@@ -84,7 +84,8 @@ app.post("/api/anthropic", async (req, res) => {
 
   const ip       = getClientIp(req);
   const isStream = !!req.body?.stream;
-  const limitErr = checkRateLimit(ip, isStream);
+  const isDev    = ip === "::1" || ip === "127.0.0.1" || ip === "::ffff:127.0.0.1";
+  const limitErr = isDev ? null : checkRateLimit(ip, isStream);
 
   if (limitErr) {
     res.status(429).json({ error: limitErr });

@@ -182,7 +182,7 @@ export default function Dashboard({
           </div>
           {debugMsg && (
             <div style={{ marginTop:10, padding:"6px 10px", background:"rgba(200,80,60,.12)", border:"1px solid rgba(200,80,60,.3)", borderRadius:6, fontSize:11, color:"#f08070" }}>
-              Couldn't load full trip data — some sections may be missing. Tap a plan mode below to generate your itinerary anyway.
+              {debugMsg.includes("limit") ? debugMsg : "Couldn't load full trip data — some sections may be missing. Tap a plan mode below to generate your itinerary anyway."}
             </div>
           )}
         </div>
