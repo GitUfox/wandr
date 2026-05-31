@@ -43,9 +43,9 @@ function ActivityTable({ rows }) {
     <div style={{ marginBottom: 16, overflowX: "hidden" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
         <colgroup>
-          <col style={{ width: "22%" }} />
-          <col style={{ width: "30%" }} />
-          <col style={{ width: "48%" }} />
+          <col style={{ width: "65px" }} />
+          <col style={{ width: "32%" }} />
+          <col />
         </colgroup>
         <thead>
           <tr style={{ borderBottom: `1px solid ${T.border2}` }}>

@@ -75,25 +75,42 @@ export default function Dashboard({
         <div style="font-size:12px;color:#1a1a1a;font-weight:600">${v}</div>
       </div>`).join("");
 
-    const bodyHtml = planText.split("\n").map(line => {
-      if (["TABLE:","ENDTABLE","FOOD:","ENDFOOD"].includes(line.trim())) return "";
-      if (line.trim().match(/^\|[-| ]+\|$/)) return "";
-      if (line.startsWith("## "))  return `<h2 style="font-size:16px;font-weight:800;color:#0d0d0d;margin:24px 0 8px;padding-bottom:5px;border-bottom:1px solid #e8e8e8">${line.slice(3)}</h2>`;
-      if (line.startsWith("### ")) return `<h3 style="font-size:11px;font-weight:700;color:#c96442;text-transform:uppercase;letter-spacing:.08em;margin:14px 0 6px">${line.slice(4)}</h3>`;
-      if (line.trim().startsWith("TIPS:")) {
-        const tips = line.replace("TIPS:", "").trim().split("|").map(t => t.trim()).filter(Boolean);
-        const spans = tips.map(t => `<span style="font-size:11px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:4px;padding:4px 9px;color:#555;margin-right:6px">${t}</span>`).join("");
-        return `<div style="margin:8px 0 14px;display:flex;flex-wrap:wrap;gap:6px">${spans}</div>`;
+    // Build body HTML — properly open/close <table> only around actual table rows
+    const lines = planText.split("\n");
+    let bodyHtml = "";
+    let inTable  = false;
+
+    for (const line of lines) {
+      const t = line.trim();
+      const isTableRow = t.startsWith("|") && !t.match(/^\|[-| :]+\|$/);
+
+      if (isTableRow) {
+        if (!inTable) { bodyHtml += `<table style="width:100%;border-collapse:collapse;margin:8px 0 16px"><colgroup><col style="width:65px"/><col style="width:32%"/><col/></colgroup><tbody>`; inTable = true; }
+        const cells = t.replace(/^\||\|$/g, "").split("|").map(c => c.trim().replace(/\*\*/g, ""));
+        const isHeader = cells[0]?.toLowerCase() === "time";
+        if (isHeader) {
+          bodyHtml += `<tr style="border-bottom:2px solid #e8e8e8">${cells.map(c => `<th style="padding:5px 8px;text-align:left;font-size:9px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.06em">${c}</th>`).join("")}</tr>`;
+        } else {
+          bodyHtml += `<tr style="border-bottom:1px solid #eee">${cells.map((c, i) => `<td style="padding:7px 8px;font-size:${i===2?11:12}px;color:${i===0?"#c96442":i===1?"#0d0d0d":"#555"};font-weight:${i===1?700:i===0?700:400};vertical-align:top;line-height:1.5">${c}</td>`).join("")}</tr>`;
+        }
+        continue;
       }
-      if (line.trim().startsWith("|")) {
-        const cells = line.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim().replace(/\*\*/g, ""));
-        const tds = cells.map((c, i) => `<td style="padding:7px 8px;${i===0?"color:#c96442;font-weight:700;width:16%":i===1?"font-weight:700;width:30%":""}border-bottom:1px solid #eee">${c}</td>`).join("");
-        return `<tr>${tds}</tr>`;
+
+      if (inTable) { bodyHtml += `</tbody></table>`; inTable = false; }
+
+      if (["TABLE:","ENDTABLE","FOOD:","ENDFOOD"].includes(t)) continue;
+      if (t.match(/^\|[-| :]+\|$/)) continue;
+      if (line.startsWith("## "))  { bodyHtml += `<h2 style="font-size:16px;font-weight:800;color:#0d0d0d;margin:24px 0 8px;padding-bottom:5px;border-bottom:1px solid #e8e8e8">${line.slice(3)}</h2>`; continue; }
+      if (line.startsWith("### ")) { bodyHtml += `<h3 style="font-size:11px;font-weight:700;color:#c96442;text-transform:uppercase;letter-spacing:.08em;margin:14px 0 6px">${line.slice(4)}</h3>`; continue; }
+      if (t.startsWith("TIPS:")) {
+        const tips = t.replace("TIPS:","").split("|").map(s => s.trim()).filter(Boolean);
+        bodyHtml += `<div style="margin:8px 0 14px">${tips.map(tip => `<span style="display:inline-block;font-size:11px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:4px;padding:3px 8px;color:#555;margin:2px 4px 2px 0">${tip}</span>`).join("")}</div>`;
+        continue;
       }
-      if (!line.trim()) return `<div style="height:6px"></div>`;
-      const html = line.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-      return `<p style="font-size:12.5px;color:#333;line-height:1.65;margin:0 0 4px">${html}</p>`;
-    }).join("\n");
+      if (!t) { bodyHtml += `<div style="height:6px"></div>`; continue; }
+      bodyHtml += `<p style="font-size:12.5px;color:#333;line-height:1.65;margin:0 0 4px">${line.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")}</p>`;
+    }
+    if (inTable) bodyHtml += `</tbody></table>`;
 
     const w = window.open("", "_blank");
     w.document.write(`<!DOCTYPE html><html><head>
@@ -101,7 +118,6 @@ export default function Dashboard({
       <title>${trip.destination} — Wandr Itinerary</title>
       <style>
         body { font-family: 'Helvetica Neue', Helvetica, sans-serif; margin: 0; padding: 40px; background: #fff; color: #000; }
-        table { border-collapse: collapse; width: 100%; }
         @media print { body { padding: 20px; } }
       </style>
     </head><body>
@@ -111,7 +127,7 @@ export default function Dashboard({
         <div style="display:flex;flex-wrap:wrap">${metaHtml}</div>
       </div>
       <div style="display:inline-block;background:#c96442;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:20px">${modeName}</div>
-      <table><tbody>${bodyHtml}</tbody></table>
+      ${bodyHtml}
     </body></html>`);
     w.document.close();
     w.focus();
