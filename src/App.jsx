@@ -159,7 +159,7 @@ export default function Wandr() {
     <>
       <link rel="stylesheet" href={GF} />
       <style>{GLOBAL_CSS}</style>
-      <div style={{ position: "relative", minHeight: "100vh", overflow: "hidden", background: T.bg0 }}>
+      <div style={{ position: "relative", minHeight: "100vh", overflow: "clip", background: T.bg0 }}>
         <AnimatePresence mode="wait">
 
           {screen === "welcome" && (

@@ -26,8 +26,30 @@ export default function Dashboard({
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  function stripMarkdown(text) {
+    return text.split("\n").map(line => {
+      // Remove custom markers
+      if (["TABLE:","ENDTABLE","FOOD:","ENDFOOD"].includes(line.trim())) return null;
+      // Table separator rows
+      if (line.trim().match(/^\|[-| ]+\|$/)) return null;
+      // Table rows → tab-separated
+      if (line.trim().startsWith("|")) {
+        return line.trim().replace(/^\||\|$/g, "").split("|").map(c => c.replace(/\*\*/g, "").trim()).join("   ");
+      }
+      // TIPS: x | y | z → "Tips: x, y, z"
+      if (line.trim().startsWith("TIPS:")) {
+        return "Tips: " + line.replace("TIPS:","").trim().split("|").map(t => t.trim()).filter(Boolean).join(", ");
+      }
+      // Headings — uppercase H2, plain H3
+      if (line.startsWith("## "))  return "\n" + line.slice(3).toUpperCase();
+      if (line.startsWith("### ")) return line.slice(4);
+      // Strip bold markers
+      return line.replace(/\*\*([^*]+)\*\*/g, "$1");
+    }).filter(l => l !== null).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  }
+
   function copyPlan() {
-    navigator.clipboard.writeText(planText).then(() => {
+    navigator.clipboard.writeText(stripMarkdown(planText)).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     }).catch(() => {});
@@ -54,7 +76,8 @@ export default function Dashboard({
         @media print {
           body { background: #fff !important; }
           .no-print { display: none !important; }
-          .print-modal { position: static !important; background: #fff !important; padding: 0 !important; }
+          .print-modal { position: static !important; background: #fff !important; padding: 0 !important; overflow: visible !important; }
+          .print-content { max-width: 100% !important; box-shadow: none !important; border-radius: 0 !important; }
         }
       `}</style>
 
@@ -71,7 +94,7 @@ export default function Dashboard({
             </div>
           </div>
           {/* Print-friendly white page */}
-          <div style={{ maxWidth:760, margin:"0 auto", background:"#fff", borderRadius:8, padding:"40px", fontFamily:"'Helvetica Neue',Helvetica,sans-serif" }}>
+          <div className="print-content" style={{ maxWidth:760, margin:"0 auto", background:"#fff", borderRadius:8, padding:"40px", fontFamily:"'Helvetica Neue',Helvetica,sans-serif" }}>
             <div style={{ borderBottom:"2px solid #c96442", paddingBottom:16, marginBottom:24 }}>
               <div style={{ fontSize:28, fontWeight:800, color:"#0d0d0d", letterSpacing:"-.02em", marginBottom:4 }}>{trip.destination}</div>
               <div style={{ fontSize:13, color:"#666", fontStyle:"italic", marginBottom:12 }}>{trip.tagline}</div>
