@@ -20,8 +20,9 @@ export async function complete(messages, maxTokens = 5000) {
     body:    JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages }),
   });
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+    const body = await res.json().catch(() => null);
+    const msg  = body?.error || `HTTP ${res.status}`;
+    throw new Error(msg);
   }
   return res.json();
 }
@@ -36,8 +37,9 @@ export async function stream(messages, maxTokens = 8000) {
     body:    JSON.stringify({ model: MODEL, max_tokens: maxTokens, stream: true, messages }),
   });
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
+    const body = await res.json().catch(() => null);
+    const msg  = body?.error || `HTTP ${res.status}`;
+    throw new Error(msg);
   }
   return res;
 }

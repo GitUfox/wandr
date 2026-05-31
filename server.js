@@ -19,6 +19,57 @@ const PORT   = process.env.PORT    ?? 3001;
 const KEY    = process.env.ANTHROPIC_API_KEY ?? process.env.VITE_ANTHROPIC_API_KEY;
 const TARGET = "https://api.anthropic.com/v1/messages";
 
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+// Limits per IP per 24-hour rolling window.
+// Trip builds (non-streaming) cost more tokens so get a tighter cap.
+const LIMIT_TRIPS = 3;   // buildTrip calls
+const LIMIT_PLANS = 10;  // generate/stream calls
+const WINDOW_MS   = 24 * 60 * 60 * 1000; // 24 hours
+
+// { ip -> { trips: number, plans: number, resetAt: timestamp } }
+const rateLimitStore = new Map();
+
+function getClientIp(req) {
+  // Respect X-Forwarded-For set by Vercel / reverse proxies
+  const forwarded = req.headers["x-forwarded-for"];
+  return (forwarded ? forwarded.split(",")[0] : req.socket.remoteAddress || "unknown").trim();
+}
+
+function checkRateLimit(ip, isStream) {
+  const now  = Date.now();
+  let entry  = rateLimitStore.get(ip);
+
+  // Expired or first visit — fresh entry
+  if (!entry || now > entry.resetAt) {
+    entry = { trips: 0, plans: 0, resetAt: now + WINDOW_MS };
+    rateLimitStore.set(ip, entry);
+  }
+
+  if (isStream) {
+    if (entry.plans >= LIMIT_PLANS) {
+      const mins = Math.ceil((entry.resetAt - now) / 60000);
+      return `Plan generation limit reached (${LIMIT_PLANS}/day). Resets in ${mins} min.`;
+    }
+    entry.plans++;
+  } else {
+    if (entry.trips >= LIMIT_TRIPS) {
+      const mins = Math.ceil((entry.resetAt - now) / 60000);
+      return `Trip build limit reached (${LIMIT_TRIPS}/day). Resets in ${mins} min.`;
+    }
+    entry.trips++;
+  }
+
+  return null; // no error
+}
+
+// Periodically prune expired entries so the map doesn't grow unbounded
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of rateLimitStore) {
+    if (now > entry.resetAt) rateLimitStore.delete(ip);
+  }
+}, 60 * 60 * 1000); // every hour
+
 app.use(express.json({ limit: "20mb" }));
 
 // ── Proxy endpoint ────────────────────────────────────────────────────────────
@@ -28,6 +79,15 @@ app.post("/api/anthropic", async (req, res) => {
     res.status(500).json({
       error: "ANTHROPIC_API_KEY not set — add it to .env.local and restart the server",
     });
+    return;
+  }
+
+  const ip       = getClientIp(req);
+  const isStream = !!req.body?.stream;
+  const limitErr = checkRateLimit(ip, isStream);
+
+  if (limitErr) {
+    res.status(429).json({ error: limitErr });
     return;
   }
 
