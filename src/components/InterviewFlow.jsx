@@ -53,7 +53,11 @@ export default function InterviewFlow({
   const pct = Math.round((step / STEPS.length) * 100);
 
   function toggleChip(o) {
-    setChips(p => p.includes(o) ? p.filter(x => x !== o) : [...p, o]);
+    if (S.singleSelect) {
+      setChips(p => p.includes(o) ? [] : [o]);
+    } else {
+      setChips(p => p.includes(o) ? p.filter(x => x !== o) : [...p, o]);
+    }
   }
 
   return (

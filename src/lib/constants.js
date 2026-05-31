@@ -18,8 +18,9 @@ export const STEPS = [
   {
     id:"party",
     q:"Who's on this trip?",
-    sub:"Select all that apply",
+    sub:"Pick the one that best describes your group",
     type:"chips+text",
+    singleSelect:true,
     opts:["Solo","Partner / couple","Friends (small group)","Group (4+)","Family"],
     ph:"e.g. Me, my partner, and one other couple",
   },
