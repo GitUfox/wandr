@@ -268,6 +268,11 @@ export default function Dashboard({
                   {planLoading && (
                     <span style={{ display:"inline-block", width:7, height:14, background:T.accent, marginLeft:3, animation:"blink 1s step-end infinite", borderRadius:1 }} />
                   )}
+                  {!planLoading && (
+                    <div style={{ marginTop:"1.25rem", paddingTop:"1rem", borderTop:`1px solid ${T.border}`, fontSize:11, color:T.hint, lineHeight:1.6 }}>
+                      AI-generated — always verify opening hours, prices, and details directly with venues before your trip.
+                    </div>
+                  )}
                 </div>
               )}
             </div>
