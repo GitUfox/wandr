@@ -21,7 +21,10 @@ export async function complete(messages, maxTokens = 5000) {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    const msg  = body?.error || `HTTP ${res.status}`;
+    const msg  = (typeof body?.error === "string" ? body.error : null)
+      || (res.status === 429 ? "Daily limit reached. Try again later." : null)
+      || (res.status >= 500 ? "Something went wrong on our end. Please try again." : null)
+      || "Something went wrong. Please try again.";
     throw new Error(msg);
   }
   return res.json();
@@ -38,7 +41,10 @@ export async function stream(messages, maxTokens = 8000) {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    const msg  = body?.error || `HTTP ${res.status}`;
+    const msg  = (typeof body?.error === "string" ? body.error : null)
+      || (res.status === 429 ? "Daily limit reached. Try again later." : null)
+      || (res.status >= 500 ? "Something went wrong on our end. Please try again." : null)
+      || "Something went wrong. Please try again.";
     throw new Error(msg);
   }
   return res;

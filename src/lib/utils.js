@@ -77,5 +77,5 @@ export function recoverJSON(raw) {
     try { return JSON.parse(m[0]); } catch { /* continue */ }
   }
 
-  throw new Error("JSON unrecoverable");
+  throw new Error("Couldn't read the trip data. You can still generate a plan below.");
 }

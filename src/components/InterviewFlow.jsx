@@ -6,6 +6,7 @@
  */
 import { AnimatePresence, motion } from "framer-motion";
 import { STEPS, T } from "../lib/constants.js";
+import DateRangePicker from "./DateRangePicker.jsx";
 
 const inputSt = {
   width:"100%", padding:"10px 14px", border:`1px solid ${T.border}`, borderRadius:8,
@@ -180,34 +181,7 @@ export default function InterviewFlow({
 
         {/* ── Date range ── */}
         {S.type === "daterange" && (
-          <div style={{ marginBottom:"1.25rem" }}>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom: d1 && d2 && d2 <= d1 ? 8 : 0 }}>
-            {[["Arrival", d1, setD1], ["Departure", d2, setD2]].map(([lbl, v, set]) => (
-              <div key={lbl}>
-                <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:5 }}>{lbl}</div>
-                <input type="date" value={v} onChange={e => {
-                  const raw = (e.target.value || "").trim();
-                  if (!raw) { set(""); return; }
-                  let norm = raw;
-                  const dmy  = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-                  if (dmy)  norm = `${dmy[3]}-${dmy[2].padStart(2,"0")}-${dmy[1].padStart(2,"0")}`;
-                  const dmyD = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-                  if (dmyD) norm = `${dmyD[3]}-${dmyD[2].padStart(2,"0")}-${dmyD[1].padStart(2,"0")}`;
-                  if (/^\d{4}-\d{2}-\d{2}$/.test(norm)) {
-                    const d = new Date(norm + "T00:00:00");
-                    if (!isNaN(d.getTime())) { set(norm); return; }
-                  }
-                  set("");
-                }} style={{...inputSt, marginBottom:0}} />
-              </div>
-            ))}
-          </div>
-          {d1 && d2 && d2 <= d1 && (
-            <div style={{ fontSize:12, color:"#f08070", padding:"6px 10px", background:"rgba(200,80,60,.1)", border:"1px solid rgba(200,80,60,.25)", borderRadius:7 }}>
-              Departure must be after arrival
-            </div>
-          )}
-          </div>
+          <DateRangePicker d1={d1} setD1={setD1} d2={d2} setD2={setD2} />
         )}
 
         {/* ── Chips only ── */}

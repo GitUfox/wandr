@@ -45,16 +45,21 @@ function checkRateLimit(ip, isStream) {
     rateLimitStore.set(ip, entry);
   }
 
+  function humanTime(ms) {
+    const h = Math.floor(ms / 3600000);
+    const m = Math.ceil((ms % 3600000) / 60000);
+    if (h >= 1) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    return `${m} minute${m !== 1 ? "s" : ""}`;
+  }
+
   if (isStream) {
     if (entry.plans >= LIMIT_PLANS) {
-      const mins = Math.ceil((entry.resetAt - now) / 60000);
-      return `Plan generation limit reached (${LIMIT_PLANS}/day). Resets in ${mins} min.`;
+      return `You've reached today's plan limit. Check back in ${humanTime(entry.resetAt - now)}.`;
     }
     entry.plans++;
   } else {
     if (entry.trips >= LIMIT_TRIPS) {
-      const mins = Math.ceil((entry.resetAt - now) / 60000);
-      return `Trip build limit reached (${LIMIT_TRIPS}/day). Resets in ${mins} min.`;
+      return `You've reached today's trip limit. Check back in ${humanTime(entry.resetAt - now)}.`;
     }
     entry.trips++;
   }
@@ -77,7 +82,7 @@ app.use(express.json({ limit: "20mb" }));
 app.post("/api/anthropic", async (req, res) => {
   if (!KEY) {
     res.status(500).json({
-      error: "ANTHROPIC_API_KEY not set — add it to .env.local and restart the server",
+      error: "Service unavailable — the app is not configured correctly. Please contact the owner.",
     });
     return;
   }
@@ -112,7 +117,7 @@ app.post("/api/anthropic", async (req, res) => {
     // Pipe the upstream body (works for both JSON and streaming SSE)
     Readable.fromWeb(upstream.body).pipe(res);
   } catch (err) {
-    if (!res.headersSent) res.status(502).json({ error: err.message });
+    if (!res.headersSent) res.status(502).json({ error: "Couldn't reach the AI service. Please try again." });
   }
 });
 

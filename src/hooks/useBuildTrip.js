@@ -26,7 +26,7 @@ export function useBuildTrip() {
     const tryBuild = async () => {
       const data = await complete([{ role: "user", content: messageContent }], 5000);
       const raw  = data.content?.find(b => b.type === "text")?.text || "";
-      if (!raw) throw new Error("Empty API response");
+      if (!raw) throw new Error("No response from AI. Please try again.");
       return recoverJSON(raw);
     };
 

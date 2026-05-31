@@ -16,7 +16,7 @@ export default class ErrorBoundary extends React.Component {
             </svg>
           </div>
           <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>Something went wrong</div>
-          <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 24, maxWidth: 360 }}>{this.state.error.message}</div>
+          <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 24, maxWidth: 360 }}>Something unexpected happened. Your trip data is safe — tap below to reload.</div>
           <button
             onClick={() => this.setState({ error: null })}
             style={{ padding: "10px 22px", background: T.accent, color: T.white, border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: T.font }}

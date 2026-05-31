@@ -24,7 +24,7 @@ export function useGenerate() {
         setPlanText(streamRef.current);
       });
     } catch (e) {
-      setPlanText(`Error: ${e.message}\n\nPlease try again.`);
+      setPlanText(e.message || "Something went wrong generating your plan. Please try again.");
     } finally {
       setPlanLoading(false);
     }
