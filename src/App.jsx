@@ -38,7 +38,7 @@ function Page({ children }) {
       animate="animate"
       exit="exit"
       transition={PAGE_TRANSITION}
-      style={{ position: "absolute", inset: 0, minHeight: "100vh", width: "100%" }}
+      style={{ position: "absolute", inset: 0, minHeight: "100vh", width: "100%", overflowY: "auto" }}
     >
       {children}
     </motion.div>

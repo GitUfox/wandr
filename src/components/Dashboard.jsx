@@ -23,7 +23,6 @@ export default function Dashboard({
   onGenerate,
   onReset,
 }) {
-  const [showPrintModal, setShowPrintModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
   function stripMarkdown(text) {
@@ -62,8 +61,7 @@ export default function Dashboard({
   const modeName = MODES.find(m => m.id === planMode)?.label || "Plan";
 
   function exportToPdf() {
-    setShowPrintModal(true);
-    setTimeout(() => window.print(), 400);
+    window.print();
   }
 
   return (
@@ -74,71 +72,58 @@ export default function Dashboard({
         @keyframes spin{to{transform:rotate(360deg)}}
         *{box-sizing:border-box}
         @media print {
-          body { background: #fff !important; }
+          body { background: #fff !important; color: #000 !important; }
           .no-print { display: none !important; }
-          .print-modal { position: static !important; background: #fff !important; padding: 0 !important; overflow: visible !important; }
-          .print-content { max-width: 100% !important; box-shadow: none !important; border-radius: 0 !important; }
+          .print-only { display: block !important; }
         }
       `}</style>
 
-      {/* ── Print / PDF modal ── */}
-      {showPrintModal && (
-        <div className="print-modal" style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", zIndex:9999, overflowY:"auto", padding:"2rem 1rem" }}>
-          <div className="no-print" style={{ maxWidth:760, margin:"0 auto 1rem", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <div style={{ fontSize:13, color:T.muted, fontFamily:T.font }}>
-              Preview — use your browser's <strong style={{ color:T.ink }}>Print → Save as PDF</strong> option
-            </div>
-            <div style={{ display:"flex", gap:8 }}>
-              <button onClick={() => window.print()} style={{ padding:"8px 18px", background:T.accent, color:"#fff", border:"none", borderRadius:7, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:T.font }}>Print / Save PDF</button>
-              <button onClick={() => setShowPrintModal(false)} style={{ padding:"8px 14px", background:T.bg3, color:T.muted, border:`1px solid ${T.border}`, borderRadius:7, fontSize:13, cursor:"pointer", fontFamily:T.font }}>✕ Close</button>
+      {/* ── Print-only layer — hidden on screen, shown by @media print ── */}
+      {planText && (
+        <div className="print-only" style={{ display:"none", fontFamily:"'Helvetica Neue',Helvetica,sans-serif", padding:"40px", background:"#fff", color:"#000" }}>
+          <div style={{ borderBottom:"2px solid #c96442", paddingBottom:16, marginBottom:24 }}>
+            <div style={{ fontSize:28, fontWeight:800, color:"#0d0d0d", marginBottom:4 }}>{trip.destination}</div>
+            <div style={{ fontSize:13, color:"#666", fontStyle:"italic", marginBottom:12 }}>{trip.tagline}</div>
+            <div style={{ display:"flex", gap:24, flexWrap:"wrap" }}>
+              {[
+                ["Dates",  [a.dates?.start, a.dates?.end].every(Boolean) ? `${a.dates.start} → ${a.dates.end}` : ""],
+                ["Nights", trip.nights],
+                ["Budget", a.budget === 0 ? "With family/friends" : `~${a.budget} USD/day`],
+                ["Party",  arr(a.party).split(",")[0]],
+                ["Season", trip.season],
+              ].filter(([, v]) => v).map(([l, v]) => (
+                <div key={l}>
+                  <div style={{ fontSize:9, textTransform:"uppercase", letterSpacing:".08em", color:"#999", marginBottom:2 }}>{l}</div>
+                  <div style={{ fontSize:12, color:"#1a1a1a", fontWeight:600 }}>{v}</div>
+                </div>
+              ))}
             </div>
           </div>
-          {/* Print-friendly white page */}
-          <div className="print-content" style={{ maxWidth:760, margin:"0 auto", background:"#fff", borderRadius:8, padding:"40px", fontFamily:"'Helvetica Neue',Helvetica,sans-serif" }}>
-            <div style={{ borderBottom:"2px solid #c96442", paddingBottom:16, marginBottom:24 }}>
-              <div style={{ fontSize:28, fontWeight:800, color:"#0d0d0d", letterSpacing:"-.02em", marginBottom:4 }}>{trip.destination}</div>
-              <div style={{ fontSize:13, color:"#666", fontStyle:"italic", marginBottom:12 }}>{trip.tagline}</div>
-              <div style={{ display:"flex", gap:24, flexWrap:"wrap" }}>
-                {[
-                  ["Dates",   [a.dates?.start, a.dates?.end].every(Boolean) ? `${a.dates.start} → ${a.dates.end}` : ""],
-                  ["Nights",  trip.nights],
-                  ["Budget",  a.budget === 0 ? "With family/friends" : `~${a.budget} USD/day`],
-                  ["Party",   arr(a.party).split(",")[0]],
-                  ["Season",  trip.season],
-                ].filter(([, v]) => v).map(([l, v]) => (
-                  <div key={l}>
-                    <div style={{ fontSize:9, textTransform:"uppercase", letterSpacing:".08em", color:"#999", marginBottom:2 }}>{l}</div>
-                    <div style={{ fontSize:12, color:"#1a1a1a", fontWeight:600 }}>{v}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div style={{ display:"inline-block", background:"#c96442", color:"#fff", fontSize:10, fontWeight:700, padding:"3px 10px", borderRadius:100, textTransform:"uppercase", letterSpacing:".1em", marginBottom:20 }}>{modeName}</div>
-            {planText.split("\n").map((line, idx) => {
-              if (["TABLE:","ENDTABLE","FOOD:","ENDFOOD"].includes(line.trim())) return null;
-              if (line.startsWith("## "))  return <div key={idx} style={{ fontSize:16, fontWeight:800, color:"#0d0d0d", margin:"24px 0 8px", paddingBottom:5, borderBottom:"1px solid #e8e8e8" }}>{line.slice(3)}</div>;
-              if (line.startsWith("### ")) return <div key={idx} style={{ fontSize:11, fontWeight:700, color:"#c96442", textTransform:"uppercase", letterSpacing:".08em", margin:"14px 0 6px" }}>{line.slice(4)}</div>;
-              if (line.trim().startsWith("TIPS:")) {
-                const tips = line.replace("TIPS:", "").trim().split("|").map(t => t.trim()).filter(Boolean);
-                return (
-                  <div key={idx} style={{ display:"flex", gap:8, flexWrap:"wrap", margin:"8px 0 14px" }}>
-                    {tips.map((t, i) => <span key={i} style={{ fontSize:11, background:"#f5f5f5", border:"1px solid #e0e0e0", borderRadius:4, padding:"4px 9px", color:"#555" }}>{t}</span>)}
-                  </div>
-                );
-              }
-              if (line.trim().startsWith("|") && !line.match(/^\|[-| ]+\|$/)) {
-                const cells = line.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim().replace(/\*\*/g, ""));
-                return (
-                  <div key={idx} style={{ display:"flex", borderBottom:"1px solid #eee", fontSize:12 }}>
-                    {cells.map((c, i) => <div key={i} style={{ padding:"7px 8px", flex:i===0?"0 0 16%":i===1?"0 0 30%":"1", color:i===0?"#c96442":"#333", fontWeight:i<=1?700:400, lineHeight:1.5, wordBreak:"break-word" }}>{c}</div>)}
-                  </div>
-                );
-              }
-              if (!line.trim()) return <div key={idx} style={{ height:6 }} />;
-              const parts = line.split(/(\*\*[^*]+\*\*)/g);
-              return <div key={idx} style={{ fontSize:12.5, color:"#333", lineHeight:1.65, marginBottom:3 }}>{parts.map((p, j) => p.startsWith("**") && p.endsWith("**") ? <strong key={j} style={{ color:"#0d0d0d" }}>{p.slice(2, -2)}</strong> : p)}</div>;
-            })}
-          </div>
+          <div style={{ display:"inline-block", background:"#c96442", color:"#fff", fontSize:10, fontWeight:700, padding:"3px 10px", borderRadius:100, textTransform:"uppercase", letterSpacing:".1em", marginBottom:20 }}>{modeName}</div>
+          {planText.split("\n").map((line, idx) => {
+            if (["TABLE:","ENDTABLE","FOOD:","ENDFOOD"].includes(line.trim())) return null;
+            if (line.startsWith("## "))  return <div key={idx} style={{ fontSize:16, fontWeight:800, color:"#0d0d0d", margin:"24px 0 8px", paddingBottom:5, borderBottom:"1px solid #e8e8e8" }}>{line.slice(3)}</div>;
+            if (line.startsWith("### ")) return <div key={idx} style={{ fontSize:11, fontWeight:700, color:"#c96442", textTransform:"uppercase", letterSpacing:".08em", margin:"14px 0 6px" }}>{line.slice(4)}</div>;
+            if (line.trim().startsWith("TIPS:")) {
+              const tips = line.replace("TIPS:", "").trim().split("|").map(t => t.trim()).filter(Boolean);
+              return (
+                <div key={idx} style={{ display:"flex", gap:8, flexWrap:"wrap", margin:"8px 0 14px" }}>
+                  {tips.map((t, i) => <span key={i} style={{ fontSize:11, background:"#f5f5f5", border:"1px solid #e0e0e0", borderRadius:4, padding:"4px 9px", color:"#555" }}>{t}</span>)}
+                </div>
+              );
+            }
+            if (line.trim().startsWith("|") && !line.match(/^\|[-| ]+\|$/)) {
+              const cells = line.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim().replace(/\*\*/g, ""));
+              return (
+                <div key={idx} style={{ display:"flex", borderBottom:"1px solid #eee", fontSize:12 }}>
+                  {cells.map((c, i) => <div key={i} style={{ padding:"7px 8px", flex:i===0?"0 0 16%":i===1?"0 0 30%":"1", color:i===0?"#c96442":"#333", fontWeight:i<=1?700:400, lineHeight:1.5, wordBreak:"break-word" }}>{c}</div>)}
+                </div>
+              );
+            }
+            if (!line.trim()) return <div key={idx} style={{ height:6 }} />;
+            const parts = line.split(/(\*\*[^*]+\*\*)/g);
+            return <div key={idx} style={{ fontSize:12.5, color:"#333", lineHeight:1.65, marginBottom:3 }}>{parts.map((p, j) => p.startsWith("**") && p.endsWith("**") ? <strong key={j}>{p.slice(2,-2)}</strong> : p)}</div>;
+          })}
         </div>
       )}
 
