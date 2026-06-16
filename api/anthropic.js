@@ -32,7 +32,7 @@ const ALLOWED_MODELS = new Set([
 ]);
 
 // Hard cap on tokens regardless of what the client requests.
-const MAX_TOKENS_CAP = 10_000;
+const MAX_TOKENS_CAP = 16_000;
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 
@@ -188,6 +188,7 @@ export default async function handler(req, res) {
         "content-type":      "application/json",
         "x-api-key":         KEY,
         "anthropic-version": "2023-06-01",
+        "anthropic-beta":    "output-128k-2025-02-19",
       },
       body: JSON.stringify(upstreamBody),
     });

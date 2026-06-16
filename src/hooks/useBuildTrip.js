@@ -24,7 +24,7 @@ export function useBuildTrip() {
     const { messageContent, n } = buildTripPrompt(answers, uploadedFiles);
 
     const tryBuild = async () => {
-      const data = await complete([{ role: "user", content: messageContent }], 5000);
+      const data = await complete([{ role: "user", content: messageContent }], 8000);
       const raw  = data.content?.find(b => b.type === "text")?.text || "";
       if (!raw) throw new Error("No response from AI. Please try again.");
       return recoverJSON(raw);

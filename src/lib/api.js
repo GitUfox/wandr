@@ -40,7 +40,7 @@ export async function complete(messages, maxTokens = 5000) {
 /**
  * Streaming completion. Returns the raw Response for the caller to consume.
  */
-export async function stream(messages, maxTokens = 8000) {
+export async function stream(messages, maxTokens = 16000) {
   let res;
   try {
     res = await fetch(API_URL, {
