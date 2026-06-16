@@ -41,25 +41,21 @@ function ActivityTable({ rows }) {
   const dataRows = isHeader ? rows.slice(1) : rows;
   return (
     <div style={{ marginBottom: 16, overflowX: "hidden" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
-        <colgroup>
-          <col style={{ width: "64px" }} />
-          <col style={{ width: "30%" }} />
-          <col />
-        </colgroup>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ borderBottom: `1px solid ${T.border2}` }}>
-            {["Time", "Activity", "Details"].map(h => (
-              <th key={h} style={{ padding: "6px 5px", textAlign: "left", fontFamily: T.font, fontSize: 9, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".06em" }}>{h}</th>
-            ))}
+            {/* width:1% + whiteSpace:nowrap = shrink to content. Activity is fixed. Details gets everything else. */}
+            <th style={{ width: "1%", whiteSpace: "nowrap", padding: "6px 12px 6px 5px", textAlign: "left", fontFamily: T.font, fontSize: 9, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".06em" }}>Time</th>
+            <th style={{ width: "28%", padding: "6px 5px", textAlign: "left", fontFamily: T.font, fontSize: 9, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".06em" }}>Activity</th>
+            <th style={{ padding: "6px 5px", textAlign: "left", fontFamily: T.font, fontSize: 9, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".06em" }}>Details</th>
           </tr>
         </thead>
         <tbody>
           {dataRows.map((row, i) => (
             <tr key={i} style={{ borderBottom: `1px solid ${T.border}`, background: i % 2 === 0 ? "transparent" : T.bg2 }}>
-              <td style={{ padding: "8px 5px", fontFamily: T.font, fontSize: 10.5, color: T.accent, fontWeight: 700, verticalAlign: "top", wordBreak: "break-word", whiteSpace: "normal" }}>{cleanCell(row[0])}</td>
-              <td style={{ padding: "8px 5px", fontFamily: T.font, fontSize: 11.5, color: T.ink, fontWeight: 600, lineHeight: 1.4, verticalAlign: "top", wordBreak: "break-word", whiteSpace: "normal" }}>{boldify(row[1])}</td>
-              <td style={{ padding: "8px 5px", fontFamily: T.font, fontSize: 11, color: T.muted, lineHeight: 1.55, verticalAlign: "top", wordBreak: "break-word", whiteSpace: "normal" }}>{boldify(row[2])}</td>
+              <td style={{ width: "1%", whiteSpace: "nowrap", padding: "8px 12px 8px 5px", fontFamily: T.font, fontSize: 10.5, color: T.accent, fontWeight: 700, verticalAlign: "top" }}>{cleanCell(row[0])}</td>
+              <td style={{ padding: "8px 5px", fontFamily: T.font, fontSize: 11.5, color: T.ink, fontWeight: 600, lineHeight: 1.4, verticalAlign: "top", wordBreak: "break-word" }}>{boldify(row[1])}</td>
+              <td style={{ padding: "8px 5px", fontFamily: T.font, fontSize: 11, color: T.muted, lineHeight: 1.55, verticalAlign: "top", wordBreak: "break-word" }}>{boldify(row[2])}</td>
             </tr>
           ))}
         </tbody>
