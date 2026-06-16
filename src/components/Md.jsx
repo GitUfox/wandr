@@ -43,8 +43,8 @@ function ActivityTable({ rows }) {
     <div style={{ marginBottom: 16, overflowX: "hidden" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
         <colgroup>
-          <col style={{ width: "42px" }} />
-          <col style={{ width: "32%" }} />
+          <col style={{ width: "64px" }} />
+          <col style={{ width: "30%" }} />
           <col />
         </colgroup>
         <thead>
@@ -192,7 +192,14 @@ export default function Md({ text }) {
       {segments.map((seg, idx) => {
         if (seg.type === "table")   return <ActivityTable key={idx} rows={parseTableRows(seg.lines, 3)} />;
         if (seg.type === "food")    return <FoodTable     key={idx} rows={parseTableRows(seg.lines, 4)} />;
-        if (seg.type === "generic") return <GenericTable  key={idx} rows={parseTableRows(seg.lines)} />;
+        if (seg.type === "generic") {
+          const generic = parseTableRows(seg.lines);
+          // A Time/Activity/Details table rendered as plain markdown should
+          // still get the activity-table column widths, not equal thirds.
+          if (generic[0]?.[0]?.toLowerCase() === "time")
+            return <ActivityTable key={idx} rows={parseTableRows(seg.lines, 3)} />;
+          return <GenericTable key={idx} rows={generic} />;
+        }
         if (seg.type === "tips") return (
           <div key={idx} style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
             {seg.tips.map((tip, ti) => (
