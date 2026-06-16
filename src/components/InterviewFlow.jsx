@@ -303,10 +303,7 @@ export default function InterviewFlow({
 
         {/* ── Navigation ── */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:".5rem" }}>
-          {step > 0
-            ? <button onClick={onBack} style={{ fontSize:12.5, color:T.hint, padding:"8px 0", background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>← Back</button>
-            : <span />
-          }
+          <button onClick={step > 0 ? onBack : onWelcome} style={{ fontSize:12.5, color:T.hint, padding:"8px 0", background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>← Back</button>
           <button onClick={onAdvance} disabled={!isValid}
             style={{ background:isValid?T.accent:T.bg3, color:isValid?T.white:T.hint, padding:"10px 26px", borderRadius:8, fontSize:13, fontWeight:700, cursor:isValid?"pointer":"default", border:"none", fontFamily:T.font, transition:"all .15s" }}>
             {step === STEPS.length - 1 ? "Build my trip →" : "Continue →"}
