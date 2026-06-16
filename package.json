@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 5173",
-    "server": "node --env-file-if-exists=.env.local server.js",
+    "server": "node server.js",
     "dev:all": "concurrently -n vite,proxy -c cyan,yellow \"npm run server\" \"npm run dev\"",
     "build": "vite build",
     "start": "NODE_ENV=production node --env-file-if-exists=.env.local server.js",
@@ -14,6 +14,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "framer-motion": "^12.40.0",
     "react": "^18.3.1",

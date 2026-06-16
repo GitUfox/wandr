@@ -49,6 +49,18 @@ function stayInstruction(stayLine) {
   return `Traveler is staying: "${stayLine}". Cluster each day's activities near this area or along a logical route from it. Minimise dead travel time within a single day. Reference this neighbourhood where relevant for nearby options.`;
 }
 
+function buildDayLabels(startISO, nights) {
+  const start = parseISODate(startISO);
+  if (!start || !nights) return [];
+  return Array.from({ length: nights }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    return d.toLocaleDateString("en-US", {
+      weekday: "long", month: "long", day: "numeric", year: "numeric",
+    });
+  });
+}
+
 // ── Build trip database prompt ─────────────────────────────────────────────────
 
 /**
@@ -114,6 +126,8 @@ AVOID: Never include anything related to: ${avoidLine}. If a category would only
 
 Rules: 3 items max per category. All strings concise (1 sentence max). Use local currency equivalents for prices.
 
+ACCURACY: Only include venues, restaurants, and services you have high confidence are currently operating. Do not suggest bike-share programs, municipal transit apps, or any service that may have shut down. If a venue's current status is uncertain, omit it entirely — a shorter list of reliable options is better than a longer list with stale picks.
+
 {"destination":"City, Country","tagline":"8-word trip description","nights":${n},"season":"one sentence","highlights":["h1","h2","h3"],
 "categories":{
 "breakfast":[{"name":"","description":"","price":"$","mustOrder":"","neighborhood":"","proTip":""}],
@@ -139,9 +153,89 @@ Rules: 3 items max per category. All strings concise (1 sentence max). Use local
 // ── Plan generation prompt ─────────────────────────────────────────────────────
 
 /**
- * Build the plan generation prompt for a given mode.
+ * Build a prompt to regenerate a single day of an existing itinerary.
+ * Uses complete() (not streaming) — response is spliced back into the plan.
  */
-export function buildPlanPrompt(mode, trip) {
+export function buildEditDayPrompt(dayLabel, dayContent, instruction, trip) {
+  const a = trip.answers;
+  const stayLine      = a.logistics?.stay || "";
+  const transportLine = a.logistics?.transport ? arr(a.logistics.transport) : "";
+  const budgetLabel   = a.budget === 0 ? "staying with family/friends" : `~${a.budget} USD/day`;
+  const avoidText     = Array.isArray(a.interests?.avoidChips) && a.interests.avoidChips.length > 0
+    ? a.interests.avoidChips.join(", ") : "nothing";
+
+  const allItems = Object.entries(trip.categories || {})
+    .filter(([cat]) => !["breakfast","lunch","dinner"].includes(cat))
+    .flatMap(([cat, items]) =>
+      (Array.isArray(items) ? items : []).map(
+        it => `[${cat.toUpperCase()}] ${it.name}: ${it.description}${it.proTip ? ` | TIP: ${it.proTip}` : ""}`
+      )
+    ).join("\n");
+
+  const restaurantIdeas = ["breakfast","lunch","dinner"]
+    .flatMap(meal => {
+      const items = trip.categories?.[meal];
+      if (!Array.isArray(items) || items.length === 0) return [];
+      return items.map(it =>
+        `[${meal.toUpperCase()}] ${it.name}: ${it.description}${it.mustOrder ? ` — order ${it.mustOrder}` : ""}`
+      );
+    }).join("\n");
+
+  const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [time] | **Place** | facts only, duration |\nENDTABLE`;
+  const FOOD_BLOCK  = `FOOD:\n| Meal | Name | Order | Price |\n|------|------|-------|-------|\n| Breakfast | **Name** | what to order | $ |\n| Lunch | **Name** | what to order | $$ |\n| Dinner | **Name** | what to order | $$$ |\nENDFOOD`;
+
+  return `You are a travel planner. Regenerate ONE day of an itinerary for ${trip.destination}.
+
+CHANGE INSTRUCTION: ${instruction || "Refresh with new activity ideas — keep the same spirit but swap out the specific activities"}
+
+CURRENT DAY (replace this entirely):
+${dayContent}
+
+TRAVELER
+- Destination: ${a.destination}
+- Party: ${arr(a.party)}
+- Budget: ${budgetLabel}
+- Staying: ${stayLine || "not specified"}
+- Transport: ${transportLine || "not specified"}
+- Interests: ${arr(a.interests)}
+- Avoid: ${avoidText}
+
+APPLY THESE RULES:
+PARTY: ${partyInstruction(a)}
+ROUTING: ${stayInstruction(stayLine || "not specified")} ${transportInstruction(transportLine || "not specified")}
+BUDGET: ${budgetInstruction(a.budget)}
+AVOID: Never suggest anything related to: ${avoidText}.
+
+ACTIVITIES TO USE:
+${allItems || `Use your knowledge of ${a.destination}`}
+
+RESTAURANT IDEAS:
+${restaurantIdeas || `Use your knowledge of restaurants in ${a.destination}`}
+
+STRICT OUTPUT RULES:
+- Return ONLY the replacement day content. Nothing before or after.
+- Start with the exact day header: ## ${dayLabel}
+- Use the same format as the original:
+
+## ${dayLabel}
+
+${TABLE_BLOCK}
+
+${FOOD_BLOCK}
+
+TIPS: [practical tip] | [logistics tip]
+
+- 3 to 5 activities max. No filler phrases. Facts only.
+- Bold place names inside table cells using **Name**
+- ACCURACY: Only recommend venues you are confident are currently operating.`;
+}
+
+/**
+ * Build the plan generation prompt for a given mode.
+ * editInstruction — optional free-text change instruction (for Full Itinerary / Specific Activities edits)
+ * editType        — "activities" | null  (controls how the instruction is framed)
+ */
+export function buildPlanPrompt(mode, trip, editInstruction = null, editType = null) {
   const a = trip.answers;
   const restaurantBins = ["breakfast", "lunch", "dinner"];
 
@@ -171,11 +265,21 @@ export function buildPlanPrompt(mode, trip) {
     ? a.interests.avoidChips.join(", ")
     : "nothing";
 
+  const today       = new Date().toISOString().slice(0, 10);
+  const startDate   = parseISODate(a.dates?.start);
+  const endDate     = parseISODate(a.dates?.end);
+  const safeStart   = (startDate ? startDate.toISOString().slice(0, 10) : a.dates?.start) || "?";
+  const safeEnd     = (endDate   ? endDate.toISOString().slice(0, 10)   : a.dates?.end)   || "?";
+  const dayLabels   = buildDayLabels(a.dates?.start, trip.nights);
+  const dayHeaderBlock = dayLabels.length > 0
+    ? `DAY HEADERS — use these exact labels in order:\n${dayLabels.map((l, i) => `  Day ${i + 1}: ${l}`).join("\n")}`
+    : "";
+
   const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [time] | **Place** | facts only, duration |\nENDTABLE`;
   const FOOD_BLOCK  = `FOOD:\n| Meal | Name | Order | Price |\n|------|------|-------|-------|\n| Breakfast | **Name** | what to order | $ |\n| Lunch | **Name** | what to order | $$ |\n| Dinner | **Name** | what to order | $$$ |\nENDFOOD`;
 
   const modeInstructions = {
-    full:   `Create a ${trip.nights}-night itinerary. For each day:\n\n## Day N — Weekday, Month Date\n\n${TABLE_BLOCK}\n\n${FOOD_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]\n\nRules: 3–5 activities max per day. Food is suggestions only. Times realistic for ${a.destination}.`,
+    full:   `Create a ${trip.nights}-night itinerary. Use the DAY HEADERS list for exact day labels. For each day:\n\n## Day N — [exact label from DAY HEADERS]\n\n${TABLE_BLOCK}\n\n${FOOD_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]\n\nRules: 3–5 activities max per day. Food is suggestions only. Times realistic for ${a.destination}.`,
     day:    `Design the ideal single day in ${a.destination}.\n\n## The Ideal Day — [Weekday, Month Date]\n\n${TABLE_BLOCK}\n\n${FOOD_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]`,
     combo:  `Create 3 themed day combinations. For each:\n\n## [Theme name]\n[One sentence — what type of day this is]\n\n${TABLE_BLOCK}\n\n${FOOD_BLOCK}`,
     foodie: `Build a full restaurant reference.\n\n## Breakfast\n${TABLE_BLOCK}\n\n## Lunch\n${TABLE_BLOCK}\n\n## Dinner\n${TABLE_BLOCK}\n\n## Drinks\n${TABLE_BLOCK}`,
@@ -205,6 +309,13 @@ PARTY: ${partyInstruction(a)}
 
 ROUTING: ${stayInstruction(stayLine || "not specified")} ${transportInstruction(transportLine || "not specified")}
 
+TEMPORAL GROUNDING: Today is ${today}. Trip dates: ${safeStart} → ${safeEnd}.${dayHeaderBlock ? `\n${dayHeaderBlock}` : ""} Always use these exact day labels — never guess or infer day-of-week independently.
+
+ACCURACY RULES:
+- OPERATING HOURS: Before placing a venue in a time slot, verify it is open on that specific day of week and at that time. Many restaurants do not serve dinner on Sundays; museums are often closed Mondays or Tuesdays; brunch-only spots cannot fill a dinner slot. If a venue's hours make a slot implausible, substitute a different option from the same category.
+- LIVE EVENTS: Never assert that a specific sports game, concert, or ticketed event is scheduled on a particular date — team schedules, touring dates, and event lineups change. Instead write: "Check schedule: [venue or team name]" as an optional add-on.
+- CLOSED VENUES: Do not recommend any bike-share program, transit app, or dining establishment you cannot confidently confirm is currently operating. Omit uncertain venues entirely rather than risk sending the traveler somewhere that no longer exists.
+
 BUDGET: ${budgetInstruction(a.budget)}
 
 AVOID: Never suggest anything related to: ${avoidText}.
@@ -219,5 +330,10 @@ STRICT OUTPUT RULES:
 - Tables exactly as shown with TABLE/ENDTABLE and FOOD/ENDFOOD markers
 - 3 to 5 activities per day max
 - Bold place names inside table cells using **Name**
-- TIPS line format: TIPS: tip one | tip two`;
+- TIPS line format: TIPS: tip one | tip two${editInstruction ? `
+
+${editType === "activities"
+  ? `ACTIVITY EDIT: ${editInstruction}\nAdjust ONLY the activities described. Keep all other days and activities unchanged. If an exact match cannot be found, replace the closest activity in the same time slot.`
+  : `EDIT INSTRUCTION: ${editInstruction}\nApply this change throughout the itinerary while keeping the same structure, format, and day count.`
+}` : ""}`;
 }

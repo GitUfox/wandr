@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { T, DEST_PLACEHOLDERS } from "../lib/constants.js";
+import WandrLogo from "./WandrLogo.jsx";
 
 export default function WelcomeScreen({ onStart, savedTrip, onResume }) {
   const [dest, setDest]                     = useState("");
@@ -28,15 +29,11 @@ export default function WelcomeScreen({ onStart, savedTrip, onResume }) {
       <div style={{ width: "100%", maxWidth: 440 }}>
 
         {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.25rem" }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
+        <div style={{ textAlign: "center", marginBottom: "2.75rem" }}>
+          <WandrLogo size="lg" />
+          <div style={{ fontSize: 14, fontWeight: 600, color: T.muted, letterSpacing: ".02em", marginTop: "1rem" }}>
+            Make it your trip.
           </div>
-          <div style={{ fontSize: 38, fontWeight: 800, letterSpacing: "-.04em", color: T.ink, lineHeight: 1, marginBottom: 8 }}>Wandr</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, letterSpacing: "-.01em" }}>Make it your trip.</div>
         </div>
 
         {/* Destination input */}

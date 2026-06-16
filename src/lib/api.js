@@ -14,11 +14,18 @@ const HEADERS = { "Content-Type": "application/json" };
  * Single-shot completion. Returns the parsed response object.
  */
 export async function complete(messages, maxTokens = 5000) {
-  const res = await fetch(API_URL, {
-    method:  "POST",
-    headers: HEADERS,
-    body:    JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages }),
-  });
+  let res;
+  try {
+    res = await fetch(API_URL, {
+      method:  "POST",
+      headers: HEADERS,
+      body:    JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages }),
+    });
+  } catch {
+    // Network-level failure (server down, connection refused, offline)
+    // Use the same message as 502 so the retry logic in useBuildTrip fires
+    throw new Error("Couldn't reach the AI service. Please try again.");
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     const msg  = (typeof body?.error === "string" ? body.error : null)
@@ -34,11 +41,17 @@ export async function complete(messages, maxTokens = 5000) {
  * Streaming completion. Returns the raw Response for the caller to consume.
  */
 export async function stream(messages, maxTokens = 8000) {
-  const res = await fetch(API_URL, {
-    method:  "POST",
-    headers: HEADERS,
-    body:    JSON.stringify({ model: MODEL, max_tokens: maxTokens, stream: true, messages }),
-  });
+  let res;
+  try {
+    res = await fetch(API_URL, {
+      method:  "POST",
+      headers: HEADERS,
+      body:    JSON.stringify({ model: MODEL, max_tokens: maxTokens, stream: true, messages }),
+    });
+  } catch {
+    // Network-level failure (server down, connection refused, offline)
+    throw new Error("Couldn't reach the AI service. Please try again.");
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     const msg  = (typeof body?.error === "string" ? body.error : null)

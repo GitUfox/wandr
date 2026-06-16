@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/anthropic.js": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}

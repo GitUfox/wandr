@@ -14,7 +14,7 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 const GF = "https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap";
 
 const GLOBAL_CSS = `
-  html,body,#root{background:#0d0d0d!important;margin:0;padding:0;min-height:100vh;width:100%}
+  html,body,#root{background:${T.bg0}!important;margin:0;padding:0;min-height:100vh;width:100%}
   @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
   @keyframes spin{to{transform:rotate(360deg)}}
   @keyframes blink{50%{opacity:0}}
@@ -79,7 +79,7 @@ export default function Wandr() {
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const { buildTrip: doBuildTrip, loadMsg, error: buildError } = useBuildTrip();
-  const { planText, planMode, planLoading, generate: doGenerate, resetPlan } = useGenerate();
+  const { planText, planMode, planLoading, patchError, generate: doGenerate, patchDay: doPatchDay, resetPlan } = useGenerate();
   const { uploadedFiles, uploadError, handleFiles, removeFile, resetFiles } = useFileUpload();
 
   // ── Interview helpers ─────────────────────────────────────────────────────
@@ -138,6 +138,34 @@ export default function Wandr() {
   function handleGenerate(mode) {
     setTab("plan");
     doGenerate(mode, trip);
+  }
+
+  /**
+   * Handle plan-level edits from EditTripSheet.
+   *   type        — "activities" | "day" | "full"
+   *   instruction — user's change prompt
+   *   dayIndex    — 0-based day index (day edits only)
+   *   dayLabel    — full label string (day edits only)
+   */
+  function handleEditPlan(type, instruction, dayIndex, dayLabel) {
+    setTab("plan");
+    if (type === "day") {
+      doPatchDay(dayIndex, dayLabel, instruction, trip);
+    } else {
+      // "activities" → re-generate current mode with targeted instruction
+      // "full"       → re-generate current mode with vibe overlay
+      const editType = type === "activities" ? "activities" : null;
+      doGenerate(planMode || "full", trip, instruction, editType);
+    }
+  }
+
+  /**
+   * Rebuild the trip with updated answers (from Trip Details edit).
+   * Keeps the old trip in localStorage until the new one succeeds.
+   */
+  async function handleEditTripDetails(newAnswers) {
+    setAnswers(newAnswers);
+    await handleBuildTrip(newAnswers);
   }
 
   // ── Reset / resume ────────────────────────────────────────────────────────
@@ -217,10 +245,13 @@ export default function Wandr() {
                 <Dashboard
                   trip={trip}
                   planText={planText} planLoading={planLoading} planMode={planMode}
+                  patchError={patchError}
                   tab={tab} setTab={setTab}
                   expandedCat={expandedCat} setExpandedCat={setExpandedCat}
                   debugMsg={buildError}
                   onGenerate={handleGenerate}
+                  onEditPlan={handleEditPlan}
+                  onEditTripDetails={handleEditTripDetails}
                   onReset={resetAll}
                 />
               </ErrorBoundary>

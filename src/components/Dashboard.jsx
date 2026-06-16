@@ -8,6 +8,8 @@ import { useState } from "react";
 import { MODES, CATS, T } from "../lib/constants.js";
 import { arr } from "../lib/utils.js";
 import Md from "./Md.jsx";
+import WandrLogo from "./WandrLogo.jsx";
+import EditTripSheet from "./EditTripSheet.jsx";
 
 // Small colored square used in place of emoji category icons
 function CatDot({ col }) {
@@ -17,13 +19,17 @@ function CatDot({ col }) {
 export default function Dashboard({
   trip,
   planText, planLoading, planMode,
+  patchError,
   tab, setTab,
   expandedCat, setExpandedCat,
   debugMsg,
   onGenerate,
+  onEditPlan,
+  onEditTripDetails,
   onReset,
 }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied]           = useState(false);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
 
   function stripMarkdown(text) {
     return text.split("\n").map(line => {
@@ -51,7 +57,10 @@ export default function Dashboard({
     navigator.clipboard.writeText(stripMarkdown(planText)).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
-    }).catch(() => {});
+    }).catch(() => {
+      setCopied("error");
+      setTimeout(() => setCopied(false), 2000);
+    });
   }
 
   const cats     = trip.categories || {};
@@ -60,9 +69,24 @@ export default function Dashboard({
   const hasCats  = Object.values(cats).some(v => Array.isArray(v) && v.length > 0);
   const modeName = MODES.find(m => m.id === planMode)?.label || "Plan";
 
+  /** Convert ISO date "2026-06-08" → "6/8/2026" */
+  function fmtDate(iso) {
+    if (!iso) return "";
+    const [y, m, d] = iso.split("-");
+    return `${parseInt(m)}/${parseInt(d)}/${y}`;
+  }
+
+  function htmlEscape(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
   function exportToPdf() {
     const meta = [
-      ["Dates",  [a.dates?.start, a.dates?.end].every(Boolean) ? `${a.dates.start} → ${a.dates.end}` : ""],
+      ["Dates",  [a.dates?.start, a.dates?.end].every(Boolean) ? `${fmtDate(a.dates.start)} → ${fmtDate(a.dates.end)}` : ""],
       ["Nights", trip.nights],
       ["Budget", a.budget === 0 ? "With family/friends" : `~${a.budget} USD/day`],
       ["Party",  arr(a.party).split(",")[0]],
@@ -85,7 +109,7 @@ export default function Dashboard({
       const isTableRow = t.startsWith("|") && !t.match(/^\|[-| :]+\|$/);
 
       if (isTableRow) {
-        if (!inTable) { bodyHtml += `<table style="width:100%;border-collapse:collapse;margin:8px 0 16px"><colgroup><col style="width:65px"/><col style="width:32%"/><col/></colgroup><tbody>`; inTable = true; }
+        if (!inTable) { bodyHtml += `<table style="width:100%;border-collapse:collapse;margin:8px 0 16px"><colgroup><col style="width:42px"/><col style="width:32%"/><col/></colgroup><tbody>`; inTable = true; }
         const cells = t.replace(/^\||\|$/g, "").split("|").map(c => c.trim().replace(/\*\*/g, ""));
         const isHeader = cells[0]?.toLowerCase() === "time";
         if (isHeader) {
@@ -113,17 +137,22 @@ export default function Dashboard({
     if (inTable) bodyHtml += `</tbody></table>`;
 
     const w = window.open("", "_blank");
+    if (!w) {
+      // Popup was blocked by the browser — nothing we can do silently
+      window.alert("Pop-up blocked. Please allow pop-ups for this site to export the PDF.");
+      return;
+    }
     w.document.write(`<!DOCTYPE html><html><head>
       <meta charset="utf-8">
-      <title>${trip.destination} — Wandr Itinerary</title>
+      <title>${htmlEscape(trip.destination)} — Wandr Itinerary</title>
       <style>
         body { font-family: 'Helvetica Neue', Helvetica, sans-serif; margin: 0; padding: 40px; background: #fff; color: #000; }
         @media print { body { padding: 20px; } }
       </style>
     </head><body>
       <div style="border-bottom:2px solid #c96442;padding-bottom:16px;margin-bottom:24px">
-        <div style="font-size:28px;font-weight:800;color:#0d0d0d;margin-bottom:4px">${trip.destination}</div>
-        <div style="font-size:13px;color:#666;font-style:italic;margin-bottom:12px">${trip.tagline || ""}</div>
+        <div style="font-size:28px;font-weight:800;color:#0d0d0d;margin-bottom:4px">${htmlEscape(trip.destination)}</div>
+        <div style="font-size:13px;color:#666;font-style:italic;margin-bottom:12px">${htmlEscape(trip.tagline || "")}</div>
         <div style="display:flex;flex-wrap:wrap">${metaHtml}</div>
       </div>
       <div style="display:inline-block;background:#c96442;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:20px">${modeName}</div>
@@ -149,6 +178,10 @@ export default function Dashboard({
 
         {/* Header */}
         <div style={{ background:T.bg1, borderBottom:`1px solid ${T.border}`, padding:"1.75rem 1.75rem 1.375rem" }}>
+          {/* Brand bar */}
+          <div style={{ marginBottom:"1.25rem" }}>
+            <WandrLogo size="sm" showTrail={false} />
+          </div>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, flexWrap:"wrap", marginBottom:10 }}>
             <div>
               <div style={{ fontSize:9, letterSpacing:".2em", textTransform:"uppercase", color:T.hint, marginBottom:3 }}>Your trip</div>
@@ -164,11 +197,19 @@ export default function Dashboard({
                 </div>
               )}
             </div>
-            <button onClick={onReset} style={{ fontSize:11, color:T.muted, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px", cursor:"pointer", fontFamily:T.font }}>New trip</button>
+            <div style={{ display:"flex", gap:7 }}>
+              <button
+                onClick={() => setEditSheetOpen(true)}
+                style={{ fontSize:11, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:6, padding:"5px 12px", cursor:"pointer", fontFamily:T.font, fontWeight:600 }}
+              >
+                Edit trip
+              </button>
+              <button onClick={onReset} style={{ fontSize:11, color:T.muted, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px", cursor:"pointer", fontFamily:T.font }}>New trip</button>
+            </div>
           </div>
           <div style={{ display:"flex", flexWrap:"wrap", gap:20, paddingTop:10, borderTop:`1px solid ${T.border}` }}>
             {[
-              ["Dates",  [a.dates?.start, a.dates?.end].every(Boolean) ? `${a.dates.start} → ${a.dates.end}` : ""],
+              ["Dates",  [a.dates?.start, a.dates?.end].every(Boolean) ? `${fmtDate(a.dates.start)} → ${fmtDate(a.dates.end)}` : ""],
               ["Nights", `${trip.nights}`],
               ["Budget", a.budget === 0 ? "With family/friends" : `~${a.budget} USD/day`],
               ["Party",  arr(a.party).split(",")[0]],
@@ -240,6 +281,13 @@ export default function Dashboard({
                   );
                 })}
               </div>
+              {/* Patch error banner (day-edit failure — plan text is preserved) */}
+              {patchError && !planLoading && (
+                <div style={{ display:"flex", alignItems:"center", gap:9, padding:"10px 14px", background:"rgba(180,60,40,.12)", border:"1px solid rgba(180,60,40,.3)", borderRadius:9, marginBottom:10, fontSize:12.5, color:"#f08070" }}>
+                  <span style={{ flexShrink:0 }}>⚠</span>
+                  <span>{patchError}</span>
+                </div>
+              )}
               {/* Loading spinner */}
               {planLoading && !planText && (
                 <div style={{ display:"flex", alignItems:"center", gap:9, padding:"1.25rem 0", fontSize:12.5, color:T.muted }}>
@@ -254,8 +302,8 @@ export default function Dashboard({
                     {!planLoading && (
                       <>
                         <button onClick={copyPlan}
-                          style={{ display:"flex", alignItems:"center", gap:5, padding:"7px 12px", fontSize:12, fontWeight:600, color:copied?T.ink:T.muted, background:copied?T.bg3:"transparent", border:`1px solid ${T.border}`, borderRadius:7, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
-                          {copied ? "✓ Copied" : "Copy"}
+                          style={{ display:"flex", alignItems:"center", gap:5, padding:"7px 12px", fontSize:12, fontWeight:600, color:copied==="error"?"#f08070":copied?T.ink:T.muted, background:copied?T.bg3:"transparent", border:`1px solid ${T.border}`, borderRadius:7, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                          {copied === "error" ? "Copy failed" : copied ? "✓ Copied" : "Copy"}
                         </button>
                         <button onClick={exportToPdf}
                           style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", fontSize:12, fontWeight:600, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:7, cursor:"pointer", fontFamily:T.font }}>
@@ -478,6 +526,17 @@ export default function Dashboard({
 
         </div>
       </div>
+      {/* Edit Trip Sheet — owns its own AnimatePresence internally */}
+      <EditTripSheet
+        open={editSheetOpen}
+        trip={trip}
+        planText={planText}
+        planMode={planMode}
+        planLoading={planLoading}
+        onClose={() => setEditSheetOpen(false)}
+        onEditPlan={onEditPlan}
+        onEditTripDetails={onEditTripDetails}
+      />
     </div>
   );
 }

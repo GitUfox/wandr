@@ -35,7 +35,13 @@ export function useBuildTrip() {
       try {
         parsed = await tryBuild();
       } catch (e) {
-        if (e.message.includes("500") || e.message.includes("server")) {
+        // api.js translates raw HTTP codes into friendly messages — match those strings.
+        // "our end" → 500, "AI service" → 502, "No response" → empty body
+        const isRetryable =
+          e.message.includes("our end") ||
+          e.message.includes("AI service") ||
+          e.message.includes("No response");
+        if (isRetryable) {
           setLoadMsg("Retrying…");
           await new Promise(r => setTimeout(r, 2000));
           parsed = await tryBuild();

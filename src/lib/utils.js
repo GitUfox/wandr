@@ -79,3 +79,34 @@ export function recoverJSON(raw) {
 
   throw new Error("Couldn't read the trip data. You can still generate a plan below.");
 }
+
+/**
+ * Extract day headers from a generated full-itinerary plan string.
+ * Returns [{ index, label, pos }, ...] where label = "Day 1 — Wednesday, June 11, 2025".
+ */
+export function extractDayHeaders(planText) {
+  if (!planText) return [];
+  const re = /^## (Day \d+ — .+)$/gm;
+  const results = [];
+  let m;
+  while ((m = re.exec(planText)) !== null) {
+    results.push({ index: results.length, label: m[1], pos: m.index });
+  }
+  return results;
+}
+
+/**
+ * Replace a single day block in a plan string with new content.
+ * dayIndex is 0-based (0 = Day 1).
+ * newContent should begin with the ## Day N — … header.
+ */
+export function spliceDayInPlan(planText, dayIndex, newContent) {
+  const re = /^## Day \d+ —/gm;
+  const positions = [];
+  let m;
+  while ((m = re.exec(planText)) !== null) positions.push(m.index);
+  if (dayIndex >= positions.length) return planText;
+  const start = positions[dayIndex];
+  const end = dayIndex + 1 < positions.length ? positions[dayIndex + 1] : planText.length;
+  return planText.slice(0, start) + newContent.trimEnd() + "\n\n" + planText.slice(end);
+}
