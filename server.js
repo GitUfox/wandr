@@ -11,12 +11,21 @@
  * In development, set it in .env.local — the npm scripts load it automatically.
  */
 
+import dotenv from "dotenv";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(__dirname, ".env.local") });
+
 import express from "express";
 import { Readable } from "stream";
 
 const app    = express();
 const PORT   = process.env.PORT    ?? 3001;
-const KEY    = process.env.ANTHROPIC_API_KEY ?? process.env.VITE_ANTHROPIC_API_KEY;
+// SECURITY: use ANTHROPIC_API_KEY only — never VITE_ANTHROPIC_API_KEY.
+// VITE_ prefixed vars are bundled into the browser bundle by Vite.
+// If you're migrating from the old non-proxy setup, rename the key in .env.local.
+const KEY    = process.env.ANTHROPIC_API_KEY;
 const TARGET = "https://api.anthropic.com/v1/messages";
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
@@ -75,6 +84,11 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000); // every hour
 
+// TODO [wandr-audit 2026-06-04]: No CORS restriction — any origin can call this proxy in production.
+// Add cors middleware with an allowlist of the deployed domain before going fully public.
+// TODO [wandr-audit 2026-06-04]: Body limit (20mb) vs per-file client limit (10mb × 5 files) are misaligned.
+// 5 × 10MB images base64-encoded ≈ 70MB — exceeds the server limit. Either reduce MAX_MB
+// in useFileUpload.js to ~3MB (keeping 20MB server) or raise server limit accordingly.
 app.use(express.json({ limit: "20mb" }));
 
 // ── Proxy endpoint ────────────────────────────────────────────────────────────
