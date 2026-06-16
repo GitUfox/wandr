@@ -334,7 +334,6 @@ export default function Dashboard({
                 <div style={{ background:T.bg1, border:`1px solid ${T.border}`, borderRadius:12, padding:"2rem", textAlign:"center" }}>
                   <div style={{ fontSize:15, fontWeight:700, color:T.ink, marginBottom:6 }}>No activities loaded</div>
                   <div style={{ fontSize:13, color:T.muted }}>The activity database couldn't be built. Try starting a new trip.</div>
-                  {debugMsg && <div style={{ fontSize:11, color:T.accent, background:T.bg3, padding:"6px 10px", borderRadius:6, marginTop:8 }}>{debugMsg}</div>}
                 </div>
               )}
 
