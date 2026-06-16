@@ -198,20 +198,18 @@ export default async function handler(req, res) {
     const ct = upstream.headers.get("content-type");
     if (ct) res.setHeader("content-type", ct);
 
-    if (stream && upstream.body) {
-      const reader  = upstream.body.getReader();
-      const decoder = new TextDecoder();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        res.write(decoder.decode(value, { stream: true }));
-      }
-      res.end();
-    } else {
-      const data = await upstream.json();
-      res.json(data);
+    // Forward the raw upstream body for BOTH streaming and non-streaming
+    // requests — mirrors the proven pipe-through in server.js. Writing raw
+    // bytes (no decode/re-encode) works for SSE and one-shot JSON alike.
+    const reader = upstream.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(Buffer.from(value));
     }
-  } catch {
+    res.end();
+  } catch (err) {
+    console.error("[wandr proxy] upstream error:", err);
     if (!res.headersSent) {
       res.status(502).json({ error: "Couldn't reach the AI service. Please try again." });
     }
