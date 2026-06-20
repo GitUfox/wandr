@@ -13,15 +13,17 @@ const HEADERS = { "Content-Type": "application/json" };
 /**
  * Single-shot completion. Returns the parsed response object.
  */
-export async function complete(messages, maxTokens = 5000) {
+export async function complete(messages, maxTokens = 5000, signal) {
   let res;
   try {
     res = await fetch(API_URL, {
       method:  "POST",
       headers: HEADERS,
       body:    JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages }),
+      signal,
     });
-  } catch {
+  } catch (e) {
+    if (e?.name === "AbortError") throw e;
     // Network-level failure (server down, connection refused, offline)
     // Use the same message as 502 so the retry logic in useBuildTrip fires
     throw new Error("Couldn't reach the AI service. Please try again.");
@@ -40,15 +42,17 @@ export async function complete(messages, maxTokens = 5000) {
 /**
  * Streaming completion. Returns the raw Response for the caller to consume.
  */
-export async function stream(messages, maxTokens = 16000) {
+export async function stream(messages, maxTokens = 16000, signal) {
   let res;
   try {
     res = await fetch(API_URL, {
       method:  "POST",
       headers: HEADERS,
       body:    JSON.stringify({ model: MODEL, max_tokens: maxTokens, stream: true, messages }),
+      signal,
     });
-  } catch {
+  } catch (e) {
+    if (e?.name === "AbortError") throw e;
     // Network-level failure (server down, connection refused, offline)
     throw new Error("Couldn't reach the AI service. Please try again.");
   }
@@ -66,10 +70,11 @@ export async function stream(messages, maxTokens = 16000) {
 /**
  * Consume a streaming response and call onChunk(text) for each delta.
  */
-export async function consumeStream(response, onChunk) {
+export async function consumeStream(response, onChunk, signal) {
   const reader  = response.body.getReader();
   const decoder = new TextDecoder();
   while (true) {
+    if (signal?.aborted) { reader.cancel(); break; }
     const { done, value } = await reader.read();
     if (done) break;
     for (const line of decoder.decode(value).split("\n")) {

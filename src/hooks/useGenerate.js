@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { stream, consumeStream, complete } from "../lib/api.js";
 import { buildPlanPrompt, buildEditDayPrompt } from "../lib/prompts.js";
 import { spliceDayInPlan } from "../lib/utils.js";
@@ -8,12 +8,10 @@ export function useGenerate() {
   const [planMode, setPlanMode]       = useState(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [patchError, setPatchError]   = useState("");
-  const streamRef = useRef("");
+  const streamRef  = useRef("");
+  const abortRef   = useRef(null);
 
-  // TODO [wandr-audit 2026-06-04]: No AbortController — if the user navigates away mid-stream
-  // (e.g. hits "New trip"), consumeStream keeps running and updates orphaned state.
-  // Fix requires threading an AbortSignal through stream() and consumeStream() in api.js
-  // and calling abort() in a useEffect cleanup. Deferred — architectural change.
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   /**
    * Generate (or re-generate) a plan in the given mode.
@@ -21,7 +19,10 @@ export function useGenerate() {
    * editType        — "activities" | null — controls prompt framing.
    */
   async function generate(mode, trip, editInstruction = null, editType = null) {
-    if (planLoading) return; // prevent concurrent streams
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setPlanMode(mode);
     setPlanLoading(true);
     setPlanText("");
@@ -31,12 +32,13 @@ export function useGenerate() {
     const prompt = buildPlanPrompt(mode, trip, editInstruction, editType);
 
     try {
-      const res = await stream([{ role: "user", content: prompt }], 8000);
+      const res = await stream([{ role: "user", content: prompt }], 8000, controller.signal);
       await consumeStream(res, chunk => {
         streamRef.current += chunk;
         setPlanText(streamRef.current);
-      });
+      }, controller.signal);
     } catch (e) {
+      if (e?.name === "AbortError") return;
       // Sanitise: never show raw browser network errors (e.g. "Failed to fetch") to the user
       const msg = e.message || "";
       const isBrowserNetworkError = /failed to fetch|network|load failed/i.test(msg);
@@ -46,7 +48,7 @@ export function useGenerate() {
           : msg || "Something went wrong generating your plan. Please try again."
       );
     } finally {
-      setPlanLoading(false);
+      if (!controller.signal.aborted) setPlanLoading(false);
     }
   }
 
@@ -62,6 +64,9 @@ export function useGenerate() {
    */
   async function patchDay(dayIndex, dayLabel, instruction, trip) {
     if (planLoading) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setPlanLoading(true);
     setPatchError("");
 
@@ -78,13 +83,14 @@ export function useGenerate() {
     const prompt = buildEditDayPrompt(dayLabel, dayContent, instruction, trip);
 
     try {
-      const data = await complete([{ role: "user", content: prompt }], 3000);
+      const data = await complete([{ role: "user", content: prompt }], 3000, controller.signal);
       const raw  = data.content?.find(b => b.type === "text")?.text || "";
       if (!raw) throw new Error("No response from AI. Please try again.");
       const newPlan = spliceDayInPlan(currentPlan, dayIndex, raw);
       setPlanText(newPlan);
       streamRef.current = newPlan;
     } catch (e) {
+      if (e?.name === "AbortError") return;
       const msg = e.message || "";
       const isBrowserNetworkError = /failed to fetch|network|load failed/i.test(msg);
       // Don't overwrite existing planText — show error separately
@@ -94,11 +100,13 @@ export function useGenerate() {
           : msg || "Something went wrong updating the day. Please try again."
       );
     } finally {
-      setPlanLoading(false);
+      if (!controller.signal.aborted) setPlanLoading(false);
     }
   }
 
   function resetPlan() {
+    abortRef.current?.abort();
+    abortRef.current = null;
     setPlanText("");
     setPlanMode(null);
     setPlanLoading(false);
