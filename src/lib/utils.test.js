@@ -126,7 +126,7 @@ describe("recoverJSON", () => {
   });
 
   it("throws when JSON is unrecoverable", () => {
-    expect(() => recoverJSON("this is not json at all")).toThrow("JSON unrecoverable");
+    expect(() => recoverJSON("this is not json at all")).toThrow("Couldn't read the trip data. You can still generate a plan below.");
     expect(() => recoverJSON("")).toThrow();
   });
 });
