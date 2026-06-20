@@ -5,6 +5,9 @@
  * Any change here applies to both environments automatically.
  */
 
+import { Redis }      from "@upstash/redis";
+import { Ratelimit }  from "@upstash/ratelimit";
+
 const TARGET = "https://api.anthropic.com/v1/messages";
 
 // Only these models may be requested — prevents key abuse for arbitrary workloads.
@@ -44,15 +47,51 @@ export function setCorsHeaders(res, origin) {
 }
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
-// TODO: replace with Upstash Redis before wide public launch.
-// In Vercel serverless, this Map resets on every cold start — it's a no-op stub.
-// In the Express dev server it persists for the lifetime of the process.
 
 const LIMIT_TRIPS = 3;
 const LIMIT_PLANS = 10;
 export const WINDOW_MS = 24 * 60 * 60 * 1000;
 
-// Exported so server.js can prune stale entries in its setInterval.
+// ── Redis-backed limiters (production) ───────────────────────────────────────
+//
+// Initialized only when Upstash credentials are present in the environment.
+// When absent (local dev, or if Redis is misconfigured), all rate-limit calls
+// fall through to the in-memory stub below — users are never locked out due to
+// a missing Redis connection.
+//
+// To enable: set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN in the
+// Vercel dashboard. Never commit these values to source control.
+
+function createRedisLimiters() {
+  const url   = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+
+  const redis = new Redis({ url, token });
+
+  return {
+    trips: new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(LIMIT_TRIPS, "24 h"),
+      prefix:  "wandr:trips",
+    }),
+    plans: new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(LIMIT_PLANS, "24 h"),
+      prefix:  "wandr:plans",
+    }),
+  };
+}
+
+const redisLimiters = createRedisLimiters();
+
+// ── In-memory fallback stub ───────────────────────────────────────────────────
+//
+// Used when Redis is not configured. In Vercel serverless this Map resets on
+// every cold start (effectively no-op). In the Express dev server it persists
+// for the process lifetime and provides real limiting in development.
+
+// Exported so server.js can prune stale entries in its hourly setInterval.
 export const rateLimitStore = new Map();
 
 function getClientIp(req) {
@@ -67,7 +106,7 @@ function humanTime(ms) {
   return `${m} minute${m !== 1 ? "s" : ""}`;
 }
 
-function checkRateLimit(ip, isStream) {
+function checkRateLimitMemory(ip, isStream) {
   const now = Date.now();
   let entry = rateLimitStore.get(ip);
   if (!entry || now > entry.resetAt) {
@@ -86,6 +125,29 @@ function checkRateLimit(ip, isStream) {
     entry.trips++;
   }
   return null;
+}
+
+async function checkRateLimitRedis(ip, isStream) {
+  const limiter = isStream ? redisLimiters.plans : redisLimiters.trips;
+  const { success, reset } = await limiter.limit(ip);
+  if (!success) {
+    const type = isStream ? "plan" : "trip";
+    return `You've reached today's ${type} limit. Check back in ${humanTime(reset - Date.now())}.`;
+  }
+  return null;
+}
+
+// Returns an error string if the IP is over limit, null if the request is allowed.
+async function checkRateLimit(ip, isStream) {
+  if (redisLimiters) {
+    try {
+      return await checkRateLimitRedis(ip, isStream);
+    } catch (err) {
+      // Fail open — a Redis outage must never lock out all users.
+      console.error("[wandr proxy] Redis rate limit error, falling back to memory:", err.message);
+    }
+  }
+  return checkRateLimitMemory(ip, isStream);
 }
 
 // ── Core proxy handler ────────────────────────────────────────────────────────
@@ -119,7 +181,7 @@ export async function handleAnthropicProxy(req, res, { key, isDev }) {
   }
 
   if (!isDev) {
-    const limitErr = checkRateLimit(getClientIp(req), !!stream);
+    const limitErr = await checkRateLimit(getClientIp(req), !!stream);
     if (limitErr) {
       res.status(429).json({ error: limitErr });
       return;
