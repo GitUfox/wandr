@@ -26,8 +26,8 @@ export const STEPS = [
   },
   {
     id:"logistics",
-    q:"Where are you staying & how are you getting around?",
-    sub:"Accommodation and transport — both help us plan realistic days",
+    q:"How do you like to travel?",
+    sub:"Getting around, pace, and accommodation shape every day",
     type:"logistics",
   },
   {
@@ -43,19 +43,18 @@ export const STEPS = [
     type:"chips+text",
     ph:"e.g. Love craft beer bars, record shops, live football",
     groups:[
-      { label:"Food & Drink",      opts:["Fine dining","Street food & markets","Coffee culture","Craft cocktails & wine","Cooking / food experiences"] },
-      { label:"Outdoors & Active", opts:["Hiking & nature","Beaches & water","Adventure sports"] },
-      { label:"Culture & Arts",    opts:["History & museums","Contemporary art","Architecture","Music & live shows","Festivals & events"] },
-      { label:"Local Life",        opts:["Local neighbourhoods","Photography","Shopping","Nightlife","Wellness & spas"] },
-      { label:"Sports & Events",   opts:["Live sports"] },
+      { label:"Food & Drink",      opts:["Street food & markets","Sit-down dining","Coffee culture","Cocktails & wine","Cooking experiences"] },
+      { label:"Outdoors & Active", opts:["Hiking & nature","Beaches & water","Adventure sports","Day trips & excursions"] },
+      { label:"Culture & Arts",    opts:["History & museums","Architecture","Contemporary art","Music & live shows","Festivals & events","Live sports"] },
+      { label:"Local Life",        opts:["Photo spots & scenic routes","Nightlife","Shopping","Wellness & spas"] },
     ],
   },
   {
     id:"notes",
     q:"Anything else we should know?",
-    sub:"Must-dos, sporting events, special occasions, dietary needs, vibe — anything",
+    sub:"Must-dos, things to avoid, dietary needs, special occasions, vibe — anything",
     type:"textarea+upload",
-    ph:"e.g. Want to catch a live match · Anniversary trip · Vegetarian · Love slow mornings · First time abroad",
+    ph:"e.g. No museums · Vegetarian · Want to catch a live match · Anniversary trip · Love slow mornings",
   },
 ];
 

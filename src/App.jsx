@@ -57,16 +57,16 @@ export default function Wandr() {
   const [answers, setAnswers] = useState({});
 
   // Per-step form state
-  const [cur, setCur]                   = useState("");
-  const [chips, setChips]               = useState([]);
-  const [avoidMode, setAvoidMode]       = useState(false);
-  const [avoidChips, setAvoidChips]     = useState([]);
-  const [budget, setBudget]             = useState(150);
-  const [d1, setD1]                     = useState("");
-  const [d2, setD2]                     = useState("");
-  const [logStay, setLogStay]           = useState("");
-  const [logTransChips, setLogTransChips] = useState([]);
-  const [logTransText, setLogTransText]   = useState("");
+  const [cur, setCur]                     = useState("");
+  const [chips, setChips]                 = useState([]);
+  const [kids, setKids]                   = useState("");
+  const [budget, setBudget]               = useState(120);
+  const [d1, setD1]                       = useState("");
+  const [d2, setD2]                       = useState("");
+  const [logStay, setLogStay]             = useState("");
+  const [logTransport, setLogTransport]   = useState("");
+  const [logPace, setLogPace]             = useState("");
+  const [logFirstTime, setLogFirstTime]   = useState("");
 
   // Trip + dashboard
   const [trip, setTrip]               = useState(null);
@@ -85,10 +85,13 @@ export default function Wandr() {
   // ── Interview helpers ─────────────────────────────────────────────────────
   function currentVal() {
     if (S.type === "chips")      return chips;
-    if (S.type === "chips+text") return { chips, text: cur };
+    if (S.type === "chips+text") {
+      if (S.id === "party" && kids) return { chips, text: cur, kids };
+      return { chips, text: cur };
+    }
     if (S.type === "daterange")  return { start: d1, end: d2 };
     if (S.type === "budget")     return budget;
-    if (S.type === "logistics")  return { stay: logStay, transport: { chips: logTransChips, text: logTransText } };
+    if (S.type === "logistics")  return { stay: logStay, transport: logTransport, pace: logPace, firstTime: logFirstTime };
     return cur;
   }
 
@@ -96,23 +99,23 @@ export default function Wandr() {
     const v = currentVal();
     if (S.type === "chips")      return v.length > 0;
     if (S.type === "chips+text") return S.id === "interests"
-      ? (chips.length > 0 || cur.trim().length > 1 || avoidChips.length > 0)
+      ? (chips.length > 0 || cur.trim().length > 1)
       : (v.chips.length > 0 || v.text.trim().length > 1);
     if (S.type === "daterange")  return !!(d1 && d2 && d1.length >= 8 && d2.length >= 8 && d2 > d1);
     if (S.type === "budget")     return true;
-    if (S.type === "logistics")  return logStay.trim().length > 1;
-    if (S.id === "avoid" || S.id === "notes") return true;
+    if (S.type === "logistics")  return true;
+    if (S.id === "notes")        return true;
     return String(v).trim().length > 1;
   }
 
   function advance() {
-    const val = S.id === "interests" ? { chips, text: cur, avoidChips } : currentVal();
+    const val = currentVal();
     const newAns = { ...answers, [S.id]: val };
     setAnswers(newAns);
     if (step < STEPS.length - 1) {
       setDir(1);
       setStep(s => s + 1);
-      setCur(""); setChips([]); setAvoidMode(false); setAvoidChips([]);
+      setCur(""); setChips([]); setKids("");
     } else {
       handleBuildTrip(newAns);
     }
@@ -121,7 +124,7 @@ export default function Wandr() {
   function goBack() {
     setDir(-1);
     setStep(s => s - 1);
-    setCur(""); setChips([]); setAvoidMode(false); setAvoidChips([]);
+    setCur(""); setChips([]); setKids("");
   }
 
   // ── API actions ───────────────────────────────────────────────────────────
@@ -171,8 +174,8 @@ export default function Wandr() {
   // ── Reset / resume ────────────────────────────────────────────────────────
   function resetAll() {
     setScreen("welcome"); setStep(0); setAnswers({}); setDir(1);
-    setCur(""); setChips([]); setAvoidMode(false); setAvoidChips([]);
-    setBudget(150); setD1(""); setD2(""); setLogStay(""); setLogTransChips([]); setLogTransText("");
+    setCur(""); setChips([]); setKids("");
+    setBudget(120); setD1(""); setD2(""); setLogStay(""); setLogTransport(""); setLogPace(""); setLogFirstTime("");
     setTrip(null); setTab("plan"); setExpandedCat(null);
     resetFiles(); resetPlan();
   }
@@ -195,9 +198,9 @@ export default function Wandr() {
               <WelcomeScreen
                 onStart={dest => {
                   // Reset all per-step form state so stale values don't bleed into a new trip
-                  setCur(""); setChips([]); setAvoidMode(false); setAvoidChips([]);
-                  setBudget(150); setD1(""); setD2("");
-                  setLogStay(""); setLogTransChips([]); setLogTransText("");
+                  setCur(""); setChips([]); setKids("");
+                  setBudget(120); setD1(""); setD2("");
+                  setLogStay(""); setLogTransport(""); setLogPace(""); setLogFirstTime("");
                   setDir(1);
                   setAnswers({ destination: dest });
                   setScreen("interview");
@@ -219,13 +222,13 @@ export default function Wandr() {
                 onBack={goBack}
                 cur={cur} setCur={setCur}
                 chips={chips} setChips={setChips}
-                avoidMode={avoidMode} setAvoidMode={setAvoidMode}
-                avoidChips={avoidChips} setAvoidChips={setAvoidChips}
+                kids={kids} setKids={setKids}
                 budget={budget} setBudget={setBudget}
                 d1={d1} setD1={setD1} d2={d2} setD2={setD2}
                 logStay={logStay} setLogStay={setLogStay}
-                logTransChips={logTransChips} setLogTransChips={setLogTransChips}
-                logTransText={logTransText} setLogTransText={setLogTransText}
+                logTransport={logTransport} setLogTransport={setLogTransport}
+                logPace={logPace} setLogPace={setLogPace}
+                logFirstTime={logFirstTime} setLogFirstTime={setLogFirstTime}
                 uploadedFiles={uploadedFiles} uploadError={uploadError} fileInputRef={fileInputRef}
                 handleFiles={handleFiles} removeFile={removeFile}
                 isValid={isValid()}

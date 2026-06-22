@@ -14,17 +14,6 @@ const inputSt = {
   marginBottom:"1.25rem", colorScheme:"dark", boxSizing:"border-box",
 };
 
-const AVOID_OPTS = {
-  "Food & Drink":      ["Tourist trap restaurants","Skip fine dining"],
-  "Outdoors & Active": ["Skip beaches","Skip strenuous hikes"],
-  "Culture & Arts":    ["Skip museums","Skip guided tours"],
-  "Local Life":        ["Skip nightlife","Skip shopping"],
-  "Sports & Events":   ["Skip live sports"],
-};
-
-const UNIVERSAL_AVOIDS = [
-  "Crowded tourist spots","Anything early morning","Religious sites","Extreme sports","Shopping malls",
-];
 
 const STEP_VARIANTS = {
   enter:  (dir) => ({ x: dir > 0 ? 32 : -32, opacity: 0 }),
@@ -39,13 +28,13 @@ export default function InterviewFlow({
   onWelcome, onAdvance, onBack,
   cur, setCur,
   chips, setChips,
-  avoidMode, setAvoidMode,
-  avoidChips, setAvoidChips,
+  kids, setKids,
   budget, setBudget,
   d1, setD1, d2, setD2,
   logStay, setLogStay,
-  logTransChips, setLogTransChips,
-  logTransText, setLogTransText,
+  logTransport, setLogTransport,
+  logPace, setLogPace,
+  logFirstTime, setLogFirstTime,
   uploadedFiles, uploadError, fileInputRef,
   handleFiles, removeFile,
   isValid,
@@ -56,6 +45,7 @@ export default function InterviewFlow({
   function toggleChip(o) {
     if (S.singleSelect) {
       setChips(p => p.includes(o) ? [] : [o]);
+      if (S.id === "party") setKids("");
     } else {
       setChips(p => p.includes(o) ? p.filter(x => x !== o) : [...p, o]);
     }
@@ -98,37 +88,65 @@ export default function InterviewFlow({
 
         {/* ── Logistics ── */}
         {S.type === "logistics" && (
-          <div style={{ marginBottom:"1.25rem" }}>
-            <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:5 }}>Where are you staying?</div>
-            <input type="text" value={logStay} onChange={e => setLogStay(e.target.value)}
-              placeholder="Airbnb in Trastevere · Hotel near city centre · Staying with family in Shinjuku"
-              style={{...inputSt, marginBottom:12}} />
-            <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>How are you getting around?</div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:7, marginBottom:8 }}>
-              {[
-                ["Own / rented car", ["I have my own vehicle","Renting a car"]],
-                ["Rideshare / taxi",  ["Rideshare / taxi app"]],
-                ["Public transit",    ["Public transit"]],
-                ["Walk / cycle",      ["Walking mostly","Cycling"]],
-                ["Scooter / moto",    ["Scooter / moto"]],
-                ["Borrowed car",      ["Using a family / friend's car"]],
-              ].map(([label, vals]) => {
-                const sel = vals.some(v => logTransChips.includes(v));
-                return (
-                  <button key={label} onClick={() => {
-                    setLogTransChips(p => {
-                      const hasAny = vals.some(v => p.includes(v));
-                      return hasAny ? p.filter(x => !vals.includes(x)) : [...p, ...vals.filter(v => !p.includes(v))];
-                    });
-                  }} style={{ display:"flex", alignItems:"center", gap:8, padding:"9px 11px", borderRadius:9, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, fontSize:12, transition:"all .15s", textAlign:"left" }}>
-                    {label}
-                  </button>
-                );
-              })}
+          <div style={{ marginBottom:"1.25rem", display:"flex", flexDirection:"column", gap:18 }}>
+
+            {/* Getting around */}
+            <div>
+              <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>Getting around</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+                {["Got a car", "Transit & rideshare", "Walking & cycling"].map(o => {
+                  const sel = logTransport === o;
+                  return (
+                    <button key={o} onClick={() => setLogTransport(p => p === o ? "" : o)}
+                      style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                      {o}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <input type="text" value={logTransText} onChange={e => setLogTransText(e.target.value)}
-              placeholder="e.g. Borrowing a family car, also plan to use rideshare at night"
-              style={{...inputSt, marginBottom:0, fontSize:12.5}} />
+
+            {/* Pace */}
+            <div>
+              <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>Pace</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+                {["Slow & wandering", "Balanced", "Pack it in"].map(o => {
+                  const sel = logPace === o;
+                  return (
+                    <button key={o} onClick={() => setLogPace(p => p === o ? "" : o)}
+                      style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                      {o}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* First time? */}
+            <div>
+              <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>First time there?</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+                {["First visit", "Been before"].map(o => {
+                  const sel = logFirstTime === o;
+                  return (
+                    <button key={o} onClick={() => setLogFirstTime(p => p === o ? "" : o)}
+                      style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                      {o}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Where staying — optional */}
+            <div>
+              <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:5 }}>
+                Where staying <span style={{ fontWeight:400, letterSpacing:"normal", textTransform:"none", color:T.hint, opacity:.6 }}>· optional</span>
+              </div>
+              <input type="text" value={logStay} onChange={e => setLogStay(e.target.value)}
+                placeholder="Airbnb in Trastevere · Hotel near city centre · Staying with family"
+                style={{...inputSt, marginBottom:0}} />
+            </div>
           </div>
         )}
 
@@ -202,69 +220,65 @@ export default function InterviewFlow({
         {/* ── Chips + text (interests / party) ── */}
         {S.type === "chips+text" && (
           <div style={{ marginBottom:"1.25rem" }}>
-            {/* Love / Skip toggle — interests step only */}
-            {S.id === "interests" && (
-              <div style={{ display:"flex", background:T.bg2, borderRadius:8, padding:3, marginBottom:14, border:`1px solid ${T.border}` }}>
-                {[["What I love", false], ["What to skip", true]].map(([label, mode]) => (
-                  <button key={label} onClick={() => setAvoidMode(mode)}
-                    style={{ flex:1, padding:"7px 0", fontSize:12, fontWeight:700, borderRadius:6, background:avoidMode===mode?T.bg3:"transparent", color:avoidMode===mode?T.ink:T.hint, border:avoidMode===mode?`1px solid ${T.border}`:"1px solid transparent", cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
             {/* Grouped chips (interests) */}
             {S.groups ? (
               <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:10 }}>
-                {S.groups.map(group => {
-                  const opts         = avoidMode ? (AVOID_OPTS[group.label] || []) : group.opts;
-                  const extraAvoids  = avoidMode && group.label === "Food & Drink" ? UNIVERSAL_AVOIDS : [];
-                  const allOpts      = [...opts, ...extraAvoids];
-                  if (allOpts.length === 0) return null;
-                  return (
-                    <div key={group.label}>
-                      <div style={{ fontSize:10, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:6 }}>{group.label}</div>
-                      <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                        {allOpts.map(o => {
-                          const activeList = avoidMode ? avoidChips : chips;
-                          const setActive  = avoidMode ? setAvoidChips : setChips;
-                          const sel        = activeList.includes(o);
-                          const selColor   = avoidMode ? "#e07070" : T.accent;
-                          const selBg      = avoidMode ? "#251515" : "#2a1a12";
-                          const selBdr     = avoidMode ? "#602020" : T.accent;
-                          return (
-                            <button key={o} onClick={() => setActive(p => p.includes(o) ? p.filter(x => x !== o) : [...p, o])}
-                              style={{ padding:"6px 13px", fontSize:12, borderRadius:100, background:sel?selBg:T.bg2, border:sel?`1.5px solid ${selBdr}`:`1px solid ${T.border}`, color:sel?selColor:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
-                              {o}
-                            </button>
-                          );
-                        })}
-                      </div>
+                {S.groups.map(group => (
+                  <div key={group.label}>
+                    <div style={{ fontSize:10, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:6 }}>{group.label}</div>
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                      {group.opts.map(o => {
+                        const sel = chips.includes(o);
+                        return (
+                          <button key={o} onClick={() => setChips(p => p.includes(o) ? p.filter(x => x !== o) : [...p, o])}
+                            style={{ padding:"6px 13px", fontSize:12, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                            {o}
+                          </button>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             ) : (
               /* Flat chips (party step) */
-              <div style={{ display:"flex", flexWrap:"wrap", gap:7, marginBottom:10 }}>
-                {S.opts.map(o => {
-                  const sel = chips.includes(o);
-                  return (
-                    <button key={o} onClick={() => toggleChip(o)}
-                      style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?T.accent:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.white:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
-                      {o}
-                    </button>
-                  );
-                })}
-              </div>
+              <>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:7, marginBottom:10 }}>
+                  {S.opts.map(o => {
+                    const sel = chips.includes(o);
+                    return (
+                      <button key={o} onClick={() => toggleChip(o)}
+                        style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?T.accent:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.white:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                        {o}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Kids sub-question — shown when a group is selected (not Solo) */}
+                {S.id === "party" && chips.length > 0 && !chips.includes("Solo") && (
+                  <div style={{ marginBottom:10, padding:"12px 14px", background:T.bg2, borderRadius:10, border:`1px solid ${T.border}` }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:T.muted, marginBottom:8 }}>Any kids in the group?</div>
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                      {["No kids", "Yes — under 5", "Yes — 5 to 12", "Yes — teens"].map(o => {
+                        const sel = kids === o;
+                        return (
+                          <button key={o} onClick={() => setKids(k => k === o ? "" : o)}
+                            style={{ padding:"6px 12px", fontSize:12, borderRadius:100, background:sel?"#2a1a12":T.bg3, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                            {o}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
             <input type="text" value={cur} onChange={e => setCur(e.target.value)}
-              placeholder={avoidMode && S.id === "interests" ? "e.g. No early museums, skip beach clubs" : S.ph}
+              placeholder={S.ph}
               style={{...inputSt, marginBottom:0, fontSize:12.5}} />
-            {S.id === "interests" && (chips.length > 0 || avoidChips.length > 0) && (
-              <div style={{ display:"flex", gap:10, marginTop:8 }}>
-                {chips.length > 0      && <span style={{ fontSize:11, color:T.accent }}>{chips.length} interests</span>}
-                {avoidChips.length > 0 && <span style={{ fontSize:11, color:"#e07070" }}>{avoidChips.length} to skip</span>}
+            {S.id === "interests" && chips.length > 0 && (
+              <div style={{ marginTop:8 }}>
+                <span style={{ fontSize:11, color:T.accent }}>{chips.length} interest{chips.length !== 1 ? "s" : ""} selected</span>
               </div>
             )}
           </div>
@@ -275,19 +289,20 @@ export default function InterviewFlow({
           <div style={{ marginBottom:"1.25rem" }}>
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {[
-                [50,  "$",    "Budget",    "Hostels, street food, local transport"],
-                [120, "$$",   "Mid-range", "3-star hotels, sit-down restaurants"],
-                [250, "$$$",  "Upper",     "Boutique stays, fine dining"],
-                [450, "$$$$", "Luxury",    "5-star, private experiences"],
-                [0,   "~",    "Hosted",    "Staying with family or friends"],
-              ].map(([v, tier, label, desc]) => {
+                [40,  "Local",       "~$30–50 / day",  "Street food, free sights, local spots"],
+                [120, "Comfortable", "~$75–120 / day", "Sit-down restaurants, paid attractions"],
+                [300, "Splurge",     "~$200+ / day",   "Fine dining, premium & private experiences"],
+                [0,   "Hosted",      "",               "Staying with locals, flexible spend"],
+              ].map(([v, label, price, desc]) => {
                 const sel = budget === v;
                 return (
                   <button key={v} onClick={() => setBudget(v)}
                     style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 14px", borderRadius:10, background:sel?"#2a1a12":T.bg1, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, cursor:"pointer", fontFamily:T.font, textAlign:"left", transition:"all .15s" }}>
-                    <div style={{ fontSize:12, fontWeight:800, color:sel?T.accent:T.hint, letterSpacing:"-.01em", width:32, textAlign:"center", flexShrink:0 }}>{tier}</div>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontSize:13, fontWeight:700, color:sel?T.accent:T.ink, marginBottom:1 }}>{label}{v > 0 ? ` · ~$${v}/day` : ""}</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:sel?T.accent:T.ink, marginBottom:1 }}>
+                        {label}
+                        {price && <span style={{ fontWeight:400, fontSize:12, color:sel?"#a06040":T.hint, marginLeft:8 }}>{price}</span>}
+                      </div>
                       <div style={{ fontSize:11.5, color:sel?"#a06040":T.hint }}>{desc}</div>
                     </div>
                     {sel && <span style={{ fontSize:14, color:T.accent }}>✓</span>}
@@ -309,7 +324,7 @@ export default function InterviewFlow({
             {step === STEPS.length - 1 ? "Build my trip →" : "Continue →"}
           </button>
         </div>
-        {(S.id === "avoid" || S.id === "notes") && (
+        {S.id === "notes" && (
           <p style={{ fontSize:11, color:T.hint, textAlign:"center", marginTop:12 }}>Optional — tap Continue to skip</p>
         )}
 

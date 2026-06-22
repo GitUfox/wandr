@@ -35,12 +35,38 @@ function budgetInstruction(budget) {
   if (budget === 0)
     return "Staying with family/friends — no accommodation cost. Focus on free and low-cost activities. Street food and casual local dining. Flag any paid options as optional splurges.";
   if (budget <= 60)
-    return "Budget traveler (~$50/day). Prioritise free attractions, street food, markets, cheap local eats. Avoid fine dining or expensive experiences. Hostels, walking, local transit.";
+    return "Low budget (~$30–50/day). Street food, markets, free sights. Skip paid attractions where free alternatives exist.";
   if (budget <= 150)
-    return "Mid-range budget (~$120/day). Comfortable sit-down restaurants, standard admission prices, occasional premium experience is fine. Mix of free and paid activities.";
+    return "Comfortable budget (~$75–120/day). Sit-down restaurants, standard paid attractions. Occasional premium experience is fine.";
   if (budget <= 300)
-    return "Upper-mid budget (~$250/day). Quality over volume. Fine dining is appropriate. Include premium experiences worth paying for. Skip budget-only options.";
-  return "Luxury budget (~$450+/day). High-end throughout — tasting menus, private experiences, exclusive venues. No budget compromises. Concierge-level recommendations.";
+    return "Higher budget (~$200+/day). Quality dining and premium experiences. Skip budget-only options.";
+  return "Luxury budget (~$450+/day). High-end throughout — tasting menus, private experiences, exclusive venues.";
+}
+
+function paceInstruction(pace) {
+  if (pace === "Slow & wandering")
+    return "Set a relaxed pace — max 2–3 activities per day with breathing room. Long lunches, spontaneous wandering, and quiet time are part of the plan.";
+  if (pace === "Pack it in")
+    return "High-energy itinerary — 4–6 activities per day, efficient routing, minimal downtime. The traveler would rather be tired than bored.";
+  return "Balanced pace — 3–4 activities per day, mix of planned and unstructured time.";
+}
+
+function firstTimeInstruction(dest, firstTime) {
+  if (firstTime === "First visit")
+    return `First-time visitor to ${dest}. Include essential classics and iconic must-sees alongside hidden gems.`;
+  if (firstTime === "Been before")
+    return `Returning visitor to ${dest}. Deprioritise obvious tourist landmarks. Prioritise neighbourhood gems, local-only spots, and experiences that reward repeat visitors.`;
+  return "";
+}
+
+function kidsInstruction(kids) {
+  if (!kids || kids === "No kids") return "";
+  const map = {
+    "Yes — under 5":  "Toddlers in the group (under 5). Stroller-accessible venues only. Short activity blocks. Nap-schedule-friendly timing. Avoid long waits and loud venues.",
+    "Yes — 5 to 12":  "School-age kids (5–12). Hands-on and interactive experiences. Kid-friendly dining with familiar options. Keep pace manageable.",
+    "Yes — teens":    "Teenagers in the group. Skip anything 'too young'. Include culture, food, and independence-friendly spots. Energy matters more than educational value.",
+  };
+  return map[kids] || "";
 }
 
 function stayInstruction(stayLine) {
@@ -81,12 +107,19 @@ export function buildTripPrompt(answers, uploadedFiles) {
 
   const stayLine      = a.logistics?.stay || "not specified";
   const transportLine = a.logistics?.transport ? arr(a.logistics.transport) : "not specified";
+  const pace          = a.logistics?.pace     || "";
+  const firstTime     = a.logistics?.firstTime || "";
+  const kidsVal       = a.party?.kids         || "";
 
   const interestsLine   = arr(a.interests);
   const avoidFromChips  = Array.isArray(a.interests?.avoidChips)
     ? a.interests.avoidChips.join(", ")
     : "";
   const avoidLine = avoidFromChips || arr(a.avoid) || "nothing";
+
+  const paceText      = pace      ? paceInstruction(pace)                          : "";
+  const firstTimeText = firstTime ? firstTimeInstruction(a.destination, firstTime) : "";
+  const kidsText      = kidsVal   ? kidsInstruction(kidsVal)                       : "";
 
   const textFileContext = (uploadedFiles || [])
     .filter(f => !f.isImage)
@@ -101,13 +134,13 @@ export function buildTripPrompt(answers, uploadedFiles) {
 
 DESTINATION: ${a.destination}
 DATES: ${safeStart} → ${safeEnd} (${n} nights)
-PARTY: ${arr(a.party)}
+PARTY: ${arr(a.party)}${kidsVal ? ` · Kids: ${kidsVal}` : ""}
 STAYING: ${stayLine}
 TRANSPORT: ${transportLine}
 BUDGET: ${budgetLine}
 INTERESTS: ${interestsLine}
 AVOID: ${avoidLine}
-NOTES: ${a.notes || "none"}
+NOTES: ${a.notes || "none"}${pace ? `\nPACE: ${pace}` : ""}${firstTime ? `\nFIRST VISIT: ${firstTime}` : ""}
 ${textFileContext ? `\nUPLOADED CONTEXT:\n${textFileContext}` : ""}
 
 INSTRUCTIONS — apply these to every selection you make:
@@ -119,7 +152,9 @@ LOCATION: ${stayInstruction(stayLine)}
 TRANSPORT: ${transportInstruction(transportLine)}
 
 BUDGET: ${budgetInstruction(a.budget)}
-
+${paceText ? `\nPACE: ${paceText}` : ""}
+${firstTimeText ? `VISIT HISTORY: ${firstTimeText}` : ""}
+${kidsText ? `KIDS: ${kidsText}` : ""}
 INTERESTS: Only include categories that genuinely match the traveler's stated interests. If an interest category has no relevant match, omit it entirely rather than filling it with generic picks.
 
 AVOID: Never include anything related to: ${avoidLine}. If a category would only contain avoided items, leave it empty.
@@ -163,6 +198,12 @@ export function buildEditDayPrompt(dayLabel, dayContent, instruction, trip) {
   const budgetLabel   = a.budget === 0 ? "staying with family/friends" : `~${a.budget} USD/day`;
   const avoidText     = Array.isArray(a.interests?.avoidChips) && a.interests.avoidChips.length > 0
     ? a.interests.avoidChips.join(", ") : "nothing";
+  const pace          = a.logistics?.pace     || "";
+  const firstTime     = a.logistics?.firstTime || "";
+  const kidsVal       = a.party?.kids         || "";
+  const paceText      = pace      ? paceInstruction(pace)                          : "";
+  const firstTimeText = firstTime ? firstTimeInstruction(a.destination, firstTime) : "";
+  const kidsText      = kidsVal   ? kidsInstruction(kidsVal)                       : "";
 
   const allItems = Object.entries(trip.categories || {})
     .filter(([cat]) => !["breakfast","lunch","dinner"].includes(cat))
@@ -193,17 +234,17 @@ ${dayContent}
 
 TRAVELER
 - Destination: ${a.destination}
-- Party: ${arr(a.party)}
+- Party: ${arr(a.party)}${kidsVal ? ` · Kids: ${kidsVal}` : ""}
 - Budget: ${budgetLabel}
 - Staying: ${stayLine || "not specified"}
-- Transport: ${transportLine || "not specified"}
+- Transport: ${transportLine || "not specified"}${pace ? `\n- Pace: ${pace}` : ""}${firstTime ? `\n- First visit: ${firstTime}` : ""}
 - Interests: ${arr(a.interests)}
 - Avoid: ${avoidText}
 
 APPLY THESE RULES:
 PARTY: ${partyInstruction(a)}
 ROUTING: ${stayInstruction(stayLine || "not specified")} ${transportInstruction(transportLine || "not specified")}
-BUDGET: ${budgetInstruction(a.budget)}
+BUDGET: ${budgetInstruction(a.budget)}${paceText ? `\nPACE: ${paceText}` : ""}${firstTimeText ? `\nVISIT HISTORY: ${firstTimeText}` : ""}${kidsText ? `\nKIDS: ${kidsText}` : ""}
 AVOID: Never suggest anything related to: ${avoidText}.
 
 ACTIVITIES TO USE:
@@ -264,6 +305,12 @@ export function buildPlanPrompt(mode, trip, editInstruction = null, editType = n
   const avoidText     = Array.isArray(a.interests?.avoidChips) && a.interests.avoidChips.length > 0
     ? a.interests.avoidChips.join(", ")
     : "nothing";
+  const pace          = a.logistics?.pace     || "";
+  const firstTime     = a.logistics?.firstTime || "";
+  const kidsVal       = a.party?.kids         || "";
+  const paceText      = pace      ? paceInstruction(pace)                          : "";
+  const firstTimeText = firstTime ? firstTimeInstruction(a.destination, firstTime) : "";
+  const kidsText      = kidsVal   ? kidsInstruction(kidsVal)                       : "";
 
   const today       = new Date().toISOString().slice(0, 10);
   const startDate   = parseISODate(a.dates?.start);
@@ -294,10 +341,10 @@ ${modeInstructions[mode]}
 
 TRAVELER
 - Destination: ${a.destination}
-- Party: ${arr(a.party)}
+- Party: ${arr(a.party)}${kidsVal ? ` · Kids: ${kidsVal}` : ""}
 - Budget: ${budgetLabel}
 - Staying: ${stayLine || "not specified"}
-- Transport: ${transportLine || "not specified"}
+- Transport: ${transportLine || "not specified"}${pace ? `\n- Pace: ${pace}` : ""}${firstTime ? `\n- First visit: ${firstTime}` : ""}
 - Interests: ${arr(a.interests)}
 - Avoid: ${avoidText}
 - Notes: ${a.notes || "none"}
@@ -308,7 +355,9 @@ APPLY THESE RULES TO THE ITINERARY:
 PARTY: ${partyInstruction(a)}
 
 ROUTING: ${stayInstruction(stayLine || "not specified")} ${transportInstruction(transportLine || "not specified")}
-
+${paceText ? `\nPACE: ${paceText}` : ""}
+${firstTimeText ? `VISIT HISTORY: ${firstTimeText}` : ""}
+${kidsText ? `KIDS: ${kidsText}` : ""}
 TEMPORAL GROUNDING: Today is ${today}. Trip dates: ${safeStart} → ${safeEnd}.${mode === "full" && dayHeaderBlock ? `\n${dayHeaderBlock}` : ""} Always use these exact day labels — never guess or infer day-of-week independently.
 
 ACCURACY RULES:
