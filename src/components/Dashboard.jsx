@@ -267,21 +267,23 @@ export default function Dashboard({
                   </button>
                 );
               })()}
-              {/* Secondary modes */}
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:6, marginBottom:planMode?10:0 }}>
-                {MODES.slice(1).map(m => {
-                  const isActive = planMode === m.id;
-                  return (
-                    <button key={m.id} onClick={() => onGenerate(m.id)}
-                      style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 12px", borderRadius:10, background:isActive?"#2a1a12":T.bg1, border:isActive?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, cursor:"pointer", fontFamily:T.font, textAlign:"left", transition:"all .15s" }}>
-                      <div>
-                        <div style={{ fontSize:12, fontWeight:700, color:isActive?T.accent:T.ink, lineHeight:1.3 }}>{m.label}</div>
-                        <div style={{ fontSize:10.5, color:isActive?"#a06040":T.hint, lineHeight:1.4 }}>{m.desc}</div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Secondary modes — only render when more than the hero mode exists */}
+              {MODES.length > 1 && (
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:6, marginBottom:planMode?10:0 }}>
+                  {MODES.slice(1).map(m => {
+                    const isActive = planMode === m.id;
+                    return (
+                      <button key={m.id} onClick={() => onGenerate(m.id)}
+                        style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 12px", borderRadius:10, background:isActive?"#2a1a12":T.bg1, border:isActive?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, cursor:"pointer", fontFamily:T.font, textAlign:"left", transition:"all .15s" }}>
+                        <div>
+                          <div style={{ fontSize:12, fontWeight:700, color:isActive?T.accent:T.ink, lineHeight:1.3 }}>{m.label}</div>
+                          <div style={{ fontSize:10.5, color:isActive?"#a06040":T.hint, lineHeight:1.4 }}>{m.desc}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               {/* Patch error banner (day-edit failure — plan text is preserved) */}
               {patchError && !planLoading && (
                 <div style={{ display:"flex", alignItems:"center", gap:9, padding:"10px 14px", background:"rgba(180,60,40,.12)", border:"1px solid rgba(180,60,40,.3)", borderRadius:9, marginBottom:10, fontSize:12.5, color:"#f08070" }}>

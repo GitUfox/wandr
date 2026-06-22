@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { buildTripPrompt, buildPlanPrompt } from "./prompts.js";
+import {
+  buildTripPrompt,
+  buildTripCategoriesPrompt,
+  buildTripMetaPrompt,
+  buildPlanPrompt,
+} from "./prompts.js";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -102,6 +107,44 @@ describe("buildTripPrompt", () => {
     const noDateAnswers = { ...BASE_ANSWERS, dates: {} };
     const { n } = buildTripPrompt(noDateAnswers, []);
     expect(n).toBe(5); // calcNights default
+  });
+});
+
+// ── Split build (parallel halves) ───────────────────────────────────────────────
+
+describe("split trip build", () => {
+  it("categories half asks for categories but not the meta sections", () => {
+    const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []);
+    expect(messageContent).toContain('"categories"');
+    expect(messageContent).toContain('"breakfast"');
+    expect(messageContent).not.toContain('"photoSpots"');
+    expect(messageContent).not.toContain('"practical"');
+  });
+
+  it("meta half asks for meta sections but not the category list", () => {
+    const { messageContent } = buildTripMetaPrompt(BASE_ANSWERS, []);
+    expect(messageContent).toContain('"practical"');
+    expect(messageContent).toContain('"photoSpots"');
+    expect(messageContent).toContain('"avoidList"');
+    expect(messageContent).not.toContain('"breakfast"');
+  });
+
+  it("both halves carry the same shared trip context", () => {
+    const cats = buildTripCategoriesPrompt(BASE_ANSWERS, []).messageContent;
+    const meta = buildTripMetaPrompt(BASE_ANSWERS, []).messageContent;
+    for (const part of [cats, meta]) {
+      expect(part).toContain("Tokyo, Japan");
+      expect(part).toContain("Hotel in Shinjuku");
+    }
+  });
+
+  it("both halves preserve image blocks when files are uploaded", () => {
+    const files = [{ isImage: true, type: "image/jpeg", content: "base64data" }];
+    for (const build of [buildTripCategoriesPrompt, buildTripMetaPrompt]) {
+      const { messageContent } = build(BASE_ANSWERS, files);
+      expect(Array.isArray(messageContent)).toBe(true);
+      expect(messageContent[0].type).toBe("image");
+    }
   });
 });
 

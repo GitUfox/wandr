@@ -53,7 +53,11 @@ export default function InterviewFlow({
 
   return (
     <div style={{ minHeight:"100vh", width:"100%", background:T.bg0, fontFamily:T.font }}>
-      <style>{`html,body,#root{background:${T.bg0}!important;margin:0;padding:0;min-height:100vh;width:100%} *{box-sizing:border-box}`}</style>
+      <style>{`html,body,#root{background:${T.bg0}!important;margin:0;padding:0;min-height:100vh;width:100%} *{box-sizing:border-box}
+        /* Chips bold on select; reserve the bold width up front so toggling
+           weight never changes the chip size (no flex-wrap reflow). */
+        .wandr-chip{position:relative}
+        .wandr-chip::after{content:attr(data-label);display:block;height:0;overflow:hidden;visibility:hidden;font-weight:700;pointer-events:none}`}</style>
       <div style={{ maxWidth:560, margin:"0 auto", padding:"2rem 1.5rem", minHeight:"100vh" }}>
 
         {/* Breadcrumb + progress bar */}
@@ -97,7 +101,7 @@ export default function InterviewFlow({
                 {["Got a car", "Transit & rideshare", "Walking & cycling"].map(o => {
                   const sel = logTransport === o;
                   return (
-                    <button key={o} onClick={() => setLogTransport(p => p === o ? "" : o)}
+                    <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogTransport(p => p === o ? "" : o)}
                       style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                       {o}
                     </button>
@@ -113,7 +117,7 @@ export default function InterviewFlow({
                 {["Slow & wandering", "Balanced", "Pack it in"].map(o => {
                   const sel = logPace === o;
                   return (
-                    <button key={o} onClick={() => setLogPace(p => p === o ? "" : o)}
+                    <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogPace(p => p === o ? "" : o)}
                       style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                       {o}
                     </button>
@@ -129,7 +133,7 @@ export default function InterviewFlow({
                 {["First visit", "Been before"].map(o => {
                   const sel = logFirstTime === o;
                   return (
-                    <button key={o} onClick={() => setLogFirstTime(p => p === o ? "" : o)}
+                    <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogFirstTime(p => p === o ? "" : o)}
                       style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                       {o}
                     </button>
@@ -208,7 +212,7 @@ export default function InterviewFlow({
             {S.opts.map(o => {
               const sel = chips.includes(o);
               return (
-                <button key={o} onClick={() => toggleChip(o)}
+                <button key={o} className="wandr-chip" data-label={o} onClick={() => toggleChip(o)}
                   style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?T.accent:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.white:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                   {o}
                 </button>
@@ -230,7 +234,7 @@ export default function InterviewFlow({
                       {group.opts.map(o => {
                         const sel = chips.includes(o);
                         return (
-                          <button key={o} onClick={() => setChips(p => p.includes(o) ? p.filter(x => x !== o) : [...p, o])}
+                          <button key={o} className="wandr-chip" data-label={o} onClick={() => setChips(p => p.includes(o) ? p.filter(x => x !== o) : [...p, o])}
                             style={{ padding:"6px 13px", fontSize:12, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                             {o}
                           </button>
@@ -247,7 +251,7 @@ export default function InterviewFlow({
                   {S.opts.map(o => {
                     const sel = chips.includes(o);
                     return (
-                      <button key={o} onClick={() => toggleChip(o)}
+                      <button key={o} className="wandr-chip" data-label={o} onClick={() => toggleChip(o)}
                         style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?T.accent:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.white:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                         {o}
                       </button>
@@ -262,7 +266,7 @@ export default function InterviewFlow({
                       {["No kids", "Yes — under 5", "Yes — 5 to 12", "Yes — teens"].map(o => {
                         const sel = kids === o;
                         return (
-                          <button key={o} onClick={() => setKids(k => k === o ? "" : o)}
+                          <button key={o} className="wandr-chip" data-label={o} onClick={() => setKids(k => k === o ? "" : o)}
                             style={{ padding:"6px 12px", fontSize:12, borderRadius:100, background:sel?"#2a1a12":T.bg3, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                             {o}
                           </button>

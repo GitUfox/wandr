@@ -71,8 +71,17 @@ export const CATS = {
 };
 
 // ── Plan generation modes ─────────────────────────────────────────────────────
+// Only "full" ships today — it's the core experience. The other modes are
+// back-burnered on the roadmap (see FUTURE_MODES). Their prompt logic still
+// lives in prompts.js (modeInstructions), so reviving any of them is just a
+// matter of moving the entry back into MODES — no prompt work required.
 export const MODES = [
   { id:"full",   label:"Full itinerary",     desc:"Every day planned, morning to night" },
+];
+
+// Back-burner roadmap — not surfaced in the UI. Do not delete: the matching
+// prompt branches in prompts.js (modeInstructions) are kept in sync with these.
+export const FUTURE_MODES = [
   { id:"day",    label:"Perfect single day", desc:"The one ideal day, hour by hour" },
   { id:"combo",  label:"Activity combos",    desc:"3 themed days or standout picks" },
   { id:"foodie", label:"Food & drink guide", desc:"Every meal and drink, mapped out" },

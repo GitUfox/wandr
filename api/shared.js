@@ -48,7 +48,9 @@ export function setCorsHeaders(res, origin) {
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 
-const LIMIT_TRIPS = 3;
+// A trip build is now two parallel non-stream calls (categories + meta), so
+// each logical trip consumes two against this counter. 6 ⇒ ~3 trips per IP/day.
+const LIMIT_TRIPS = 6;
 const LIMIT_PLANS = 10;
 export const WINDOW_MS = 24 * 60 * 60 * 1000;
 

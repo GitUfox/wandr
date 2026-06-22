@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { complete } from "../lib/api.js";
-import { buildTripPrompt } from "../lib/prompts.js";
+import { buildTripCategoriesPrompt, buildTripMetaPrompt } from "../lib/prompts.js";
 import { recoverJSON } from "../lib/utils.js";
 import { LOAD_MSGS } from "../lib/constants.js";
 
@@ -21,13 +21,29 @@ export function useBuildTrip() {
       setLoadMsg(LOAD_MSGS[msgIdx]);
     }, 1600);
 
-    const { messageContent, n } = buildTripPrompt(answers, uploadedFiles);
+    // The trip database is built in two parallel calls. A single combined call
+    // generates >60s of JSON and is killed by Vercel's function timeout. Each
+    // half finishes comfortably under the limit; we run them concurrently and
+    // merge. (Each call counts against the per-IP trip rate limit — see
+    // LIMIT_TRIPS in api/shared.js, sized for 2 calls per trip.)
+    const { messageContent: catsMsg, n } = buildTripCategoriesPrompt(answers, uploadedFiles);
+    const { messageContent: metaMsg }     = buildTripMetaPrompt(answers, uploadedFiles);
 
-    const tryBuild = async () => {
-      const data = await complete([{ role: "user", content: messageContent }], 8000);
+    const oneCall = async (content, maxTokens) => {
+      const data = await complete([{ role: "user", content }], maxTokens);
       const raw  = data.content?.find(b => b.type === "text")?.text || "";
       if (!raw) throw new Error("No response from AI. Please try again.");
       return recoverJSON(raw);
+    };
+
+    const tryBuild = async () => {
+      const [cats, meta] = await Promise.all([
+        oneCall(catsMsg, 6000),
+        oneCall(metaMsg, 4000),
+      ]);
+      // meta provides destination/tagline/season/highlights/practical/photoSpots/avoidList;
+      // cats provides categories. Merge into the single trip object the app expects.
+      return { ...meta, categories: cats?.categories || {} };
     };
 
     try {

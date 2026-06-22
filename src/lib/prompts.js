@@ -89,10 +89,41 @@ function buildDayLabels(startISO, nights) {
 
 // ── Build trip database prompt ─────────────────────────────────────────────────
 
+// ── Schema fragments ────────────────────────────────────────────────────────
+//
+// The trip database is built in two parallel calls so each finishes well under
+// Vercel's 60s function limit (the single combined call generates >60s of JSON
+// and gets killed mid-stream). CATEGORIES_SCHEMA is the heavy half (~44s);
+// META_SCHEMA is the lighter half (~23s). useBuildTrip runs both concurrently
+// and merges. FULL_SCHEMA is kept for buildTripPrompt (tests / single-call use).
+
+const CATEGORIES_BODY =
+`"categories":{
+"breakfast":[{"name":"","description":"","price":"$","mustOrder":"","neighborhood":"","proTip":""}],
+"lunch":[{"name":"","description":"","price":"$$","mustOrder":"","neighborhood":"","proTip":""}],
+"dinner":[{"name":"","description":"","price":"$$$","mustOrder":"","neighborhood":"","proTip":""}],
+"nature":[{"name":"","description":"","duration":"","difficulty":"","proTip":""}],
+"culture":[{"name":"","description":"","duration":"","admission":"","proTip":""}],
+"nightlife":[{"name":"","description":"","vibe":"","proTip":""}],
+"exploration":[{"name":"","description":"","bestTime":"","proTip":""}],
+"experiences":[{"name":"","description":"","duration":"","price":"","bookAhead":true,"proTip":""}]
+}`;
+
+const META_BODY = (n) =>
+`"destination":"City, Country","tagline":"8-word trip description","nights":${n},"season":"one sentence","highlights":["h1","h2","h3"],
+"practical":{"gettingAround":"","bestAreas":"","timing":"","budgetTips":"","localTips":"","weatherNote":"","bookAhead":""},
+"photoSpots":[{"name":"","neighborhood":"","gps":"lat,lon","what":"","bestLight":"golden hour","goldenHourWindow":"","lens":"","proTip":""}],
+"avoidList":["","",""]`;
+
+const CATEGORIES_SCHEMA      = `{${CATEGORIES_BODY}}`;
+const META_SCHEMA            = (n) => `{${META_BODY(n)}}`;
+const FULL_SCHEMA            = (n) => `{${META_BODY(n)},\n${CATEGORIES_BODY}}`;
+
 /**
- * Build the trip database prompt — returns { messageContent, n, safeStart, safeEnd }
+ * Build the shared instruction context (everything except the JSON schema)
+ * plus the image blocks and computed dates. Used by every trip-build variant.
  */
-export function buildTripPrompt(answers, uploadedFiles) {
+function tripContext(answers, uploadedFiles) {
   const a = answers;
   const d1 = parseISODate(a.dates?.start);
   const d2 = parseISODate(a.dates?.end);
@@ -130,7 +161,7 @@ export function buildTripPrompt(answers, uploadedFiles) {
     .filter(f => f.isImage)
     .map(f => ({ type: "image", source: { type: "base64", media_type: f.type, data: f.content } }));
 
-  const promptText = `Return ONLY a valid JSON object. No markdown, no explanation, nothing else.
+  const contextText = `Return ONLY a valid JSON object. No markdown, no explanation, nothing else.
 
 DESTINATION: ${a.destination}
 DATES: ${safeStart} → ${safeEnd} (${n} nights)
@@ -161,28 +192,44 @@ AVOID: Never include anything related to: ${avoidLine}. If a category would only
 
 Rules: 3 items max per category. All strings concise (1 sentence max). Use local currency equivalents for prices.
 
-ACCURACY: Only include venues, restaurants, and services you have high confidence are currently operating. Do not suggest bike-share programs, municipal transit apps, or any service that may have shut down. If a venue's current status is uncertain, omit it entirely — a shorter list of reliable options is better than a longer list with stale picks.
+ACCURACY: Only include venues, restaurants, and services you have high confidence are currently operating. Do not suggest bike-share programs, municipal transit apps, or any service that may have shut down. If a venue's current status is uncertain, omit it entirely — a shorter list of reliable options is better than a longer list with stale picks.`;
 
-{"destination":"City, Country","tagline":"8-word trip description","nights":${n},"season":"one sentence","highlights":["h1","h2","h3"],
-"categories":{
-"breakfast":[{"name":"","description":"","price":"$","mustOrder":"","neighborhood":"","proTip":""}],
-"lunch":[{"name":"","description":"","price":"$$","mustOrder":"","neighborhood":"","proTip":""}],
-"dinner":[{"name":"","description":"","price":"$$$","mustOrder":"","neighborhood":"","proTip":""}],
-"nature":[{"name":"","description":"","duration":"","difficulty":"","proTip":""}],
-"culture":[{"name":"","description":"","duration":"","admission":"","proTip":""}],
-"nightlife":[{"name":"","description":"","vibe":"","proTip":""}],
-"exploration":[{"name":"","description":"","bestTime":"","proTip":""}],
-"experiences":[{"name":"","description":"","duration":"","price":"","bookAhead":true,"proTip":""}]
-},
-"practical":{"gettingAround":"","bestAreas":"","timing":"","budgetTips":"","localTips":"","weatherNote":"","bookAhead":""},
-"photoSpots":[{"name":"","neighborhood":"","gps":"lat,lon","what":"","bestLight":"golden hour","goldenHourWindow":"","lens":"","proTip":""}],
-"avoidList":["","",""]}`;
+  return { contextText, imageBlocks, n, safeStart, safeEnd };
+}
 
-  const messageContent = imageBlocks.length > 0
+// Combine context + schema into a final message (text, or image blocks + text).
+function assembleTripMessage(contextText, schema, imageBlocks) {
+  const promptText = `${contextText}\n\n${schema}`;
+  return imageBlocks.length > 0
     ? [...imageBlocks, { type: "text", text: promptText }]
     : promptText;
+}
 
-  return { messageContent, n, safeStart, safeEnd };
+/**
+ * Single-call trip prompt (full schema). Kept for tests and any non-split use.
+ * Returns { messageContent, n, safeStart, safeEnd }.
+ */
+export function buildTripPrompt(answers, uploadedFiles) {
+  const { contextText, imageBlocks, n, safeStart, safeEnd } = tripContext(answers, uploadedFiles);
+  return { messageContent: assembleTripMessage(contextText, FULL_SCHEMA(n), imageBlocks), n, safeStart, safeEnd };
+}
+
+/**
+ * Heavy half of the split build — the 8 food/activity categories.
+ * Returns { messageContent, n }.
+ */
+export function buildTripCategoriesPrompt(answers, uploadedFiles) {
+  const { contextText, imageBlocks, n } = tripContext(answers, uploadedFiles);
+  return { messageContent: assembleTripMessage(contextText, CATEGORIES_SCHEMA, imageBlocks), n };
+}
+
+/**
+ * Light half of the split build — meta, practical, photoSpots, avoidList.
+ * Returns { messageContent, n }.
+ */
+export function buildTripMetaPrompt(answers, uploadedFiles) {
+  const { contextText, imageBlocks, n } = tripContext(answers, uploadedFiles);
+  return { messageContent: assembleTripMessage(contextText, META_SCHEMA(n), imageBlocks), n };
 }
 
 // ── Plan generation prompt ─────────────────────────────────────────────────────

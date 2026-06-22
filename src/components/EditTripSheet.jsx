@@ -35,25 +35,25 @@ const PARTY_OPTS = [
 const OPTIONS = [
   {
     id:   "specific-activities",
-    icon: "☑",
+    icon: "🔄",
     title: "Specific Activities",
     sub:   "Describe what to swap out",
   },
   {
     id:   "specific-day",
-    icon: "🗓",
+    icon: "🗓️",
     title: "Specific Day",
     sub:   "Redo one day from scratch",
   },
   {
     id:   "full-itinerary",
-    icon: "◻",
+    icon: "🎨",
     title: "Full Itinerary",
     sub:   "Adjust the overall feel",
   },
   {
     id:   "trip-details",
-    icon: "✏",
+    icon: "🧳",
     title: "Trip Details",
     sub:   "Destination, dates, budget, party",
   },
