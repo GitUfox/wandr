@@ -6,6 +6,7 @@ export default function WelcomeScreen({ onStart, savedTrip, onResume }) {
   const [dest, setDest]                     = useState("");
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [placeholderFade, setPlaceholderFade] = useState(true);
+  const [showAbout, setShowAbout]           = useState(false);
   const intervalRef = useRef(null);
 
   const destValid = dest.trim().length > 1;
@@ -25,7 +26,46 @@ export default function WelcomeScreen({ onStart, savedTrip, onResume }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2.5rem 1.5rem", background: T.bg0, fontFamily: T.font }}>
+    <div style={{ minHeight: "100vh", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2.5rem 1.5rem", background: T.bg0, fontFamily: T.font, position: "relative" }}>
+
+      {/* Help affordance — unambiguous "?" that opens an About panel */}
+      <button onClick={() => setShowAbout(true)} aria-label="About Wandr"
+        style={{ position: "fixed", top: 16, right: 16, width: 32, height: 32, borderRadius: "50%", background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: T.font, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
+        ?
+      </button>
+
+      {/* About panel */}
+      {showAbout && (
+        <div onClick={() => setShowAbout(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
+          <div onClick={e => e.stopPropagation()} className="fade-up"
+            style={{ width: "100%", maxWidth: 380, background: T.bg1, border: `1px solid ${T.border}`, borderRadius: 14, padding: "1.5rem 1.5rem 1.75rem" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>What Wandr does</div>
+              <button onClick={() => setShowAbout(false)} aria-label="Close"
+                style={{ width: 26, height: 26, borderRadius: "50%", background: "transparent", border: "none", color: T.hint, fontSize: 18, cursor: "pointer", fontFamily: T.font, lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, marginBottom: 16 }}>
+              Answer a few quick questions and Wandr builds you a personal trip — tailored to your pace, budget, and what you actually care about.
+            </div>
+            {[
+              ["A day-by-day itinerary", "Every day planned and timed around your pace"],
+              ["Dining for every meal", "Where to eat and what to order, to your budget"],
+              ["Insider tips & logistics", "How to get around, what to book, what to skip"],
+              ["Photo spots", "The best views and when the light is right"],
+            ].map(([title, desc]) => (
+              <div key={title} style={{ display: "flex", gap: 9, marginBottom: 11 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.accent, flexShrink: 0, marginTop: 6 }} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{title}</div>
+                  <div style={{ fontSize: 12, color: T.hint, lineHeight: 1.5 }}>{desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div style={{ width: "100%", maxWidth: 440 }}>
 
         {/* Logo */}
@@ -75,14 +115,9 @@ export default function WelcomeScreen({ onStart, savedTrip, onResume }) {
         {!savedTrip?.destination && destValid && <div style={{ height: "1.5rem" }} />}
         {!savedTrip?.destination && !destValid && <div style={{ height: 0 }} />}
 
-        {/* Feature pills */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
-          {["Daily itinerary","Dining guide","Insider intel","Photography guide"].map(label => (
-            <div key={label} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 12px", background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 9, fontSize: 12, color: T.hint }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: T.accent, flexShrink: 0, display: "inline-block", opacity: .7 }} />
-              <span style={{ fontWeight: 500 }}>{label}</span>
-            </div>
-          ))}
+        {/* Honest value line — replaces the old fake-clickable feature pills */}
+        <div style={{ textAlign: "center", fontSize: 12.5, color: T.hint, lineHeight: 1.6, padding: "0 8px" }}>
+          A complete day-by-day itinerary, built around how you actually travel.
         </div>
 
       </div>
