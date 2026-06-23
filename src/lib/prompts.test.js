@@ -4,6 +4,7 @@ import {
   buildTripCategoriesPrompt,
   buildTripMetaPrompt,
   buildPlanPrompt,
+  buildEditDayPrompt,
 } from "./prompts.js";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -235,5 +236,66 @@ describe("buildPlanPrompt", () => {
     const hidden = buildPlanPrompt("hidden", BASE_TRIP);
     expect(hidden).not.toContain("night itinerary");
     expect(full).toContain("night itinerary");
+  });
+});
+
+// ── Activity priority ranking ───────────────────────────────────────────────────
+
+describe("buildPlanPrompt — activity priority", () => {
+  const PRIORITY_TRIP = {
+    ...BASE_TRIP,
+    categories: {
+      breakfast: [{ name: "Ichiran Ramen", description: "Solo booth ramen", mustOrder: "tonkotsu", priority: "essential" }],
+      culture: [
+        { name: "Optional Gallery", description: "Minor gallery", priority: "optional" },
+        { name: "Senso-ji", description: "Ancient temple", priority: "essential" },
+        { name: "Mid Museum", description: "Decent museum", priority: "recommended" },
+      ],
+    },
+  };
+
+  it("tags each activity with its priority tier", () => {
+    const result = buildPlanPrompt("full", PRIORITY_TRIP);
+    expect(result).toContain("· ESSENTIAL]");
+    expect(result).toContain("· RECOMMENDED]");
+    expect(result).toContain("· OPTIONAL]");
+  });
+
+  it("lists activities essentials-first regardless of source order", () => {
+    const result = buildPlanPrompt("full", PRIORITY_TRIP);
+    const essIdx = result.indexOf("Senso-ji");
+    const recIdx = result.indexOf("Mid Museum");
+    const optIdx = result.indexOf("Optional Gallery");
+    expect(essIdx).toBeLessThan(recIdx);
+    expect(recIdx).toBeLessThan(optIdx);
+  });
+
+  it("includes the PRIORITY scheduling instruction", () => {
+    const result = buildPlanPrompt("full", PRIORITY_TRIP);
+    expect(result).toContain("PRIORITY:");
+    expect(result).toContain("Never drop an essential");
+  });
+
+  it("tags restaurants with their priority tier", () => {
+    const result = buildPlanPrompt("foodie", PRIORITY_TRIP);
+    expect(result).toContain("[BREAKFAST · ESSENTIAL]");
+  });
+
+  it("defaults missing priority to RECOMMENDED (legacy trips)", () => {
+    // BASE_TRIP categories carry no priority field
+    const result = buildPlanPrompt("full", BASE_TRIP);
+    expect(result).toContain("· RECOMMENDED]");
+    expect(result).not.toContain("· ESSENTIAL]");
+  });
+
+  it("edit-day prompt also surfaces priority tags and rule", () => {
+    const result = buildEditDayPrompt(
+      "Monday, July 1, 2024",
+      "## Monday\nsome content",
+      "make it more relaxed",
+      PRIORITY_TRIP,
+    );
+    expect(result).toContain("· ESSENTIAL]");
+    expect(result).toContain("PRIORITY:");
   });
 });

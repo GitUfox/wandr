@@ -1,5 +1,48 @@
 import { arr, calcNights, parseISODate } from "./utils.js";
 
+// ── Activity priority helpers ───────────────────────────────────────────────
+// Each built activity carries a "priority" tier (essential | recommended |
+// optional) assigned during the trip-build ranking step. The plan prompts
+// surface these so the itinerary schedules must-dos first and treats optionals
+// as spare-capacity filler. Trips built before ranking existed have no priority
+// field — those default to "recommended" so behaviour degrades gracefully
+// (nothing is wrongly promoted or demoted).
+
+const RESTAURANT_BINS = ["breakfast", "lunch", "dinner"];
+const PRIORITY_RANK = { essential: 0, recommended: 1, optional: 2 };
+
+function normalizePriority(p) {
+  const v = String(p ?? "").toLowerCase().trim();
+  return v === "essential" || v === "optional" ? v : "recommended";
+}
+
+// Flatten non-food categories into a priority-tagged, essentials-first list.
+function formatActivityItems(categories) {
+  return Object.entries(categories || {})
+    .filter(([cat]) => !RESTAURANT_BINS.includes(cat))
+    .flatMap(([cat, items]) =>
+      (Array.isArray(items) ? items : []).map(it => ({ cat, it, prio: normalizePriority(it.priority) }))
+    )
+    .sort((a, b) => PRIORITY_RANK[a.prio] - PRIORITY_RANK[b.prio])
+    .map(({ cat, it, prio }) =>
+      `[${cat.toUpperCase()} · ${prio.toUpperCase()}] ${it.name}: ${it.description}${it.proTip ? ` | TIP: ${it.proTip}` : ""}`
+    )
+    .join("\n");
+}
+
+// Flatten food categories into a priority-tagged restaurant reference.
+function formatRestaurantItems(categories) {
+  return RESTAURANT_BINS
+    .flatMap(meal => {
+      const items = categories?.[meal];
+      if (!Array.isArray(items) || items.length === 0) return [];
+      return items.map(it =>
+        `[${meal.toUpperCase()} · ${normalizePriority(it.priority).toUpperCase()}] ${it.name}: ${it.description}${it.mustOrder ? ` — order ${it.mustOrder}` : ""}`
+      );
+    })
+    .join("\n");
+}
+
 // ── Shared instruction builders ────────────────────────────────────────────────
 
 function partyInstruction(a) {
@@ -99,14 +142,14 @@ function buildDayLabels(startISO, nights) {
 
 const CATEGORIES_BODY =
 `"categories":{
-"breakfast":[{"name":"","description":"","price":"$","mustOrder":"","neighborhood":"","proTip":""}],
-"lunch":[{"name":"","description":"","price":"$$","mustOrder":"","neighborhood":"","proTip":""}],
-"dinner":[{"name":"","description":"","price":"$$$","mustOrder":"","neighborhood":"","proTip":""}],
-"nature":[{"name":"","description":"","duration":"","difficulty":"","proTip":""}],
-"culture":[{"name":"","description":"","duration":"","admission":"","proTip":""}],
-"nightlife":[{"name":"","description":"","vibe":"","proTip":""}],
-"exploration":[{"name":"","description":"","bestTime":"","proTip":""}],
-"experiences":[{"name":"","description":"","duration":"","price":"","bookAhead":true,"proTip":""}]
+"breakfast":[{"name":"","description":"","price":"$","mustOrder":"","neighborhood":"","proTip":"","priority":"essential|recommended|optional"}],
+"lunch":[{"name":"","description":"","price":"$$","mustOrder":"","neighborhood":"","proTip":"","priority":"essential|recommended|optional"}],
+"dinner":[{"name":"","description":"","price":"$$$","mustOrder":"","neighborhood":"","proTip":"","priority":"essential|recommended|optional"}],
+"nature":[{"name":"","description":"","duration":"","difficulty":"","proTip":"","priority":"essential|recommended|optional"}],
+"culture":[{"name":"","description":"","duration":"","admission":"","proTip":"","priority":"essential|recommended|optional"}],
+"nightlife":[{"name":"","description":"","vibe":"","proTip":"","priority":"essential|recommended|optional"}],
+"exploration":[{"name":"","description":"","bestTime":"","proTip":"","priority":"essential|recommended|optional"}],
+"experiences":[{"name":"","description":"","duration":"","price":"","bookAhead":true,"proTip":"","priority":"essential|recommended|optional"}]
 }`;
 
 const META_BODY = (n) =>
@@ -169,7 +212,7 @@ PARTY: ${arr(a.party)}${kidsVal ? ` · Kids: ${kidsVal}` : ""}
 STAYING: ${stayLine}
 TRANSPORT: ${transportLine}
 BUDGET: ${budgetLine}
-INTERESTS: ${interestsLine}
+INTERESTS (listed most-important-first): ${interestsLine}
 AVOID: ${avoidLine}
 NOTES: ${a.notes || "none"}${pace ? `\nPACE: ${pace}` : ""}${firstTime ? `\nFIRST VISIT: ${firstTime}` : ""}
 ${textFileContext ? `\nUPLOADED CONTEXT:\n${textFileContext}` : ""}
@@ -186,7 +229,9 @@ BUDGET: ${budgetInstruction(a.budget)}
 ${paceText ? `\nPACE: ${paceText}` : ""}
 ${firstTimeText ? `VISIT HISTORY: ${firstTimeText}` : ""}
 ${kidsText ? `KIDS: ${kidsText}` : ""}
-INTERESTS: Only include categories that genuinely match the traveler's stated interests. If an interest category has no relevant match, omit it entirely rather than filling it with generic picks.
+INTERESTS: Only include categories that genuinely match the traveler's stated interests. If an interest category has no relevant match, omit it entirely rather than filling it with generic picks. The interests are listed most-important-first — weight earlier interests more heavily when deciding what to include and how to rank it.
+
+RANKING: Give every item a "priority" of exactly "essential", "recommended", or "optional", reflecting how strongly it matches the traveler's top interests and visit history. Reserve "essential" for genuine must-dos — at most one per category, and never mark everything essential. The tiers exist to prioritise a limited daily schedule, so be discerning.${firstTime === "First visit" ? " As a first-time visitor, iconic must-sees that define the destination should rank essential." : firstTime === "Been before" ? " As a returning visitor, distinctive local-only gems should rank essential over obvious landmarks the traveler has likely already seen." : ""}
 
 AVOID: Never include anything related to: ${avoidLine}. If a category would only contain avoided items, leave it empty.
 
@@ -252,22 +297,8 @@ export function buildEditDayPrompt(dayLabel, dayContent, instruction, trip) {
   const firstTimeText = firstTime ? firstTimeInstruction(a.destination, firstTime) : "";
   const kidsText      = kidsVal   ? kidsInstruction(kidsVal)                       : "";
 
-  const allItems = Object.entries(trip.categories || {})
-    .filter(([cat]) => !["breakfast","lunch","dinner"].includes(cat))
-    .flatMap(([cat, items]) =>
-      (Array.isArray(items) ? items : []).map(
-        it => `[${cat.toUpperCase()}] ${it.name}: ${it.description}${it.proTip ? ` | TIP: ${it.proTip}` : ""}`
-      )
-    ).join("\n");
-
-  const restaurantIdeas = ["breakfast","lunch","dinner"]
-    .flatMap(meal => {
-      const items = trip.categories?.[meal];
-      if (!Array.isArray(items) || items.length === 0) return [];
-      return items.map(it =>
-        `[${meal.toUpperCase()}] ${it.name}: ${it.description}${it.mustOrder ? ` — order ${it.mustOrder}` : ""}`
-      );
-    }).join("\n");
+  const allItems        = formatActivityItems(trip.categories);
+  const restaurantIdeas = formatRestaurantItems(trip.categories);
 
   const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [time] | **Place** | facts only, duration |\nENDTABLE`;
   const FOOD_BLOCK  = `FOOD:\n| Meal | Name | Order | Price |\n|------|------|-------|-------|\n| Breakfast | **Name** | what to order | $ |\n| Lunch | **Name** | what to order | $$ |\n| Dinner | **Name** | what to order | $$$ |\nENDFOOD`;
@@ -293,8 +324,9 @@ PARTY: ${partyInstruction(a)}
 ROUTING: ${stayInstruction(stayLine || "not specified")} ${transportInstruction(transportLine || "not specified")}
 BUDGET: ${budgetInstruction(a.budget)}${paceText ? `\nPACE: ${paceText}` : ""}${firstTimeText ? `\nVISIT HISTORY: ${firstTimeText}` : ""}${kidsText ? `\nKIDS: ${kidsText}` : ""}
 AVOID: Never suggest anything related to: ${avoidText}.
+PRIORITY: Activities and restaurants are tagged ESSENTIAL, RECOMMENDED, or OPTIONAL (activities listed essentials-first). Favour ESSENTIAL items for this day; use OPTIONAL only if there is spare time. For each meal, prefer the ESSENTIAL restaurant. Never drop an essential in favour of an optional.
 
-ACTIVITIES TO USE:
+ACTIVITIES TO USE (tagged by priority, essentials first):
 ${allItems || `Use your knowledge of ${a.destination}`}
 
 RESTAURANT IDEAS:
@@ -325,26 +357,9 @@ TIPS: [practical tip] | [logistics tip]
  */
 export function buildPlanPrompt(mode, trip, editInstruction = null, editType = null) {
   const a = trip.answers;
-  const restaurantBins = ["breakfast", "lunch", "dinner"];
 
-  const allItems = Object.entries(trip.categories || {})
-    .filter(([cat]) => !restaurantBins.includes(cat))
-    .flatMap(([cat, items]) =>
-      (Array.isArray(items) ? items : []).map(
-        it => `[${cat.toUpperCase()}] ${it.name}: ${it.description}${it.proTip ? ` | TIP: ${it.proTip}` : ""}`
-      )
-    )
-    .join("\n");
-
-  const restaurantIdeas = restaurantBins
-    .flatMap(meal => {
-      const items = trip.categories?.[meal];
-      if (!Array.isArray(items) || items.length === 0) return [];
-      return items.map(it =>
-        `[${meal.toUpperCase()}] ${it.name}: ${it.description}${it.mustOrder ? ` — order ${it.mustOrder}` : ""}`
-      );
-    })
-    .join("\n");
+  const allItems        = formatActivityItems(trip.categories);
+  const restaurantIdeas = formatRestaurantItems(trip.categories);
 
   const stayLine      = a.logistics?.stay || "";
   const transportLine = a.logistics?.transport ? arr(a.logistics.transport) : "";
@@ -416,7 +431,9 @@ BUDGET: ${budgetInstruction(a.budget)}
 
 AVOID: Never suggest anything related to: ${avoidText}.
 
-ACTIVITIES TO USE:
+PRIORITY: Activities and restaurants are tagged ESSENTIAL, RECOMMENDED, or OPTIONAL (activities listed essentials-first). Schedule ESSENTIAL items before RECOMMENDED, and use OPTIONAL only when there is genuine spare capacity (a relaxed pace or extra days). In a multi-day itinerary, every ESSENTIAL should appear at least once before any OPTIONAL is added. For each meal, prefer the ESSENTIAL restaurant. Never drop an essential in favour of an optional.
+
+ACTIVITIES TO USE (tagged by priority, essentials first):
 ${allItems || `Use your knowledge of ${a.destination}`}
 
 RESTAURANT IDEAS:
