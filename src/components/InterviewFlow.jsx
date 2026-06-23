@@ -29,6 +29,7 @@ export default function InterviewFlow({
   cur, setCur,
   chips, setChips,
   kids, setKids,
+  avoidText, setAvoidText,
   budget, setBudget,
   d1, setD1, d2, setD2,
   logStay, setLogStay,
@@ -196,6 +197,15 @@ export default function InterviewFlow({
                 {uploadError && (
                   <div style={{ fontSize:11, color:"#f08070", marginTop:6, padding:"5px 8px", background:"rgba(200,80,60,.1)", borderRadius:5 }}>{uploadError}</div>
                 )}
+
+                {/* Dedicated avoid field — fed to the AVOID prompt instruction as a hard exclusion */}
+                <div style={{ marginTop:"1.25rem" }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 }}>Anything to avoid?</div>
+                  <input type="text" value={avoidText || ""} onChange={e => setAvoidText(e.target.value)}
+                    placeholder="e.g. crowds · seafood · long hikes · touristy spots"
+                    style={inputSt} />
+                  <div style={{ fontSize:11, color:T.hint, marginTop:6 }}>Hard no's — we'll keep these out of every suggestion.</div>
+                </div>
               </div>
             )}
           </>

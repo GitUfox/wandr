@@ -60,6 +60,7 @@ export default function Wandr() {
   const [cur, setCur]                     = useState("");
   const [chips, setChips]                 = useState([]);
   const [kids, setKids]                   = useState("");
+  const [avoidText, setAvoidText]         = useState("");
   const [budget, setBudget]               = useState(120);
   const [d1, setD1]                       = useState("");
   const [d2, setD2]                       = useState("");
@@ -111,11 +112,12 @@ export default function Wandr() {
   function advance() {
     const val = currentVal();
     const newAns = { ...answers, [S.id]: val };
+    if (S.id === "notes") newAns.avoid = avoidText.trim();
     setAnswers(newAns);
     if (step < STEPS.length - 1) {
       setDir(1);
       setStep(s => s + 1);
-      setCur(""); setChips([]); setKids("");
+      setCur(""); setChips([]); setKids(""); setAvoidText("");
     } else {
       handleBuildTrip(newAns);
     }
@@ -124,7 +126,7 @@ export default function Wandr() {
   function goBack() {
     setDir(-1);
     setStep(s => s - 1);
-    setCur(""); setChips([]); setKids("");
+    setCur(""); setChips([]); setKids(""); setAvoidText("");
   }
 
   // ── API actions ───────────────────────────────────────────────────────────
@@ -174,7 +176,7 @@ export default function Wandr() {
   // ── Reset / resume ────────────────────────────────────────────────────────
   function resetAll() {
     setScreen("welcome"); setStep(0); setAnswers({}); setDir(1);
-    setCur(""); setChips([]); setKids("");
+    setCur(""); setChips([]); setKids(""); setAvoidText("");
     setBudget(120); setD1(""); setD2(""); setLogStay(""); setLogTransport(""); setLogPace(""); setLogFirstTime("");
     setTrip(null); setTab("plan"); setExpandedCat(null);
     resetFiles(); resetPlan();
@@ -198,7 +200,7 @@ export default function Wandr() {
               <WelcomeScreen
                 onStart={dest => {
                   // Reset all per-step form state so stale values don't bleed into a new trip
-                  setCur(""); setChips([]); setKids("");
+                  setCur(""); setChips([]); setKids(""); setAvoidText("");
                   setBudget(120); setD1(""); setD2("");
                   setLogStay(""); setLogTransport(""); setLogPace(""); setLogFirstTime("");
                   setDir(1);
@@ -223,6 +225,7 @@ export default function Wandr() {
                 cur={cur} setCur={setCur}
                 chips={chips} setChips={setChips}
                 kids={kids} setKids={setKids}
+                avoidText={avoidText} setAvoidText={setAvoidText}
                 budget={budget} setBudget={setBudget}
                 d1={d1} setD1={setD1} d2={d2} setD2={setD2}
                 logStay={logStay} setLogStay={setLogStay}

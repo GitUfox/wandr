@@ -52,9 +52,9 @@ export const STEPS = [
   {
     id:"notes",
     q:"Anything else we should know?",
-    sub:"Must-dos, things to avoid, dietary needs, special occasions, vibe — anything",
+    sub:"Must-dos, dietary needs, special occasions, vibe — anything",
     type:"textarea+upload",
-    ph:"e.g. No museums · Vegetarian · Want to catch a live match · Anniversary trip · Love slow mornings",
+    ph:"e.g. Want to catch a live match · Anniversary trip · Love slow mornings",
   },
 ];
 

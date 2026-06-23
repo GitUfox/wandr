@@ -43,6 +43,16 @@ function formatRestaurantItems(categories) {
     .join("\n");
 }
 
+// Resolve what the traveler wants to avoid into a single instruction string.
+// Sources, combined: the free-text "avoid" field (answers.avoid, new) and any
+// legacy avoidChips from older trips (answers.interests.avoidChips). Returns
+// "nothing" when neither is set so the AVOID instruction degrades cleanly.
+function resolveAvoid(a) {
+  const chips = Array.isArray(a.interests?.avoidChips) ? a.interests.avoidChips.join(", ") : "";
+  const free  = typeof a.avoid === "string" ? a.avoid.trim() : "";
+  return [chips, free].filter(Boolean).join(", ") || "nothing";
+}
+
 // ── Shared instruction builders ────────────────────────────────────────────────
 
 function partyInstruction(a) {
@@ -186,10 +196,7 @@ function tripContext(answers, uploadedFiles) {
   const kidsVal       = a.party?.kids         || "";
 
   const interestsLine   = arr(a.interests);
-  const avoidFromChips  = Array.isArray(a.interests?.avoidChips)
-    ? a.interests.avoidChips.join(", ")
-    : "";
-  const avoidLine = avoidFromChips || arr(a.avoid) || "nothing";
+  const avoidLine       = resolveAvoid(a);
 
   const paceText      = pace      ? paceInstruction(pace)                          : "";
   const firstTimeText = firstTime ? firstTimeInstruction(a.destination, firstTime) : "";
@@ -288,8 +295,7 @@ export function buildEditDayPrompt(dayLabel, dayContent, instruction, trip) {
   const stayLine      = a.logistics?.stay || "";
   const transportLine = a.logistics?.transport ? arr(a.logistics.transport) : "";
   const budgetLabel   = a.budget === 0 ? "staying with family/friends" : `~${a.budget} USD/day`;
-  const avoidText     = Array.isArray(a.interests?.avoidChips) && a.interests.avoidChips.length > 0
-    ? a.interests.avoidChips.join(", ") : "nothing";
+  const avoidText     = resolveAvoid(a);
   const pace          = a.logistics?.pace     || "";
   const firstTime     = a.logistics?.firstTime || "";
   const kidsVal       = a.party?.kids         || "";
@@ -364,9 +370,7 @@ export function buildPlanPrompt(mode, trip, editInstruction = null, editType = n
   const stayLine      = a.logistics?.stay || "";
   const transportLine = a.logistics?.transport ? arr(a.logistics.transport) : "";
   const budgetLabel   = a.budget === 0 ? "staying with family/friends" : `~${a.budget} USD/day`;
-  const avoidText     = Array.isArray(a.interests?.avoidChips) && a.interests.avoidChips.length > 0
-    ? a.interests.avoidChips.join(", ")
-    : "nothing";
+  const avoidText     = resolveAvoid(a);
   const pace          = a.logistics?.pace     || "";
   const firstTime     = a.logistics?.firstTime || "";
   const kidsVal       = a.party?.kids         || "";

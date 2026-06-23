@@ -299,3 +299,44 @@ describe("buildPlanPrompt — activity priority", () => {
     expect(result).toContain("PRIORITY:");
   });
 });
+
+// ── Avoid wiring ────────────────────────────────────────────────────────────────
+
+describe("avoid wiring", () => {
+  it("free-text avoid populates the AVOID line in the trip build", () => {
+    const answers = { ...BASE_ANSWERS, avoid: "seafood, crowds" };
+    const { messageContent } = buildTripPrompt(answers, []);
+    expect(messageContent).toContain("seafood, crowds");
+    expect(messageContent).not.toContain("related to: nothing");
+  });
+
+  it("free-text avoid reaches both plan and edit-day prompts", () => {
+    const trip = { ...BASE_TRIP, answers: { ...BASE_ANSWERS, avoid: "long hikes" } };
+    const plan = buildPlanPrompt("full", trip);
+    const day  = buildEditDayPrompt("Mon", "## Mon\nx", "tweak", trip);
+    expect(plan).toContain("long hikes");
+    expect(day).toContain("long hikes");
+  });
+
+  it("combines free-text avoid with legacy avoidChips", () => {
+    const answers = {
+      ...BASE_ANSWERS,
+      avoid: "seafood",
+      interests: { ...BASE_ANSWERS.interests, avoidChips: ["Skip museums"] },
+    };
+    const { messageContent } = buildTripPrompt(answers, []);
+    expect(messageContent).toContain("Skip museums");
+    expect(messageContent).toContain("seafood");
+  });
+
+  it("falls back to 'nothing' when no avoid is set", () => {
+    const { messageContent } = buildTripPrompt(BASE_ANSWERS, []); // no avoid, empty avoidChips
+    expect(messageContent).toContain("related to: nothing");
+  });
+
+  it("ignores empty/whitespace avoid text", () => {
+    const answers = { ...BASE_ANSWERS, avoid: "   " };
+    const result = buildPlanPrompt("full", { ...BASE_TRIP, answers });
+    expect(result).toContain("Avoid: nothing");
+  });
+});
