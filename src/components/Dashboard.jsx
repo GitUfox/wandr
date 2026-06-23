@@ -16,6 +16,16 @@ function CatDot({ col }) {
   return <span style={{ width:7, height:7, borderRadius:1.5, background:col, display:"inline-block", flexShrink:0 }} />;
 }
 
+// "Must-do" badge — shown only for items the trip build ranked as essential.
+function MustDo({ priority }) {
+  if (priority !== "essential") return null;
+  return (
+    <span style={{ fontSize:9, fontWeight:700, color:T.white, background:T.accent, padding:"1.5px 6px", borderRadius:100, textTransform:"uppercase", letterSpacing:".06em", whiteSpace:"nowrap", flexShrink:0 }}>
+      ★ Must-do
+    </span>
+  );
+}
+
 export default function Dashboard({
   trip,
   planText, planLoading, planMode,
@@ -360,7 +370,10 @@ export default function Dashboard({
                           {items.map((item, i) => (
                             <div key={i} style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10, padding:"8px 0", borderBottom:i<items.length-1?`1px solid ${T.border}`:"none" }}>
                               <div style={{ flex:1 }}>
-                                <div style={{ fontSize:12.5, fontWeight:700, color:T.ink, marginBottom:2 }}>{item.name}</div>
+                                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2, flexWrap:"wrap" }}>
+                                  <span style={{ fontSize:12.5, fontWeight:700, color:T.ink }}>{item.name}</span>
+                                  <MustDo priority={item.priority} />
+                                </div>
                                 <div style={{ fontSize:12, color:T.muted, lineHeight:1.55 }}>{item.description}</div>
                                 {item.mustOrder   && <div style={{ fontSize:11.5, color:C.col, marginTop:3 }}><span style={{ fontWeight:700, opacity:.7, marginRight:4 }}>Must try</span>{item.mustOrder}</div>}
                                 {item.neighborhood && <div style={{ fontSize:11, color:T.hint, marginTop:2 }}>{item.neighborhood}</div>}
@@ -401,7 +414,10 @@ export default function Dashboard({
                             <div key={i} style={{ padding:"11px 0", borderBottom:i<items.length-1?`1px solid ${T.border}`:"none" }}>
                               <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10 }}>
                                 <div style={{ flex:1 }}>
-                                  <div style={{ fontSize:13, fontWeight:700, marginBottom:3, color:T.ink }}>{item.name}</div>
+                                  <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3, flexWrap:"wrap" }}>
+                                    <span style={{ fontSize:13, fontWeight:700, color:T.ink }}>{item.name}</span>
+                                    <MustDo priority={item.priority} />
+                                  </div>
                                   <div style={{ fontSize:12, color:T.muted, lineHeight:1.6 }}>{item.description}</div>
                                   {item.highlights && <div style={{ fontSize:11.5, color:T.muted, marginTop:4 }}>{item.highlights}</div>}
                                   {item.proTip     && (
