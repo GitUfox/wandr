@@ -2,36 +2,19 @@
  * Dashboard — the post-interview trip view.
  *
  * Manages its own print-modal state (only relevant here).
- * Everything else — trip data, plan state, tab state — comes from App.jsx via props.
+ * Everything else — trip data, plan state — comes from App.jsx via props.
  */
 import { useState } from "react";
-import { MODES, CATS, T } from "../lib/constants.js";
+import { MODES, T } from "../lib/constants.js";
 import { arr } from "../lib/utils.js";
 import Md from "./Md.jsx";
 import WandrLogo from "./WandrLogo.jsx";
 import EditTripSheet from "./EditTripSheet.jsx";
 
-// Small colored square used in place of emoji category icons
-function CatDot({ col }) {
-  return <span style={{ width:7, height:7, borderRadius:1.5, background:col, display:"inline-block", flexShrink:0 }} />;
-}
-
-// "Must-do" badge — shown only for items the trip build ranked as essential.
-function MustDo({ priority }) {
-  if (priority !== "essential") return null;
-  return (
-    <span style={{ fontSize:9, fontWeight:700, color:T.white, background:T.accent, padding:"1.5px 6px", borderRadius:100, textTransform:"uppercase", letterSpacing:".06em", whiteSpace:"nowrap", flexShrink:0 }}>
-      ★ Must-do
-    </span>
-  );
-}
-
 export default function Dashboard({
   trip,
   planText, planLoading, planMode,
   patchError,
-  tab, setTab,
-  expandedCat, setExpandedCat,
   debugMsg,
   onGenerate,
   onEditPlan,
@@ -73,10 +56,7 @@ export default function Dashboard({
     });
   }
 
-  const cats     = trip.categories || {};
-  const prac     = trip.practical  || {};
   const a        = trip.answers;
-  const hasCats  = Object.values(cats).some(v => Array.isArray(v) && v.length > 0);
   const modeName = MODES.find(m => m.id === planMode)?.label || "Plan";
 
   /** Convert ISO date "2026-06-08" → "6/8/2026" */
@@ -239,27 +219,10 @@ export default function Dashboard({
           )}
         </div>
 
-        {/* Tabs */}
-        <div style={{ display:"flex", alignItems:"center", borderBottom:`1px solid ${T.border}`, background:T.bg1, padding:"0 1rem" }}>
-          {[["plan","Plan"], ["activities","Activities"], ["practical","Tips"]].map(([tb, l]) => (
-            <button key={tb} onClick={() => setTab(tb)}
-              style={{ fontFamily:T.font, padding:"11px 10px", fontSize:12, borderBottom:tab===tb?`2px solid ${T.accent}`:"2px solid transparent", borderTop:"none", borderLeft:"none", borderRight:"none", color:tab===tb?T.accent:T.hint, fontWeight:tab===tb?700:400, background:"transparent", marginBottom:-1, cursor:"pointer", transition:"color .15s" }}>
-              {l}
-            </button>
-          ))}
-          {!planMode && tab !== "plan" && (
-            <button onClick={() => setTab("plan")}
-              style={{ marginLeft:"auto", fontSize:11, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:100, padding:"3px 10px", cursor:"pointer", fontFamily:T.font, fontWeight:700, flexShrink:0 }}>
-              Generate →
-            </button>
-          )}
-        </div>
-
         <div style={{ padding:"1.25rem", background:T.bg0, minHeight:400 }}>
 
-          {/* ── PLAN TAB ── */}
-          {tab === "plan" && (
-            <div>
+          {/* Itinerary */}
+          <div>
               {/* Hero mode (full itinerary) */}
               {(() => {
                 const hero = MODES[0];
@@ -337,210 +300,6 @@ export default function Dashboard({
                 </div>
               )}
             </div>
-          )}
-
-          {/* ── ACTIVITIES TAB ── */}
-          {tab === "activities" && (
-            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              {!hasCats && (
-                <div style={{ background:T.bg1, border:`1px solid ${T.border}`, borderRadius:12, padding:"2rem", textAlign:"center" }}>
-                  <div style={{ fontSize:15, fontWeight:700, color:T.ink, marginBottom:6 }}>No activities loaded</div>
-                  <div style={{ fontSize:13, color:T.muted }}>The activity database couldn't be built. Try starting a new trip.</div>
-                </div>
-              )}
-
-              {/* Restaurant ideas — breakfast / lunch / dinner */}
-              {["breakfast","lunch","dinner"].some(k => Array.isArray(cats[k]) && cats[k].length > 0) && (
-                <div style={{ background:T.bg1, border:`1px solid ${T.border}`, borderRadius:12, overflow:"hidden" }}>
-                  <div style={{ padding:"10px 14px", borderBottom:`1px solid ${T.border}`, display:"flex", alignItems:"center", gap:8 }}>
-                    <span style={{ fontSize:13, fontWeight:700, color:T.ink }}>Restaurant Ideas</span>
-                    <span style={{ fontSize:11, color:T.hint, marginLeft:"auto" }}>pick what works for you</span>
-                  </div>
-                  {["breakfast","lunch","dinner"].map(meal => {
-                    const items = cats[meal];
-                    if (!Array.isArray(items) || items.length === 0) return null;
-                    const C = CATS[meal];
-                    return (
-                      <div key={meal} style={{ borderBottom:`1px solid ${T.border}` }}>
-                        <div style={{ padding:"8px 14px 0", display:"flex", alignItems:"center", gap:6 }}>
-                          <CatDot col={C.col} />
-                          <span style={{ fontSize:11.5, fontWeight:700, color:C.col, textTransform:"uppercase", letterSpacing:".08em" }}>{C.label}</span>
-                        </div>
-                        <div style={{ padding:"0 14px 8px" }}>
-                          {items.map((item, i) => (
-                            <div key={i} style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10, padding:"8px 0", borderBottom:i<items.length-1?`1px solid ${T.border}`:"none" }}>
-                              <div style={{ flex:1 }}>
-                                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:2, flexWrap:"wrap" }}>
-                                  <span style={{ fontSize:12.5, fontWeight:700, color:T.ink }}>{item.name}</span>
-                                  <MustDo priority={item.priority} />
-                                </div>
-                                <div style={{ fontSize:12, color:T.muted, lineHeight:1.55 }}>{item.description}</div>
-                                {item.mustOrder   && <div style={{ fontSize:11.5, color:C.col, marginTop:3 }}><span style={{ fontWeight:700, opacity:.7, marginRight:4 }}>Must try</span>{item.mustOrder}</div>}
-                                {item.neighborhood && <div style={{ fontSize:11, color:T.hint, marginTop:2 }}>{item.neighborhood}</div>}
-                                {item.proTip      && (
-                                  <div style={{ fontSize:11, background:C.bg, color:C.col, padding:"4px 8px", borderRadius:4, marginTop:5, border:`1px solid ${C.border}`, lineHeight:1.55 }}>
-                                    <span style={{ fontSize:9.5, fontWeight:700, textTransform:"uppercase", letterSpacing:".07em", opacity:.7, marginRight:5 }}>Pro tip</span>{item.proTip}
-                                  </div>
-                                )}
-                              </div>
-                              {item.price && <span style={{ fontSize:11, color:C.col, background:C.bg, padding:"2px 7px", borderRadius:5, border:`1px solid ${C.border}`, flexShrink:0 }}>{item.price}</span>}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Activity categories (nature, culture, etc.) */}
-              {Object.entries(cats)
-                .filter(([cat, items]) => !["breakfast","lunch","dinner"].includes(cat) && Array.isArray(items) && items.length > 0)
-                .map(([cat, items], catIdx) => {
-                  const C    = CATS[cat] || CATS.exploration;
-                  const open = expandedCat === null ? catIdx === 0 : expandedCat === cat;
-                  return (
-                    <div key={cat} style={{ background:T.bg1, border:`1px solid ${T.border}`, borderRadius:12, overflow:"hidden" }}>
-                      <button onClick={() => setExpandedCat(open ? null : cat)}
-                        style={{ width:"100%", padding:"11px 14px", display:"flex", alignItems:"center", gap:9, background:open?C.bg:T.bg1, borderBottom:open?`1px solid ${C.border}`:"none", borderTop:"none", borderLeft:"none", borderRight:"none", borderRadius:0, cursor:"pointer", transition:"background .15s", fontFamily:T.font }}>
-                        <CatDot col={C.col} />
-                        <span style={{ fontSize:13, fontWeight:600, color:open?C.col:T.ink, flex:1, textAlign:"left" }}>{C.label}</span>
-                        <span style={{ fontSize:11, color:T.hint }}>{items.length} places</span>
-                        <span style={{ fontSize:10, color:T.hint, marginLeft:3 }}>{open?"▲":"▼"}</span>
-                      </button>
-                      {open && (
-                        <div style={{ padding:"0 1rem .5rem", background:T.bg1 }}>
-                          {items.map((item, i) => (
-                            <div key={i} style={{ padding:"11px 0", borderBottom:i<items.length-1?`1px solid ${T.border}`:"none" }}>
-                              <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10 }}>
-                                <div style={{ flex:1 }}>
-                                  <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3, flexWrap:"wrap" }}>
-                                    <span style={{ fontSize:13, fontWeight:700, color:T.ink }}>{item.name}</span>
-                                    <MustDo priority={item.priority} />
-                                  </div>
-                                  <div style={{ fontSize:12, color:T.muted, lineHeight:1.6 }}>{item.description}</div>
-                                  {item.highlights && <div style={{ fontSize:11.5, color:T.muted, marginTop:4 }}>{item.highlights}</div>}
-                                  {item.proTip     && (
-                                    <div style={{ fontSize:11, background:C.bg, color:C.col, padding:"4px 8px", borderRadius:5, marginTop:6, lineHeight:1.55, border:`1px solid ${C.border}` }}>
-                                      <span style={{ fontSize:9.5, fontWeight:700, textTransform:"uppercase", letterSpacing:".07em", opacity:.7, marginRight:5 }}>Pro tip</span>{item.proTip}
-                                    </div>
-                                  )}
-                                </div>
-                                <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3, flexShrink:0, minWidth:65 }}>
-                                  {item.price      && <span style={{ fontSize:10.5, color:C.col, background:C.bg, padding:"2px 7px", borderRadius:5, border:`1px solid ${C.border}` }}>{item.price}</span>}
-                                  {item.duration   && <span style={{ fontSize:10.5, color:T.hint }}>{item.duration}</span>}
-                                  {item.admission  && <span style={{ fontSize:10.5, color:T.hint }}>{item.admission}</span>}
-                                  {item.difficulty && <span style={{ fontSize:10.5, color:T.hint }}>{item.difficulty}</span>}
-                                  {item.bookAhead  && <span style={{ fontSize:9.5, color:T.accent, background:"#2a1a12", padding:"2px 6px", borderRadius:4, border:`1px solid #4a3020` }}>Book ahead</span>}
-                                </div>
-                              </div>
-                              {Array.isArray(item.tags) && item.tags.length > 0 && (
-                                <div style={{ display:"flex", gap:4, marginTop:7, flexWrap:"wrap" }}>
-                                  {item.tags.map((tg, ti) => <span key={ti} style={{ fontSize:9.5, padding:"2px 7px", borderRadius:100, background:T.bg3, color:T.muted, border:`1px solid ${T.border}` }}>{tg}</span>)}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-              {/* Photo spots */}
-              {Array.isArray(trip.photoSpots) && trip.photoSpots.length > 0 && (
-                <div style={{ background:T.bg1, border:`1px solid ${T.border}`, borderRadius:12, overflow:"hidden" }}>
-                  <button onClick={() => setExpandedCat(expandedCat === "__photos__" ? null : "__photos__")}
-                    style={{ width:"100%", padding:"11px 14px", display:"flex", alignItems:"center", gap:9, background:expandedCat==="__photos__"?"#1e1530":T.bg1, borderBottom:expandedCat==="__photos__"?"1px solid #352a50":"none", borderTop:"none", borderLeft:"none", borderRight:"none", borderRadius:0, cursor:"pointer", fontFamily:T.font }}>
-                    <CatDot col="#b89cf5" />
-                    <span style={{ fontSize:13, fontWeight:600, color:expandedCat==="__photos__"?"#b89cf5":T.ink, flex:1, textAlign:"left" }}>Photo spots</span>
-                    <span style={{ fontSize:11, color:T.hint }}>{trip.photoSpots.length} spots</span>
-                    <span style={{ fontSize:10, color:T.hint, marginLeft:3 }}>{expandedCat==="__photos__"?"▲":"▼"}</span>
-                  </button>
-                  {expandedCat === "__photos__" && (
-                    <div style={{ padding:"0 1rem .75rem", background:T.bg1 }}>
-                      {trip.photoSpots.map((spot, i) => {
-                        const s = typeof spot === "string" ? { name:spot } : spot;
-                        return (
-                          <div key={i} style={{ padding:"10px 0", borderBottom:i<trip.photoSpots.length-1?`1px solid ${T.border}`:"none" }}>
-                            <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:8 }}>
-                              <div style={{ flex:1 }}>
-                                <div style={{ fontSize:12.5, fontWeight:700, color:T.ink, marginBottom:2 }}>{s.name}{s.neighborhood ? ` · ${s.neighborhood}` : ""}</div>
-                                {s.what   && <div style={{ fontSize:12, color:T.muted, lineHeight:1.55 }}>{s.what}</div>}
-                                {s.proTip && (
-                                  <div style={{ fontSize:11, background:"#1e1a30", color:"#b89cf5", padding:"4px 8px", borderRadius:4, marginTop:5, border:"1px solid #352a50", lineHeight:1.55 }}>
-                                    <span style={{ fontSize:9.5, fontWeight:700, textTransform:"uppercase", letterSpacing:".07em", opacity:.7, marginRight:5 }}>Pro tip</span>{s.proTip}
-                                  </div>
-                                )}
-                              </div>
-                              <div style={{ display:"flex", flexDirection:"column", gap:3, alignItems:"flex-end", flexShrink:0 }}>
-                                {s.bestLight        && <span style={{ fontSize:10, color:"#f0d060", background:"#242010", padding:"2px 6px", borderRadius:4, border:"1px solid #404020" }}>{s.bestLight}</span>}
-                                {s.goldenHourWindow && <span style={{ fontSize:10, color:"#f4a86a", background:"#2a1a12", padding:"2px 6px", borderRadius:4, border:"1px solid #4a3020" }}>{s.goldenHourWindow}</span>}
-                                {s.lens             && <span style={{ fontSize:10, color:"#7dd87a", background:"#152015", padding:"2px 6px", borderRadius:4, border:"1px solid #254025" }}>{s.lens}</span>}
-                                {s.gps              && <a href={`https://maps.google.com/?q=${encodeURIComponent(s.gps)}`} target="_blank" rel="noreferrer" style={{ fontSize:10, color:T.accent, background:T.bg3, padding:"2px 6px", borderRadius:4, textDecoration:"none" }}>Map →</a>}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── PRACTICAL TAB ── */}
-          {tab === "practical" && (
-            <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
-              {Object.keys(prac).length === 0 && (
-                <div style={{ background:T.bg1, border:`1px solid ${T.border}`, borderRadius:12, padding:"2rem", textAlign:"center" }}>
-                  <div style={{ fontSize:15, fontWeight:700, color:T.ink, marginBottom:6 }}>No tips loaded</div>
-                  <div style={{ fontSize:13, color:T.muted }}>Try starting a new trip.</div>
-                </div>
-              )}
-              {[
-                ["Getting around",    prac.gettingAround],
-                ["Best areas",        prac.bestAreas],
-                ["Timing & rhythms",  prac.timing],
-                ["Budget tips",       prac.budgetTips],
-                ["Local insider tips",prac.localTips],
-                ["Weather",           prac.weatherNote],
-                ["Book ahead",        prac.bookAhead],
-              ].filter(([, v]) => v).map(([title, body]) => (
-                <div key={title} style={{ background:T.bg1, border:`1px solid ${T.border}`, borderRadius:10, padding:".875rem 1.125rem" }}>
-                  <div style={{ fontSize:12.5, fontWeight:700, color:T.ink, marginBottom:5 }}>{title}</div>
-                  <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.75 }}>{body}</div>
-                </div>
-              ))}
-              {Array.isArray(trip.avoidList) && trip.avoidList.length > 0 && (
-                <div style={{ background:"#251515", border:"1px solid #402020", borderRadius:10, padding:".875rem 1.125rem" }}>
-                  <div style={{ fontSize:12.5, fontWeight:700, color:"#f08080", marginBottom:7 }}>Skip these</div>
-                  {trip.avoidList.map((av, i) => (
-                    <div key={i} style={{ fontSize:12.5, color:"#c08080", marginBottom:4, paddingLeft:10, borderLeft:"2px solid #602020", lineHeight:1.5 }}>{av}</div>
-                  ))}
-                </div>
-              )}
-              {/* Trip profile summary */}
-              <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:10, padding:".875rem 1.125rem" }}>
-                <div style={{ fontSize:11, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:9 }}>Your trip profile</div>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:7 }}>
-                  {[
-                    ["Destination", a.destination],
-                    ["Stay",        a.logistics?.stay || a.stay],
-                    ["Transport",   a.logistics?.transport ? arr(a.logistics.transport) : arr(a.transport)],
-                    ["Budget",      a.budget === 0 ? "With family/friends" : `~${a.budget} USD/day`],
-                    ["Notes",       a.notes],
-                  ].filter(([, v]) => v).map(([l, v]) => (
-                    <div key={l}>
-                      <div style={{ fontSize:9, textTransform:"uppercase", letterSpacing:".1em", color:T.hint, marginBottom:1 }}>{l}</div>
-                      <div style={{ fontSize:11.5, color:T.ink, lineHeight:1.5 }}>{v}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
 
         </div>
       </div>

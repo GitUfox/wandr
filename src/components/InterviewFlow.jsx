@@ -143,10 +143,10 @@ export default function InterviewFlow({
               </div>
             </div>
 
-            {/* Where staying — optional */}
+            {/* Home base — optional */}
             <div>
               <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:5 }}>
-                Where staying <span style={{ fontWeight:400, letterSpacing:"normal", textTransform:"none", color:T.hint, opacity:.6 }}>· optional</span>
+                Home base <span style={{ fontWeight:400, letterSpacing:"normal", textTransform:"none", color:T.hint, opacity:.6 }}>· optional</span>
               </div>
               <input type="text" value={logStay} onChange={e => setLogStay(e.target.value)}
                 placeholder="Airbnb in Trastevere · Hotel near city centre · Staying with family"

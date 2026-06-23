@@ -41,7 +41,7 @@ export function useBuildTrip() {
         oneCall(catsMsg, 6000),
         oneCall(metaMsg, 4000),
       ]);
-      // meta provides destination/tagline/season/highlights/practical/photoSpots/avoidList;
+      // meta provides destination/tagline/season/highlights;
       // cats provides categories. Merge into the single trip object the app expects.
       return { ...meta, categories: cats?.categories || {} };
     };
@@ -77,9 +77,6 @@ export function useBuildTrip() {
         nights: n,
         highlights: [],
         categories: {},
-        practical: {},
-        photoSpots: [],
-        avoidList: [],
         answers,
         _error: true,
       };

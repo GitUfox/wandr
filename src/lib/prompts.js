@@ -163,10 +163,7 @@ const CATEGORIES_BODY =
 }`;
 
 const META_BODY = (n) =>
-`"destination":"City, Country","tagline":"8-word trip description","nights":${n},"season":"one sentence","highlights":["h1","h2","h3"],
-"practical":{"gettingAround":"","bestAreas":"","timing":"","budgetTips":"","localTips":"","weatherNote":"","bookAhead":""},
-"photoSpots":[{"name":"","neighborhood":"","gps":"lat,lon","what":"","bestLight":"golden hour","goldenHourWindow":"","lens":"","proTip":""}],
-"avoidList":["","",""]`;
+`"destination":"City, Country","tagline":"8-word trip description","nights":${n},"season":"one sentence","highlights":["h1","h2","h3"]`;
 
 const CATEGORIES_SCHEMA      = `{${CATEGORIES_BODY}}`;
 const META_SCHEMA            = (n) => `{${META_BODY(n)}}`;
@@ -276,7 +273,7 @@ export function buildTripCategoriesPrompt(answers, uploadedFiles) {
 }
 
 /**
- * Light half of the split build — meta, practical, photoSpots, avoidList.
+ * Light half of the split build — destination, tagline, nights, season, highlights.
  * Returns { messageContent, n }.
  */
 export function buildTripMetaPrompt(answers, uploadedFiles) {

@@ -58,18 +58,6 @@ export const STEPS = [
   },
 ];
 
-// ── Activity category config ──────────────────────────────────────────────────
-export const CATS = {
-  breakfast:   { label:"Breakfast spots",  col:"#f4a86a", bg:"#2a1f15", border:"#4a3020" },
-  lunch:       { label:"Lunch spots",       col:"#7dd87a", bg:"#152015", border:"#254025" },
-  dinner:      { label:"Dinner spots",      col:"#e89be8", bg:"#221525", border:"#402040" },
-  nature:      { label:"Nature & hiking",   col:"#5ecfbe", bg:"#0d2420", border:"#1a4038" },
-  culture:     { label:"Culture",            col:"#b89cf5", bg:"#1e1a30", border:"#352a50" },
-  nightlife:   { label:"Music & nightlife", col:"#7ab8f0", bg:"#141e2e", border:"#243448" },
-  exploration: { label:"Exploration",       col:"#f0d060", bg:"#242010", border:"#404020" },
-  experiences: { label:"Experiences",        col:"#f08080", bg:"#251515", border:"#402020" },
-};
-
 // ── Plan generation modes ─────────────────────────────────────────────────────
 // Only "full" ships today — it's the core experience. The other modes are
 // back-burnered on the roadmap (see FUTURE_MODES). Their prompt logic still

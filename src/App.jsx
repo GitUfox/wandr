@@ -71,8 +71,6 @@ export default function Wandr() {
 
   // Trip + dashboard
   const [trip, setTrip]               = useState(null);
-  const [tab, setTab]                 = useState("plan");
-  const [expandedCat, setExpandedCat] = useState(null);
   const [savedTrip, setSavedTrip]     = useState(loadSavedTrip);
 
   const fileInputRef = useRef(null);
@@ -141,7 +139,6 @@ export default function Wandr() {
   }
 
   function handleGenerate(mode) {
-    setTab("plan");
     doGenerate(mode, trip);
   }
 
@@ -153,7 +150,6 @@ export default function Wandr() {
    *   dayLabel    — full label string (day edits only)
    */
   function handleEditPlan(type, instruction, dayIndex, dayLabel) {
-    setTab("plan");
     if (type === "day") {
       doPatchDay(dayIndex, dayLabel, instruction, trip);
     } else {
@@ -178,7 +174,7 @@ export default function Wandr() {
     setScreen("welcome"); setStep(0); setAnswers({}); setDir(1);
     setCur(""); setChips([]); setKids(""); setAvoidText("");
     setBudget(120); setD1(""); setD2(""); setLogStay(""); setLogTransport(""); setLogPace(""); setLogFirstTime("");
-    setTrip(null); setTab("plan"); setExpandedCat(null);
+    setTrip(null);
     resetFiles(); resetPlan();
   }
 
@@ -252,8 +248,6 @@ export default function Wandr() {
                   trip={trip}
                   planText={planText} planLoading={planLoading} planMode={planMode}
                   patchError={patchError}
-                  tab={tab} setTab={setTab}
-                  expandedCat={expandedCat} setExpandedCat={setExpandedCat}
                   debugMsg={buildError}
                   onGenerate={handleGenerate}
                   onEditPlan={handleEditPlan}

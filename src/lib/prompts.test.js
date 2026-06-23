@@ -122,12 +122,14 @@ describe("split trip build", () => {
     expect(messageContent).not.toContain('"practical"');
   });
 
-  it("meta half asks for meta sections but not the category list", () => {
+  it("meta half asks for the header sections but not the category list", () => {
     const { messageContent } = buildTripMetaPrompt(BASE_ANSWERS, []);
-    expect(messageContent).toContain('"practical"');
-    expect(messageContent).toContain('"photoSpots"');
-    expect(messageContent).toContain('"avoidList"');
+    expect(messageContent).toContain('"destination"');
+    expect(messageContent).toContain('"highlights"');
     expect(messageContent).not.toContain('"breakfast"');
+    // practical/photoSpots/avoidList were dropped when Activities + Tips were removed
+    expect(messageContent).not.toContain('"photoSpots"');
+    expect(messageContent).not.toContain('"practical"');
   });
 
   it("both halves carry the same shared trip context", () => {
