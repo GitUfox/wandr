@@ -107,24 +107,55 @@ export default function Wandr() {
     return String(v).trim().length > 1;
   }
 
-  function advance() {
-    const val = currentVal();
-    const newAns = { ...answers, [S.id]: val };
+  // Rehydrate the shared per-step fields (cur/chips/kids/avoidText) from the
+  // saved answers for a given step. Without this, navigating Back to a chip/text
+  // step renders blank — the answer is in `answers` but the UI state was reset.
+  // Logistics/budget/date state persist in their own vars, so aren't touched here.
+  function hydrate(idx, src) {
+    const st = STEPS[idx];
+    const a = src[st.id];
+    if (st.id === "party") {
+      setChips(a?.chips || []); setCur(a?.text || ""); setKids(a?.kids || "");
+    } else if (st.id === "interests") {
+      setChips(a?.chips || []); setCur(a?.text || ""); setKids("");
+    } else if (st.type === "chips") {
+      setChips(Array.isArray(a) ? a : []); setCur(""); setKids("");
+    } else if (st.type === "text" || st.type === "textarea+upload") {
+      setCur(typeof a === "string" ? a : ""); setChips([]); setKids("");
+    } else {
+      setChips([]); setCur(""); setKids("");
+    }
+    setAvoidText(st.id === "notes" ? (src.avoid || "") : "");
+  }
+
+  // Stage the current step's edits into answers, returning the merged object.
+  function stageCurrent() {
+    const newAns = { ...answers, [S.id]: currentVal() };
     if (S.id === "notes") newAns.avoid = avoidText.trim();
+    return newAns;
+  }
+
+  function advance() {
+    const newAns = stageCurrent();
     setAnswers(newAns);
     if (step < STEPS.length - 1) {
       setDir(1);
-      setStep(s => s + 1);
-      setCur(""); setChips([]); setKids(""); setAvoidText("");
+      const next = step + 1;
+      setStep(next);
+      hydrate(next, newAns);
     } else {
       handleBuildTrip(newAns);
     }
   }
 
   function goBack() {
+    // Persist current edits too, so navigating forward again restores them.
+    const newAns = stageCurrent();
+    setAnswers(newAns);
     setDir(-1);
-    setStep(s => s - 1);
-    setCur(""); setChips([]); setKids(""); setAvoidText("");
+    const prev = step - 1;
+    setStep(prev);
+    hydrate(prev, newAns);
   }
 
   // ── API actions ───────────────────────────────────────────────────────────
