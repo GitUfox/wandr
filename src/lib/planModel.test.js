@@ -153,6 +153,16 @@ describe("fidelity edge cases", () => {
     expect(parsePlan(serializePlan(m)).days[0].extras).toEqual(m.days[0].extras);
   });
 
+  it("drops horizontal-rule separators between days (not stored as extras)", () => {
+    // Real model output separates days with `---` (see validate-parser harness).
+    const withRules = `## Day 1 — Mon\n\nTABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| 9:00 | **A** | x |\nENDTABLE\n\n---\n\n## Day 2 — Tue\n\nTABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| 9:00 | **B** | y |\nENDTABLE\n`;
+    const m = parsePlan(withRules);
+    expect(m.days).toHaveLength(2);
+    expect(m.days[0].extras).toEqual([]);
+    expect(m.days[1].extras).toEqual([]);
+    expect(parsePlan(serializePlan(m)).days).toHaveLength(2);
+  });
+
   it("collapses an overflowing Details column instead of dropping cells", () => {
     const overflow = `## Day 1 — Monday\n\nTABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| 9:00 | **Market** | open-air | extra stalls |\nENDTABLE\n`;
     const m = parsePlan(overflow);

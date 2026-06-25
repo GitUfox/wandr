@@ -26,6 +26,9 @@ function nextId() {
 
 const DAY_HEADER = /^##\s+(.+?)\s*$/;
 const SEP_ROW = /^\|[-| :]+\|$/;
+// Horizontal rules (---, ***, ═══ etc.) are visual separators only — Md.jsx
+// skips them on render, so the model treats them as noise, not content.
+const RULE = /^(?:[-–—*_]{3,}|={3,})$/;
 
 /** Split markdown table lines into trimmed cell arrays, capping at maxCols. */
 function parseRows(lines, maxCols) {
@@ -80,6 +83,9 @@ export function parsePlan(text) {
       i++;
       continue;
     }
+
+    // Horizontal rules are visual-only — drop them everywhere (intro and days).
+    if (RULE.test(trimmed)) { i++; continue; }
 
     // Before the first day header: collect as intro.
     if (!day) {
