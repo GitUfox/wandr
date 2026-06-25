@@ -2,16 +2,63 @@ import { useState, useRef, useEffect } from "react";
 import { stream, consumeStream, complete } from "../lib/api.js";
 import { buildPlanPrompt, buildEditDayPrompt } from "../lib/prompts.js";
 import { spliceDayInPlan } from "../lib/utils.js";
+import { parsePlan, serializePlan } from "../lib/planModel.js";
 
 export function useGenerate() {
   const [planText, setPlanText]       = useState("");
+  const [planModel, setPlanModel]     = useState(null); // structured, editable plan (null until a generation completes)
   const [planMode, setPlanMode]       = useState(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [patchError, setPatchError]   = useState("");
   const streamRef  = useRef("");
+  const modelRef   = useRef(null); // mirrors planModel — avoids stale closures in edit handlers
   const abortRef   = useRef(null);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Adopt a freshly-built plan string as the editable model (and keep planText
+  // in sync). Used after generation completes and after an AI day-patch.
+  function adoptPlan(text) {
+    const model = parsePlan(text);
+    modelRef.current = model;
+    setPlanModel(model);
+  }
+
+  // Commit an edited model: model is the source of truth, planText is
+  // re-serialized so copy / PDF export / EditTripSheet all stay consistent.
+  function commitModel(next) {
+    modelRef.current = next;
+    setPlanModel(next);
+    const md = serializePlan(next);
+    streamRef.current = md;
+    setPlanText(md);
+  }
+
+  /** Inline-edit one activity's fields (time / title / details). */
+  function editActivity(dayIdx, actId, patch) {
+    const prev = modelRef.current;
+    if (!prev) return;
+    commitModel({
+      ...prev,
+      days: prev.days.map((d, i) => i !== dayIdx ? d : {
+        ...d,
+        activities: d.activities.map(act => act.id === actId ? { ...act, ...patch } : act),
+      }),
+    });
+  }
+
+  /** Remove one activity from a day. */
+  function removeActivity(dayIdx, actId) {
+    const prev = modelRef.current;
+    if (!prev) return;
+    commitModel({
+      ...prev,
+      days: prev.days.map((d, i) => i !== dayIdx ? d : {
+        ...d,
+        activities: d.activities.filter(act => act.id !== actId),
+      }),
+    });
+  }
 
   /**
    * Generate (or re-generate) a plan in the given mode.
@@ -26,6 +73,8 @@ export function useGenerate() {
     setPlanMode(mode);
     setPlanLoading(true);
     setPlanText("");
+    setPlanModel(null);
+    modelRef.current = null;
     setPatchError("");
     streamRef.current = "";
 
@@ -37,6 +86,8 @@ export function useGenerate() {
         streamRef.current += chunk;
         setPlanText(streamRef.current);
       }, controller.signal);
+      // Parse the completed plan into the editable model (skip if aborted).
+      if (!controller.signal.aborted) adoptPlan(streamRef.current);
     } catch (e) {
       if (e?.name === "AbortError") return;
       // Sanitise: never show raw browser network errors (e.g. "Failed to fetch") to the user
@@ -89,6 +140,7 @@ export function useGenerate() {
       const newPlan = spliceDayInPlan(currentPlan, dayIndex, raw);
       setPlanText(newPlan);
       streamRef.current = newPlan;
+      adoptPlan(newPlan); // keep the editable model in sync after an AI day-patch
     } catch (e) {
       if (e?.name === "AbortError") return;
       const msg = e.message || "";
@@ -108,11 +160,13 @@ export function useGenerate() {
     abortRef.current?.abort();
     abortRef.current = null;
     setPlanText("");
+    setPlanModel(null);
+    modelRef.current = null;
     setPlanMode(null);
     setPlanLoading(false);
     setPatchError("");
     streamRef.current = "";
   }
 
-  return { planText, planMode, planLoading, patchError, generate, patchDay, resetPlan };
+  return { planText, planModel, planMode, planLoading, patchError, generate, patchDay, resetPlan, editActivity, removeActivity };
 }

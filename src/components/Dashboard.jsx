@@ -5,20 +5,23 @@
  * Everything else — trip data, plan state — comes from App.jsx via props.
  */
 import { useState } from "react";
-import { MODES, T } from "../lib/constants.js";
+import { MODES, T, FEATURES } from "../lib/constants.js";
 import { arr } from "../lib/utils.js";
 import Md from "./Md.jsx";
+import ItineraryEditor from "./ItineraryEditor.jsx";
 import WandrLogo from "./WandrLogo.jsx";
 import EditTripSheet from "./EditTripSheet.jsx";
 
 export default function Dashboard({
   trip,
-  planText, planLoading, planMode,
+  planText, planModel, planLoading, planMode,
   patchError,
   debugMsg,
   onGenerate,
   onEditPlan,
   onEditTripDetails,
+  onEditActivity,
+  onDeleteActivity,
   onReset,
 }) {
   const [copied, setCopied]           = useState(false);
@@ -288,7 +291,13 @@ export default function Dashboard({
                       </>
                     )}
                   </div>
-                  <Md text={planText} />
+                  {/* Editable blocks once a full itinerary has finished streaming;
+                      Md stays the fallback (during streaming, other modes, or if parsing yielded nothing). */}
+                  {FEATURES.editableItinerary && !planLoading && planMode === "full" && planModel?.days?.length ? (
+                    <ItineraryEditor model={planModel} onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity} />
+                  ) : (
+                    <Md text={planText} />
+                  )}
                   {planLoading && (
                     <span style={{ display:"inline-block", width:7, height:14, background:T.accent, marginLeft:3, animation:"blink 1s step-end infinite", borderRadius:1 }} />
                   )}

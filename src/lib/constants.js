@@ -1,3 +1,9 @@
+// ── Feature flags ─────────────────────────────────────────────────────────────
+// Kill switches for in-progress features. Flip to false to fall back instantly.
+export const FEATURES = {
+  editableItinerary: true, // render the Full itinerary as editable blocks (else read-only Md)
+};
+
 // ── Design tokens ────────────────────────────────────────────────────────────
 export const T = {
   bg0:"#0d0d0d", bg1:"#171717", bg2:"#1f1f1f", bg3:"#2a2a2a",
