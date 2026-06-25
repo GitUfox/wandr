@@ -4,6 +4,8 @@ import { buildPlanPrompt, buildEditDayPrompt } from "../lib/prompts.js";
 import { spliceDayInPlan } from "../lib/utils.js";
 import { parsePlan, serializePlan } from "../lib/planModel.js";
 
+const PLAN_KEY = "wandr_plan";
+
 export function useGenerate() {
   const [planText, setPlanText]       = useState("");
   const [planModel, setPlanModel]     = useState(null); // structured, editable plan (null until a generation completes)
@@ -15,6 +17,14 @@ export function useGenerate() {
   const abortRef   = useRef(null);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Persist the completed/edited plan so a reload (or Resume) keeps it.
+  // Guarded on planModel (null while streaming) so we never write mid-stream;
+  // fires once on completion and again on every edit.
+  useEffect(() => {
+    if (!planModel || !planText || planLoading) return;
+    try { localStorage.setItem(PLAN_KEY, JSON.stringify({ planText, planMode })); } catch { /* quota — ignore */ }
+  }, [planModel, planText, planMode, planLoading]);
 
   // Adopt a freshly-built plan string as the editable model (and keep planText
   // in sync). Used after generation completes and after an AI day-patch.
@@ -168,5 +178,27 @@ export function useGenerate() {
     streamRef.current = "";
   }
 
-  return { planText, planModel, planMode, planLoading, patchError, generate, patchDay, resetPlan, editActivity, removeActivity };
+  /**
+   * Restore a previously-saved plan (from localStorage) into state.
+   * Re-parses planText into the model so the editable view is consistent.
+   * Returns true if a plan was restored.
+   */
+  function restorePlan() {
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem(PLAN_KEY) || "null"); } catch { saved = null; }
+    if (!saved?.planText) return false;
+    streamRef.current = saved.planText;
+    setPlanText(saved.planText);
+    setPlanMode(saved.planMode || null);
+    adoptPlan(saved.planText);
+    return true;
+  }
+
+  /** Clear the saved plan and reset in-memory state (new trip / reset). */
+  function clearSavedPlan() {
+    try { localStorage.removeItem(PLAN_KEY); } catch { /* ignore */ }
+    resetPlan();
+  }
+
+  return { planText, planModel, planMode, planLoading, patchError, generate, patchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity };
 }

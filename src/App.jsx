@@ -78,7 +78,7 @@ export default function Wandr() {
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const { buildTrip: doBuildTrip, loadMsg, error: buildError } = useBuildTrip();
-  const { planText, planModel, planMode, planLoading, patchError, generate: doGenerate, patchDay: doPatchDay, resetPlan, editActivity, removeActivity } = useGenerate();
+  const { planText, planModel, planMode, planLoading, patchError, generate: doGenerate, patchDay: doPatchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity } = useGenerate();
   const { uploadedFiles, uploadError, handleFiles, removeFile, resetFiles } = useFileUpload();
 
   // ── Interview helpers ─────────────────────────────────────────────────────
@@ -164,6 +164,7 @@ export default function Wandr() {
     const result = await doBuildTrip(a, uploadedFiles);
     if (!result._error) {
       try { localStorage.setItem("wandr_trip", JSON.stringify(result)); setSavedTrip(result); } catch {}
+      clearSavedPlan(); // a fresh/rebuilt trip — drop any saved plan from the previous one
     }
     setTrip(result);
     setScreen("dashboard");
@@ -206,11 +207,12 @@ export default function Wandr() {
     setCur(""); setChips([]); setKids(""); setAvoidText("");
     setBudget(120); setD1(""); setD2(""); setLogStay(""); setLogTransport(""); setLogPace(""); setLogFirstTime("");
     setTrip(null);
-    resetFiles(); resetPlan();
+    resetFiles(); clearSavedPlan();
   }
 
   function handleResume() {
     setTrip(savedTrip);
+    restorePlan(); // bring back the saved itinerary + edits, if any
     setScreen("dashboard");
   }
 
