@@ -7,6 +7,11 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { STEPS, T } from "../lib/constants.js";
 import DateRangePicker from "./DateRangePicker.jsx";
+import DictationButton from "./DictationButton.jsx";
+
+// Mic position for single-line inputs (anchored to the input's top, so the
+// wrapper's bottom margin doesn't throw off vertical centering).
+const INPUT_MIC = { top: 5, bottom: "auto", right: 8, width: 28, height: 28 };
 
 const inputSt = {
   width:"100%", padding:"10px 14px", border:`1px solid ${T.border}`, borderRadius:8,
@@ -156,16 +161,22 @@ export default function InterviewFlow({
         {/* ── Textarea + file upload ── */}
         {S.type === "textarea+upload" && (
           <>
-            <textarea value={cur} onChange={e => setCur(e.target.value)} placeholder={S.ph} rows={4}
-              style={{...inputSt, lineHeight:1.7, resize:"vertical"}} />
+            <div style={{ position:"relative", marginBottom:"1.25rem" }}>
+              <textarea value={cur} onChange={e => setCur(e.target.value)} placeholder={S.ph} rows={4}
+                style={{...inputSt, marginBottom:0, lineHeight:1.7, resize:"none", paddingRight:48}} />
+              <DictationButton value={cur} onChange={setCur} />
+            </div>
             {S.id === "notes" && (
               <div style={{ marginTop:2, marginBottom:"1.25rem" }}>
                 {/* Dedicated avoid field — fed to the AVOID prompt instruction as a hard exclusion */}
                 <div>
                   <div style={{ fontSize:11, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 }}>Anything to avoid?</div>
-                  <input type="text" value={avoidText || ""} onChange={e => setAvoidText(e.target.value)}
-                    placeholder="e.g. crowds · seafood · long hikes · touristy spots"
-                    style={inputSt} />
+                  <div style={{ position:"relative" }}>
+                    <input type="text" value={avoidText || ""} onChange={e => setAvoidText(e.target.value)}
+                      placeholder="e.g. crowds · seafood · long hikes · touristy spots"
+                      style={{...inputSt, paddingRight:40}} />
+                    <DictationButton value={avoidText || ""} onChange={setAvoidText} style={INPUT_MIC} />
+                  </div>
                   <div style={{ fontSize:11, color:T.hint, marginTop:6 }}>Hard no's — we'll keep these out of every suggestion.</div>
                 </div>
               </div>
@@ -249,9 +260,12 @@ export default function InterviewFlow({
                 )}
               </>
             )}
-            <input type="text" value={cur} onChange={e => setCur(e.target.value)}
-              placeholder={S.ph}
-              style={{...inputSt, marginBottom:0, fontSize:12.5}} />
+            <div style={{ position:"relative" }}>
+              <input type="text" value={cur} onChange={e => setCur(e.target.value)}
+                placeholder={S.ph}
+                style={{...inputSt, marginBottom:0, fontSize:12.5, paddingRight:40}} />
+              <DictationButton value={cur} onChange={setCur} style={INPUT_MIC} />
+            </div>
             {S.id === "interests" && chips.length > 0 && (
               <div style={{ marginTop:8 }}>
                 <span style={{ fontSize:11, color:T.accent }}>{chips.length} interest{chips.length !== 1 ? "s" : ""} selected</span>
