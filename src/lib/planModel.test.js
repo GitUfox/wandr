@@ -114,6 +114,17 @@ describe("round-trip stability (the core invariant)", () => {
     expect(round.days[1].activities[1].title).toBe("**Castelo de São Jorge**");
   });
 
+  it("survives a mutation: reordering activities within a day round-trips cleanly", () => {
+    const m = parsePlan(TWO_DAY);
+    // Reverse Day 1's activity order (what a within-day drag produces).
+    m.days[0].activities.reverse();
+    const round = parsePlan(serializePlan(m));
+    expect(round.days[0].activities.map(a => a.title)).toEqual([
+      "**Castelo de São Jorge**",
+      "**Alfama walk**",
+    ]);
+  });
+
   it("survives a mutation: deleting an activity round-trips cleanly", () => {
     const m = parsePlan(TWO_DAY);
     m.days[0].activities.splice(0, 1);

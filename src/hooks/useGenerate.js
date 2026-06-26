@@ -70,6 +70,32 @@ export function useGenerate() {
     });
   }
 
+  /** Replace a day's activity order (from a within-day drag reorder). */
+  function reorderDayActivities(dayIdx, newActivities) {
+    const prev = modelRef.current;
+    if (!prev) return;
+    commitModel({
+      ...prev,
+      days: prev.days.map((d, i) => i !== dayIdx ? d : { ...d, activities: newActivities }),
+    });
+  }
+
+  /** Move one activity from one day to the end of another. */
+  function moveActivity(fromDayIdx, actId, toDayIdx) {
+    const prev = modelRef.current;
+    if (!prev || fromDayIdx === toDayIdx) return;
+    const act = prev.days[fromDayIdx]?.activities.find(a => a.id === actId);
+    if (!act) return;
+    commitModel({
+      ...prev,
+      days: prev.days.map((d, i) => {
+        if (i === fromDayIdx) return { ...d, activities: d.activities.filter(a => a.id !== actId) };
+        if (i === toDayIdx)   return { ...d, activities: [...d.activities, act] };
+        return d;
+      }),
+    });
+  }
+
   /**
    * Generate (or re-generate) a plan in the given mode.
    * editInstruction — optional free-text instruction for Full Itinerary / Specific Activities edits.
@@ -200,5 +226,5 @@ export function useGenerate() {
     resetPlan();
   }
 
-  return { planText, planModel, planMode, planLoading, patchError, generate, patchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity };
+  return { planText, planModel, planMode, planLoading, patchError, generate, patchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity };
 }

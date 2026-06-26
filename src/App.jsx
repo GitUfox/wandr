@@ -78,7 +78,7 @@ export default function Wandr() {
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const { buildTrip: doBuildTrip, loadMsg, error: buildError } = useBuildTrip();
-  const { planText, planModel, planMode, planLoading, patchError, generate: doGenerate, patchDay: doPatchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity } = useGenerate();
+  const { planText, planModel, planMode, planLoading, patchError, generate: doGenerate, patchDay: doPatchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity } = useGenerate();
   const { uploadedFiles, uploadError, handleFiles, removeFile, resetFiles } = useFileUpload();
 
   // ── Interview helpers ─────────────────────────────────────────────────────
@@ -287,6 +287,8 @@ export default function Wandr() {
                   onEditTripDetails={handleEditTripDetails}
                   onEditActivity={editActivity}
                   onDeleteActivity={removeActivity}
+                  onReorderDay={reorderDayActivities}
+                  onMoveActivity={moveActivity}
                   onReset={resetAll}
                 />
               </ErrorBoundary>
