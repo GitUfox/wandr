@@ -20,7 +20,7 @@ const iconBtn = {
   fontFamily: T.font, fontSize: 12, padding: "3px 6px", borderRadius: 6, lineHeight: 1,
 };
 
-function ActivityBlock({ a, dayIdx, days, onEditActivity, onDeleteActivity, onMoveActivity }) {
+function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteActivity, onMoveActivity, onTweakActivity }) {
   const controls = useDragControls();
   const [editing, setEditing]       = useState(false);
   const [time, setTime]             = useState(a.time);
@@ -28,6 +28,16 @@ function ActivityBlock({ a, dayIdx, days, onEditActivity, onDeleteActivity, onMo
   const [details, setDetails]       = useState(a.details);
   const [confirmDel, setConfirmDel] = useState(false);
   const [moving, setMoving]         = useState(false);
+  const [tweakOpen, setTweakOpen]   = useState(false);
+  const [tweakText, setTweakText]   = useState("");
+
+  function submitTweak() {
+    const t = tweakText.trim();
+    if (!t) return;
+    onTweakActivity(dayIdx, a.id, t);
+    setTweakOpen(false);
+    setTweakText("");
+  }
 
   function save() {
     onEditActivity(dayIdx, a.id, {
@@ -91,26 +101,45 @@ function ActivityBlock({ a, dayIdx, days, onEditActivity, onDeleteActivity, onMo
                 <button onClick={() => setMoving(false)} style={{ ...iconBtn, fontSize: 11, color: T.muted }}>Cancel</button>
               </div>
             )}
-          </div>
-
-          {/* Actions */}
-          <div style={{ position: "absolute", top: 8, right: 8, display: "flex", gap: 2 }}>
-            {confirmDel ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 4, background: T.bg3, borderRadius: 7, padding: "2px 4px" }}>
-                <span style={{ fontSize: 10.5, color: T.muted, paddingLeft: 4 }}>Delete?</span>
-                <button onClick={() => onDeleteActivity(dayIdx, a.id)} title="Confirm delete" style={{ ...iconBtn, color: "#f08070", fontWeight: 700 }}>Yes</button>
-                <button onClick={() => setConfirmDel(false)} title="Keep" style={{ ...iconBtn, color: T.muted }}>No</button>
+            {/* AI tweak — free-text instruction for just this activity */}
+            {isTweaking ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 8, fontSize: 11, color: T.accent }}>
+                <span style={{ width: 12, height: 12, border: `1.5px solid ${T.border}`, borderTopColor: T.accent, borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
+                Tweaking this activity…
               </div>
-            ) : (
-              <>
-                {otherDays.length > 0 && (
-                  <button onClick={() => setMoving(m => !m)} title="Move to another day" style={{ ...iconBtn, color: moving ? T.accent : T.muted }}>⤴</button>
-                )}
-                <button onClick={() => setEditing(true)} title="Edit" style={{ ...iconBtn, color: T.muted }}>✎</button>
-                <button onClick={() => setConfirmDel(true)} title="Delete" style={{ ...iconBtn, color: T.hint }}>✕</button>
-              </>
+            ) : tweakOpen && (
+              <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8 }}>
+                <input value={tweakText} onChange={e => setTweakText(e.target.value)} autoFocus
+                  onKeyDown={e => e.key === "Enter" && submitTweak()}
+                  placeholder="e.g. make it more relaxed · something cheaper nearby"
+                  style={{ flex: 1, minWidth: 0, padding: "6px 9px", border: `1px solid ${T.accent}`, borderRadius: 7, background: T.bg2, color: T.ink, outline: "none", fontSize: 11.5, fontFamily: T.font }} />
+                <button onClick={submitTweak} style={{ ...iconBtn, fontSize: 11, fontWeight: 700, color: T.white, background: T.accent, padding: "5px 11px" }}>Ask AI</button>
+                <button onClick={() => setTweakOpen(false)} style={{ ...iconBtn, fontSize: 11, color: T.muted }}>✕</button>
+              </div>
             )}
           </div>
+
+          {/* Actions (hidden while an AI tweak is in flight) */}
+          {!isTweaking && (
+            <div style={{ position: "absolute", top: 8, right: 8, display: "flex", gap: 2 }}>
+              {confirmDel ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 4, background: T.bg3, borderRadius: 7, padding: "2px 4px" }}>
+                  <span style={{ fontSize: 10.5, color: T.muted, paddingLeft: 4 }}>Delete?</span>
+                  <button onClick={() => onDeleteActivity(dayIdx, a.id)} title="Confirm delete" style={{ ...iconBtn, color: "#f08070", fontWeight: 700 }}>Yes</button>
+                  <button onClick={() => setConfirmDel(false)} title="Keep" style={{ ...iconBtn, color: T.muted }}>No</button>
+                </div>
+              ) : (
+                <>
+                  <button onClick={() => setTweakOpen(o => !o)} title="Ask AI to tweak this" style={{ ...iconBtn, color: tweakOpen ? T.accent : T.muted }}>✦</button>
+                  {otherDays.length > 0 && (
+                    <button onClick={() => setMoving(m => !m)} title="Move to another day" style={{ ...iconBtn, color: moving ? T.accent : T.muted }}>⤴</button>
+                  )}
+                  <button onClick={() => setEditing(true)} title="Edit" style={{ ...iconBtn, color: T.muted }}>✎</button>
+                  <button onClick={() => setConfirmDel(true)} title="Delete" style={{ ...iconBtn, color: T.hint }}>✕</button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
     </Reorder.Item>
@@ -128,7 +157,7 @@ function FoodRow({ f }) {
   );
 }
 
-function DayCard({ day, dayIdx, days, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity }) {
+function DayCard({ day, dayIdx, days, tweakingId, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onTweakActivity }) {
   return (
     <div style={{ marginBottom: 22 }}>
       <div style={{ fontSize: 15, fontWeight: 800, color: T.ink, margin: "0 0 12px", paddingBottom: 6, borderBottom: `1px solid ${T.border}` }}>
@@ -142,8 +171,8 @@ function DayCard({ day, dayIdx, days, onEditActivity, onDeleteActivity, onReorde
       ) : (
         <Reorder.Group axis="y" as="div" values={day.activities} onReorder={next => onReorderDay(dayIdx, next)}>
           {day.activities.map(a => (
-            <ActivityBlock key={a.id} a={a} dayIdx={dayIdx} days={days}
-              onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity} onMoveActivity={onMoveActivity} />
+            <ActivityBlock key={a.id} a={a} dayIdx={dayIdx} days={days} isTweaking={tweakingId === a.id}
+              onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity} onMoveActivity={onMoveActivity} onTweakActivity={onTweakActivity} />
           ))}
         </Reorder.Group>
       )}
@@ -171,7 +200,7 @@ function DayCard({ day, dayIdx, days, onEditActivity, onDeleteActivity, onReorde
   );
 }
 
-export default function ItineraryEditor({ model, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity }) {
+export default function ItineraryEditor({ model, tweakingId, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onTweakActivity }) {
   if (!model?.days?.length) return null;
   const days = model.days.map((d, idx) => ({ idx, label: d.label }));
   return (
@@ -180,9 +209,9 @@ export default function ItineraryEditor({ model, onEditActivity, onDeleteActivit
         <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.7, marginBottom: 18 }}>{model.intro}</div>
       )}
       {model.days.map((day, i) => (
-        <DayCard key={i} day={day} dayIdx={i} days={days}
+        <DayCard key={i} day={day} dayIdx={i} days={days} tweakingId={tweakingId}
           onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity}
-          onReorderDay={onReorderDay} onMoveActivity={onMoveActivity} />
+          onReorderDay={onReorderDay} onMoveActivity={onMoveActivity} onTweakActivity={onTweakActivity} />
       ))}
     </div>
   );

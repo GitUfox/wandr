@@ -5,6 +5,7 @@ import {
   buildTripMetaPrompt,
   buildPlanPrompt,
   buildEditDayPrompt,
+  buildTweakActivityPrompt,
 } from "./prompts.js";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -340,5 +341,25 @@ describe("avoid wiring", () => {
     const answers = { ...BASE_ANSWERS, avoid: "   " };
     const result = buildPlanPrompt("full", { ...BASE_TRIP, answers });
     expect(result).toContain("Avoid: nothing");
+  });
+});
+
+describe("buildTweakActivityPrompt", () => {
+  const activity = { time: "1:00 PM", title: "**Sao Jorge Castle**", details: "Hilltop fortress, steep climb" };
+
+  it("includes the change request, the current activity, and a single TABLE block", () => {
+    const p = buildTweakActivityPrompt(BASE_TRIP, "Day 1 — Mon", activity, "make it more relaxed");
+    expect(p).toContain("make it more relaxed");
+    expect(p).toContain("Sao Jorge Castle");
+    expect(p).toContain("1:00 PM");
+    expect(p).toContain("TABLE:");
+    expect(p).toContain("ENDTABLE");
+  });
+
+  it("carries traveler context (budget + avoid) into the scoped edit", () => {
+    const trip = { ...BASE_TRIP, answers: { ...BASE_ANSWERS, avoid: "long queues" } };
+    const p = buildTweakActivityPrompt(trip, "Day 1 — Mon", activity, "cheaper option");
+    expect(p).toContain("long queues");
+    expect(p).toContain("120");
   });
 });

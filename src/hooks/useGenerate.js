@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { stream, consumeStream, complete } from "../lib/api.js";
-import { buildPlanPrompt, buildEditDayPrompt } from "../lib/prompts.js";
+import { buildPlanPrompt, buildEditDayPrompt, buildTweakActivityPrompt } from "../lib/prompts.js";
 import { spliceDayInPlan } from "../lib/utils.js";
 import { parsePlan, serializePlan } from "../lib/planModel.js";
 
@@ -12,6 +12,7 @@ export function useGenerate() {
   const [planMode, setPlanMode]       = useState(null);
   const [planLoading, setPlanLoading] = useState(false);
   const [patchError, setPatchError]   = useState("");
+  const [tweakingId, setTweakingId]   = useState(null); // id of the activity currently being AI-tweaked
   const streamRef  = useRef("");
   const modelRef   = useRef(null); // mirrors planModel — avoids stale closures in edit handlers
   const abortRef   = useRef(null);
@@ -78,6 +79,49 @@ export function useGenerate() {
       ...prev,
       days: prev.days.map((d, i) => i !== dayIdx ? d : { ...d, activities: newActivities }),
     });
+  }
+
+  /**
+   * AI-tweak one activity in place: a scoped complete() call that replaces just
+   * this activity's fields (id and position preserved). trip provides context.
+   */
+  async function tweakActivity(dayIdx, actId, instruction, trip) {
+    if (tweakingId) return;
+    const prev = modelRef.current;
+    const act = prev?.days[dayIdx]?.activities.find(a => a.id === actId);
+    if (!act) return;
+
+    setTweakingId(actId);
+    setPatchError("");
+    const controller = new AbortController();
+    try {
+      const prompt = buildTweakActivityPrompt(trip, prev.days[dayIdx].label, act, instruction);
+      const data = await complete([{ role: "user", content: prompt }], 1000, controller.signal);
+      const raw  = data.content?.find(b => b.type === "text")?.text || "";
+      // Reuse the tested parser by wrapping the row in a throwaway day header.
+      const parsed = parsePlan(`## Day 1 — tweak\n\n${raw}`);
+      const fresh  = parsed.days[0]?.activities[0];
+      if (!fresh) throw new Error("Couldn't read the AI's update. Please try again.");
+
+      // Replace by id wherever it now lives (it may have been moved meanwhile).
+      const cur = modelRef.current;
+      commitModel({
+        ...cur,
+        days: cur.days.map(d => ({
+          ...d,
+          activities: d.activities.map(a => a.id === actId
+            ? { ...a, time: fresh.time, title: fresh.title, details: fresh.details }
+            : a),
+        })),
+      });
+    } catch (e) {
+      if (e?.name === "AbortError") return;
+      const msg = e.message || "";
+      const isNet = /failed to fetch|network|load failed/i.test(msg);
+      setPatchError(isNet ? "Couldn't reach the server. Please try again." : (msg || "Couldn't update that activity. Please try again."));
+    } finally {
+      setTweakingId(null);
+    }
   }
 
   /** Move one activity from one day to the end of another. */
@@ -226,5 +270,5 @@ export function useGenerate() {
     resetPlan();
   }
 
-  return { planText, planModel, planMode, planLoading, patchError, generate, patchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity };
+  return { planText, planModel, planMode, planLoading, patchError, tweakingId, generate, patchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, tweakActivity };
 }

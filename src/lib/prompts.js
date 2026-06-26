@@ -354,6 +354,42 @@ TIPS: [practical tip] | [logistics tip]
 }
 
 /**
+ * Build a prompt to tweak ONE activity in place (Phase 3 per-activity AI edit).
+ * Returns a single replacement activity as a one-row TABLE block, which the
+ * caller parses via parsePlan. Uses complete() (not streaming).
+ */
+export function buildTweakActivityPrompt(trip, dayLabel, activity, instruction) {
+  const a = trip.answers;
+  const budgetLabel = a.budget === 0 ? "staying with family/friends" : `~${a.budget} USD/day`;
+  const avoidText   = resolveAvoid(a);
+  const kidsVal     = a.party?.kids || "";
+
+  return `You are a travel planner editing ONE activity in a ${trip.destination} itinerary (${dayLabel}).
+
+CURRENT ACTIVITY:
+| ${activity.time} | ${activity.title} | ${activity.details} |
+
+CHANGE REQUEST: ${instruction}
+
+TRAVELER CONTEXT (respect these):
+- Party: ${arr(a.party)}${kidsVal ? ` · Kids: ${kidsVal}` : ""}
+- Budget: ${budgetLabel}
+- Interests: ${arr(a.interests)}
+- Avoid: ${avoidText}
+
+Apply the change request. Keep the same time slot unless the request implies otherwise.
+Write for someone who wants facts, not atmosphere — what it is, where, how long, how much.
+Use local currency. Only suggest venues you are confident are currently operating.
+
+STRICT OUTPUT — return ONLY this block, nothing before or after:
+TABLE:
+| Time | Activity | Details |
+|------|----------|----------|
+| [time] | **Place** | facts only, duration, price |
+ENDTABLE`;
+}
+
+/**
  * Build the plan generation prompt for a given mode.
  * editInstruction — optional free-text change instruction (for Full Itinerary / Specific Activities edits)
  * editType        — "activities" | null  (controls how the instruction is framed)

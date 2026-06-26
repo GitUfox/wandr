@@ -24,6 +24,8 @@ export default function Dashboard({
   onDeleteActivity,
   onReorderDay,
   onMoveActivity,
+  onTweakActivity,
+  tweakingId,
   onReset,
 }) {
   const [copied, setCopied]           = useState(false);
@@ -296,7 +298,7 @@ export default function Dashboard({
                   {/* Editable blocks once a full itinerary has finished streaming;
                       Md stays the fallback (during streaming, other modes, or if parsing yielded nothing). */}
                   {FEATURES.editableItinerary && !planLoading && planMode === "full" && planModel?.days?.length ? (
-                    <ItineraryEditor model={planModel} onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity} onReorderDay={onReorderDay} onMoveActivity={onMoveActivity} />
+                    <ItineraryEditor model={planModel} onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity} onReorderDay={onReorderDay} onMoveActivity={onMoveActivity} onTweakActivity={onTweakActivity} tweakingId={tweakingId} />
                   ) : (
                     <Md text={planText} />
                   )}
