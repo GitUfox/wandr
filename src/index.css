@@ -11,12 +11,6 @@ html, body, #root {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Date input dark mode */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.6);
-  cursor: pointer;
-}
-
 input[type="range"] {
   accent-color: #c96442;
 }

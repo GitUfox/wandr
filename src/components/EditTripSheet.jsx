@@ -14,6 +14,7 @@
 import { useState } from "react";
 import { T } from "../lib/constants.js";
 import { extractDayHeaders } from "../lib/utils.js";
+import DateRangePicker from "./DateRangePicker.jsx";
 
 const VIBE_CHIPS = [
   "More relaxed",
@@ -513,21 +514,10 @@ export default function EditTripSheet({
               </Field>
 
               <Field label="Dates">
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input
-                    type="date"
-                    value={localStart}
-                    onChange={e => setLocalStart(e.target.value)}
-                    style={{ ...inputStyle, flex: 1 }}
-                  />
-                  <span style={{ color: T.hint, fontSize: 13, flexShrink: 0 }}>→</span>
-                  <input
-                    type="date"
-                    value={localEnd}
-                    onChange={e => setLocalEnd(e.target.value)}
-                    style={{ ...inputStyle, flex: 1 }}
-                  />
-                </div>
+                <DateRangePicker
+                  d1={localStart} setD1={setLocalStart}
+                  d2={localEnd}   setD2={setLocalEnd}
+                />
               </Field>
 
               <Field label={`Budget · ${localBudget === 0 ? "Staying with family/friends" : `~$${localBudget}/day`}`}>

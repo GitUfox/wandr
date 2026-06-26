@@ -39,9 +39,10 @@ export default function WandrLogo({
           fill="none"
           style={{ display: "block" }}
         >
-          {/* Meandering dashed trail */}
+          {/* Flowing dashed trail — ends at the plane's centre so it reads
+              as streaming out from the middle of the paper plane. */}
           <path
-            d="M8 40 C 50 14, 78 52, 120 32 S 188 18, 214 22"
+            d="M8 40 C 46 24, 90 24, 120 32 C 150 40, 190 16, 222 22"
             stroke={trailColor}
             strokeWidth="3"
             strokeLinecap="round"
@@ -67,7 +68,26 @@ export default function WandrLogo({
         fontSize,
         color:         wordColor,
       }}>
-        wandr<span style={{ color: trailColor }}>.</span>
+        wandr<svg
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          style={{
+            height:        "0.5em",
+            width:         "0.5em",
+            marginLeft:    "0.07em",
+            verticalAlign: "-0.04em",
+            display:       "inline-block",
+          }}
+        >
+          <circle cx="12" cy="12" r="11" fill={trailColor} />
+          <g stroke="#0d0d0d" strokeWidth="1.4" fill="none" strokeLinecap="round">
+            <line x1="2.2" y1="12" x2="21.8" y2="12" />
+            <line x1="4.6" y1="6.9" x2="19.4" y2="6.9" />
+            <line x1="4.6" y1="17.1" x2="19.4" y2="17.1" />
+            <line x1="12" y1="1" x2="12" y2="23" />
+            <ellipse cx="12" cy="12" rx="5" ry="11" />
+          </g>
+        </svg>
       </div>
 
     </div>
