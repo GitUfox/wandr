@@ -26,9 +26,9 @@ const VIBE_CHIPS = [
 
 const PARTY_OPTS = [
   "Solo",
-  "Partner / couple",
-  "Friends (small group)",
-  "Group (4+)",
+  "Couple",
+  "Friends",
+  "Group",
   "Family",
 ];
 

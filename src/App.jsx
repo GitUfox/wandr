@@ -67,7 +67,7 @@ export default function Wandr() {
   const [logStay, setLogStay]             = useState("");
   const [logTransport, setLogTransport]   = useState("");
   const [logPace, setLogPace]             = useState("");
-  const [logFirstTime, setLogFirstTime]   = useState("");
+  const [logFocus, setLogFocus]           = useState("");
 
   // Trip + dashboard
   const [trip, setTrip]               = useState(null);
@@ -90,7 +90,7 @@ export default function Wandr() {
     }
     if (S.type === "daterange")  return { start: d1, end: d2 };
     if (S.type === "budget")     return budget;
-    if (S.type === "logistics")  return { stay: logStay, transport: logTransport, pace: logPace, firstTime: logFirstTime };
+    if (S.type === "logistics")  return { stay: logStay, transport: logTransport, pace: logPace, focus: logFocus };
     return cur;
   }
 
@@ -205,7 +205,7 @@ export default function Wandr() {
   function resetAll() {
     setScreen("welcome"); setStep(0); setAnswers({}); setDir(1);
     setCur(""); setChips([]); setKids(""); setAvoidText("");
-    setBudget(120); setD1(""); setD2(""); setLogStay(""); setLogTransport(""); setLogPace(""); setLogFirstTime("");
+    setBudget(120); setD1(""); setD2(""); setLogStay(""); setLogTransport(""); setLogPace(""); setLogFocus("");
     setTrip(null);
     resetFiles(); clearSavedPlan();
   }
@@ -231,7 +231,7 @@ export default function Wandr() {
                   // Reset all per-step form state so stale values don't bleed into a new trip
                   setCur(""); setChips([]); setKids(""); setAvoidText("");
                   setBudget(120); setD1(""); setD2("");
-                  setLogStay(""); setLogTransport(""); setLogPace(""); setLogFirstTime("");
+                  setLogStay(""); setLogTransport(""); setLogPace(""); setLogFocus("");
                   setDir(1);
                   setAnswers({ destination: dest });
                   setScreen("interview");
@@ -260,7 +260,7 @@ export default function Wandr() {
                 logStay={logStay} setLogStay={setLogStay}
                 logTransport={logTransport} setLogTransport={setLogTransport}
                 logPace={logPace} setLogPace={setLogPace}
-                logFirstTime={logFirstTime} setLogFirstTime={setLogFirstTime}
+                logFocus={logFocus} setLogFocus={setLogFocus}
                 uploadedFiles={uploadedFiles} uploadError={uploadError} fileInputRef={fileInputRef}
                 handleFiles={handleFiles} removeFile={removeFile}
                 isValid={isValid()}

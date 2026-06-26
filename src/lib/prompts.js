@@ -61,12 +61,12 @@ function partyInstruction(a) {
   const rules = {
     "Solo":
       "Traveler is solo. Prioritise activities that work comfortably alone — communal cafés, street food, self-guided walks, local bars with counter seating. Avoid awkward solo situations. Flag anything that's notably better with a companion.",
-    "Partner / couple":
+    "Couple":
       "Traveling as a couple. Lean romantic and intimate — shared experiences, candlelit dining, quieter neighbourhoods over crowded tourist spots. Avoid large group-tour style activities.",
-    "Friends (small group)":
+    "Friends":
       "Small group of friends. Prioritise social, shareable activities — lively restaurants, group-friendly bars, experiences that generate shared memories. Energy and atmosphere matter.",
-    "Group (4+)":
-      "Large group (4+). Restaurants and venues must accommodate groups — flag reservation requirements. Activities should be group-bookable. Communal, high-energy experiences.",
+    "Group":
+      "Larger group. Restaurants and venues must accommodate groups — flag reservation requirements. Activities should be group-bookable. Communal, high-energy experiences.",
     "Family":
       "Family trip. All activity and dining selections must be family-appropriate. Include child-friendly timing (early dinners, morning activities). Exclude nightlife, late-night venues, and adult-only experiences entirely.",
   };
@@ -97,27 +97,29 @@ function budgetInstruction(budget) {
 }
 
 function paceInstruction(pace) {
-  if (pace === "Slow & wandering")
+  if (pace === "Slow")
     return "Set a relaxed pace — max 2–3 activities per day with breathing room. Long lunches, spontaneous wandering, and quiet time are part of the plan.";
-  if (pace === "Pack it in")
+  if (pace === "Fast")
     return "High-energy itinerary — 4–6 activities per day, efficient routing, minimal downtime. The traveler would rather be tired than bored.";
   return "Balanced pace — 3–4 activities per day, mix of planned and unstructured time.";
 }
 
-function firstTimeInstruction(dest, firstTime) {
-  if (firstTime === "First visit")
-    return `First-time visitor to ${dest}. Include essential classics and iconic must-sees alongside hidden gems.`;
-  if (firstTime === "Been before")
-    return `Returning visitor to ${dest}. Deprioritise obvious tourist landmarks. Prioritise neighbourhood gems, local-only spots, and experiences that reward repeat visitors.`;
+function focusInstruction(dest, focus) {
+  if (focus === "Famous sights")
+    return `Traveler wants the famous sights of ${dest} — the iconic must-sees and classics that define the destination. Lead with these; treat hidden gems as secondary.`;
+  if (focus === "Hidden gems")
+    return `Traveler wants hidden gems in ${dest}. Deprioritise obvious tourist landmarks. Prioritise neighbourhood spots, local-only finds, and experiences most visitors miss.`;
+  if (focus === "Mix of both")
+    return `Traveler wants a mix in ${dest} — pair the essential iconic sights with local discoveries so the trip covers both the classics and the off-the-radar finds.`;
   return "";
 }
 
 function kidsInstruction(kids) {
   if (!kids || kids === "No kids") return "";
   const map = {
-    "Yes — under 5":  "Toddlers in the group (under 5). Stroller-accessible venues only. Short activity blocks. Nap-schedule-friendly timing. Avoid long waits and loud venues.",
-    "Yes — 5 to 12":  "School-age kids (5–12). Hands-on and interactive experiences. Kid-friendly dining with familiar options. Keep pace manageable.",
-    "Yes — teens":    "Teenagers in the group. Skip anything 'too young'. Include culture, food, and independence-friendly spots. Energy matters more than educational value.",
+    "Under 5":  "Toddlers in the group (under 5). Stroller-accessible venues only. Short activity blocks. Nap-schedule-friendly timing. Avoid long waits and loud venues.",
+    "5 to 12":  "School-age kids (5–12). Hands-on and interactive experiences. Kid-friendly dining with familiar options. Keep pace manageable.",
+    "Teens":    "Teenagers in the group. Skip anything 'too young'. Include culture, food, and independence-friendly spots. Energy matters more than educational value.",
   };
   return map[kids] || "";
 }
@@ -189,15 +191,15 @@ function tripContext(answers, uploadedFiles) {
   const stayLine      = a.logistics?.stay || "not specified";
   const transportLine = a.logistics?.transport ? arr(a.logistics.transport) : "not specified";
   const pace          = a.logistics?.pace     || "";
-  const firstTime     = a.logistics?.firstTime || "";
+  const focus         = a.logistics?.focus    || "";
   const kidsVal       = a.party?.kids         || "";
 
   const interestsLine   = arr(a.interests);
   const avoidLine       = resolveAvoid(a);
 
-  const paceText      = pace      ? paceInstruction(pace)                          : "";
-  const firstTimeText = firstTime ? firstTimeInstruction(a.destination, firstTime) : "";
-  const kidsText      = kidsVal   ? kidsInstruction(kidsVal)                       : "";
+  const paceText      = pace  ? paceInstruction(pace)                   : "";
+  const focusText     = focus ? focusInstruction(a.destination, focus)  : "";
+  const kidsText      = kidsVal ? kidsInstruction(kidsVal)              : "";
 
   const textFileContext = (uploadedFiles || [])
     .filter(f => !f.isImage)
@@ -218,7 +220,7 @@ TRANSPORT: ${transportLine}
 BUDGET: ${budgetLine}
 INTERESTS (listed most-important-first): ${interestsLine}
 AVOID: ${avoidLine}
-NOTES: ${a.notes || "none"}${pace ? `\nPACE: ${pace}` : ""}${firstTime ? `\nFIRST VISIT: ${firstTime}` : ""}
+NOTES: ${a.notes || "none"}${pace ? `\nPACE: ${pace}` : ""}${focus ? `\nFOCUS: ${focus}` : ""}
 ${textFileContext ? `\nUPLOADED CONTEXT:\n${textFileContext}` : ""}
 
 INSTRUCTIONS — apply these to every selection you make:
@@ -231,11 +233,11 @@ TRANSPORT: ${transportInstruction(transportLine)}
 
 BUDGET: ${budgetInstruction(a.budget)}
 ${paceText ? `\nPACE: ${paceText}` : ""}
-${firstTimeText ? `VISIT HISTORY: ${firstTimeText}` : ""}
+${focusText ? `FOCUS: ${focusText}` : ""}
 ${kidsText ? `KIDS: ${kidsText}` : ""}
 INTERESTS: Only include categories that genuinely match the traveler's stated interests. If an interest category has no relevant match, omit it entirely rather than filling it with generic picks. The interests are listed most-important-first — weight earlier interests more heavily when deciding what to include and how to rank it.
 
-RANKING: Give every item a "priority" of exactly "essential", "recommended", or "optional", reflecting how strongly it matches the traveler's top interests and visit history. Reserve "essential" for genuine must-dos — at most one per category, and never mark everything essential. The tiers exist to prioritise a limited daily schedule, so be discerning.${firstTime === "First visit" ? " As a first-time visitor, iconic must-sees that define the destination should rank essential." : firstTime === "Been before" ? " As a returning visitor, distinctive local-only gems should rank essential over obvious landmarks the traveler has likely already seen." : ""}
+RANKING: Give every item a "priority" of exactly "essential", "recommended", or "optional", reflecting how strongly it matches the traveler's top interests and stated focus. Reserve "essential" for genuine must-dos — at most one per category, and never mark everything essential. The tiers exist to prioritise a limited daily schedule, so be discerning.${focus === "Famous sights" ? " The traveler wants famous sights, so iconic must-sees that define the destination should rank essential." : focus === "Hidden gems" ? " The traveler wants hidden gems, so distinctive local-only spots should rank essential over obvious landmarks." : ""}
 
 AVOID: Never include anything related to: ${avoidLine}. If a category would only contain avoided items, leave it empty.
 
@@ -294,11 +296,11 @@ export function buildEditDayPrompt(dayLabel, dayContent, instruction, trip) {
   const budgetLabel   = a.budget === 0 ? "staying with family/friends" : `~${a.budget} USD/day`;
   const avoidText     = resolveAvoid(a);
   const pace          = a.logistics?.pace     || "";
-  const firstTime     = a.logistics?.firstTime || "";
+  const focus         = a.logistics?.focus    || "";
   const kidsVal       = a.party?.kids         || "";
-  const paceText      = pace      ? paceInstruction(pace)                          : "";
-  const firstTimeText = firstTime ? firstTimeInstruction(a.destination, firstTime) : "";
-  const kidsText      = kidsVal   ? kidsInstruction(kidsVal)                       : "";
+  const paceText      = pace  ? paceInstruction(pace)                   : "";
+  const focusText     = focus ? focusInstruction(a.destination, focus)  : "";
+  const kidsText      = kidsVal ? kidsInstruction(kidsVal)              : "";
 
   const allItems        = formatActivityItems(trip.categories);
   const restaurantIdeas = formatRestaurantItems(trip.categories);
@@ -318,14 +320,14 @@ TRAVELER
 - Party: ${arr(a.party)}${kidsVal ? ` · Kids: ${kidsVal}` : ""}
 - Budget: ${budgetLabel}
 - Staying: ${stayLine || "not specified"}
-- Transport: ${transportLine || "not specified"}${pace ? `\n- Pace: ${pace}` : ""}${firstTime ? `\n- First visit: ${firstTime}` : ""}
+- Transport: ${transportLine || "not specified"}${pace ? `\n- Pace: ${pace}` : ""}${focus ? `\n- Focus: ${focus}` : ""}
 - Interests: ${arr(a.interests)}
 - Avoid: ${avoidText}
 
 APPLY THESE RULES:
 PARTY: ${partyInstruction(a)}
 ROUTING: ${stayInstruction(stayLine || "not specified")} ${transportInstruction(transportLine || "not specified")}
-BUDGET: ${budgetInstruction(a.budget)}${paceText ? `\nPACE: ${paceText}` : ""}${firstTimeText ? `\nVISIT HISTORY: ${firstTimeText}` : ""}${kidsText ? `\nKIDS: ${kidsText}` : ""}
+BUDGET: ${budgetInstruction(a.budget)}${paceText ? `\nPACE: ${paceText}` : ""}${focusText ? `\nFOCUS: ${focusText}` : ""}${kidsText ? `\nKIDS: ${kidsText}` : ""}
 AVOID: Never suggest anything related to: ${avoidText}.
 PRIORITY: Activities and restaurants are tagged ESSENTIAL, RECOMMENDED, or OPTIONAL (activities listed essentials-first). Favour ESSENTIAL items for this day; use OPTIONAL only if there is spare time. For each meal, prefer the ESSENTIAL restaurant. Never drop an essential in favour of an optional.
 
@@ -405,11 +407,11 @@ export function buildPlanPrompt(mode, trip, editInstruction = null, editType = n
   const budgetLabel   = a.budget === 0 ? "staying with family/friends" : `~${a.budget} USD/day`;
   const avoidText     = resolveAvoid(a);
   const pace          = a.logistics?.pace     || "";
-  const firstTime     = a.logistics?.firstTime || "";
+  const focus         = a.logistics?.focus    || "";
   const kidsVal       = a.party?.kids         || "";
-  const paceText      = pace      ? paceInstruction(pace)                          : "";
-  const firstTimeText = firstTime ? firstTimeInstruction(a.destination, firstTime) : "";
-  const kidsText      = kidsVal   ? kidsInstruction(kidsVal)                       : "";
+  const paceText      = pace  ? paceInstruction(pace)                   : "";
+  const focusText     = focus ? focusInstruction(a.destination, focus)  : "";
+  const kidsText      = kidsVal ? kidsInstruction(kidsVal)              : "";
 
   const today       = new Date().toISOString().slice(0, 10);
   const startDate   = parseISODate(a.dates?.start);
@@ -443,7 +445,7 @@ TRAVELER
 - Party: ${arr(a.party)}${kidsVal ? ` · Kids: ${kidsVal}` : ""}
 - Budget: ${budgetLabel}
 - Staying: ${stayLine || "not specified"}
-- Transport: ${transportLine || "not specified"}${pace ? `\n- Pace: ${pace}` : ""}${firstTime ? `\n- First visit: ${firstTime}` : ""}
+- Transport: ${transportLine || "not specified"}${pace ? `\n- Pace: ${pace}` : ""}${focus ? `\n- Focus: ${focus}` : ""}
 - Interests: ${arr(a.interests)}
 - Avoid: ${avoidText}
 - Notes: ${a.notes || "none"}
@@ -455,7 +457,7 @@ PARTY: ${partyInstruction(a)}
 
 ROUTING: ${stayInstruction(stayLine || "not specified")} ${transportInstruction(transportLine || "not specified")}
 ${paceText ? `\nPACE: ${paceText}` : ""}
-${firstTimeText ? `VISIT HISTORY: ${firstTimeText}` : ""}
+${focusText ? `FOCUS: ${focusText}` : ""}
 ${kidsText ? `KIDS: ${kidsText}` : ""}
 TEMPORAL GROUNDING: Today is ${today}. Trip dates: ${safeStart} → ${safeEnd}.${mode === "full" && dayHeaderBlock ? `\n${dayHeaderBlock}` : ""} Always use these exact day labels — never guess or infer day-of-week independently.
 

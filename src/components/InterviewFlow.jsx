@@ -35,7 +35,7 @@ export default function InterviewFlow({
   logStay, setLogStay,
   logTransport, setLogTransport,
   logPace, setLogPace,
-  logFirstTime, setLogFirstTime,
+  logFocus, setLogFocus,
   uploadedFiles, uploadError, fileInputRef,
   handleFiles, removeFile,
   isValid,
@@ -82,8 +82,8 @@ export default function InterviewFlow({
           transition={STEP_TRANSITION}
         >
 
-        <div style={{ fontSize:22, fontWeight:700, lineHeight:1.25, marginBottom:6, color:T.ink }}>{S.q}</div>
-        <p style={{ fontSize:13, color:T.muted, marginBottom:"1.5rem", lineHeight:1.6 }}>{S.sub}</p>
+        <div style={{ fontSize:22, fontWeight:700, lineHeight:1.25, marginBottom:S.sub?6:"1.5rem", color:T.ink }}>{S.q}</div>
+        {S.sub && <p style={{ fontSize:13, color:T.muted, marginBottom:"1.5rem", lineHeight:1.6 }}>{S.sub}</p>}
 
         {/* ── Text ── */}
         {S.type === "text" && (
@@ -99,7 +99,7 @@ export default function InterviewFlow({
             <div>
               <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>Getting around</div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
-                {["Got a car", "Transit & rideshare", "Walking & cycling"].map(o => {
+                {["Car", "Transit / Rideshare", "Walking / Cycling"].map(o => {
                   const sel = logTransport === o;
                   return (
                     <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogTransport(p => p === o ? "" : o)}
@@ -115,7 +115,7 @@ export default function InterviewFlow({
             <div>
               <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>Pace</div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
-                {["Slow & wandering", "Balanced", "Pack it in"].map(o => {
+                {["Slow", "Balanced", "Fast"].map(o => {
                   const sel = logPace === o;
                   return (
                     <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogPace(p => p === o ? "" : o)}
@@ -127,14 +127,14 @@ export default function InterviewFlow({
               </div>
             </div>
 
-            {/* First time? */}
+            {/* What are you after? */}
             <div>
-              <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>First time there?</div>
+              <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>What are you after?</div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
-                {["First visit", "Been before"].map(o => {
-                  const sel = logFirstTime === o;
+                {["Famous sights", "Hidden gems", "Mix of both"].map(o => {
+                  const sel = logFocus === o;
                   return (
-                    <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogFirstTime(p => p === o ? "" : o)}
+                    <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogFocus(p => p === o ? "" : o)}
                       style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                       {o}
                     </button>
@@ -143,13 +143,13 @@ export default function InterviewFlow({
               </div>
             </div>
 
-            {/* Home base — optional */}
+            {/* Where are you staying — optional */}
             <div>
               <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:5 }}>
-                Home base <span style={{ fontWeight:400, letterSpacing:"normal", textTransform:"none", color:T.hint, opacity:.6 }}>· optional</span>
+                Where are you staying? <span style={{ fontWeight:400, letterSpacing:"normal", textTransform:"none", color:T.hint, opacity:.6 }}>· optional</span>
               </div>
               <input type="text" value={logStay} onChange={e => setLogStay(e.target.value)}
-                placeholder="Airbnb in Trastevere · Hotel near city centre · Staying with family"
+                placeholder="Times Square · Downtown · West Village · Countryside"
                 style={{...inputSt, marginBottom:0}} />
             </div>
           </div>
@@ -271,9 +271,9 @@ export default function InterviewFlow({
                 {/* Kids sub-question — shown when a group is selected (not Solo) */}
                 {S.id === "party" && chips.length > 0 && !chips.includes("Solo") && (
                   <div style={{ marginBottom:10, padding:"12px 14px", background:T.bg2, borderRadius:10, border:`1px solid ${T.border}` }}>
-                    <div style={{ fontSize:12, fontWeight:700, color:T.muted, marginBottom:8 }}>Any kids in the group?</div>
+                    <div style={{ fontSize:12, fontWeight:700, color:T.muted, marginBottom:8 }}>Any kids?</div>
                     <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                      {["No kids", "Yes — under 5", "Yes — 5 to 12", "Yes — teens"].map(o => {
+                      {["No kids", "Under 5", "5 to 12", "Teens"].map(o => {
                         const sel = kids === o;
                         return (
                           <button key={o} className="wandr-chip" data-label={o} onClick={() => setKids(k => k === o ? "" : o)}
@@ -305,7 +305,7 @@ export default function InterviewFlow({
               {[
                 [40,  "Local",       "~$30–50 / day",  "Street food, free sights, local spots"],
                 [120, "Comfortable", "~$75–120 / day", "Sit-down restaurants, paid attractions"],
-                [300, "Splurge",     "~$200+ / day",   "Fine dining, premium & private experiences"],
+                [300, "Splurge",     "~$200+ / day",   "Fine dining, premium experiences"],
                 [0,   "Hosted",      "",               "Staying with locals, flexible spend"],
               ].map(([v, label, price, desc]) => {
                 const sel = budget === v;
