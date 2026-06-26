@@ -36,8 +36,6 @@ export default function InterviewFlow({
   logTransport, setLogTransport,
   logPace, setLogPace,
   logFocus, setLogFocus,
-  uploadedFiles, uploadError, fileInputRef,
-  handleFiles, removeFile,
   isValid,
 }) {
   const S   = STEPS[step];
@@ -162,44 +160,8 @@ export default function InterviewFlow({
               style={{...inputSt, lineHeight:1.7, resize:"vertical"}} />
             {S.id === "notes" && (
               <div style={{ marginTop:2, marginBottom:"1.25rem" }}>
-                <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.txt,.csv,.json"
-                  style={{ display:"none" }} onChange={e => handleFiles(e.target.files)} />
-                {uploadedFiles.length === 0 ? (
-                  <button onClick={() => fileInputRef.current?.click()}
-                    style={{ display:"flex", alignItems:"center", gap:7, padding:"7px 12px", fontSize:12, color:T.hint, background:"transparent", border:`1px dashed ${T.border}`, borderRadius:8, cursor:"pointer", fontFamily:T.font }}>
-                    Attach files (itinerary, bookings, photos)
-                  </button>
-                ) : (
-                  <div>
-                    <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:6 }}>
-                      {uploadedFiles.map((f, i) => (
-                        <div key={i} style={{ display:"flex", alignItems:"center", gap:8, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:8, padding:"7px 10px" }}>
-                          {f.isImage && f.preview
-                            ? <img src={f.preview} alt={f.name} style={{ width:32, height:32, borderRadius:4, objectFit:"cover", flexShrink:0 }} />
-                            : <span style={{ fontSize:11, color:T.hint, flexShrink:0, fontWeight:700, letterSpacing:".05em" }}>{f.name.endsWith(".pdf")?"PDF":f.name.endsWith(".csv")?"CSV":"TXT"}</span>
-                          }
-                          <div style={{ flex:1, minWidth:0 }}>
-                            <div style={{ fontSize:12, fontWeight:600, color:T.ink, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{f.name}</div>
-                            <div style={{ fontSize:10, color:T.hint }}>{f.size}</div>
-                          </div>
-                          <button onClick={() => removeFile(i)} style={{ fontSize:13, color:T.hint, background:"none", border:"none", cursor:"pointer", padding:"2px 6px" }}>✕</button>
-                        </div>
-                      ))}
-                    </div>
-                    {uploadedFiles.length < 5 && (
-                      <button onClick={() => fileInputRef.current?.click()}
-                        style={{ fontSize:11, color:T.hint, background:"transparent", border:"none", cursor:"pointer", fontFamily:T.font, padding:0 }}>
-                        + Add another file
-                      </button>
-                    )}
-                  </div>
-                )}
-                {uploadError && (
-                  <div style={{ fontSize:11, color:"#f08070", marginTop:6, padding:"5px 8px", background:"rgba(200,80,60,.1)", borderRadius:5 }}>{uploadError}</div>
-                )}
-
                 {/* Dedicated avoid field — fed to the AVOID prompt instruction as a hard exclusion */}
-                <div style={{ marginTop:"1.25rem" }}>
+                <div>
                   <div style={{ fontSize:11, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 }}>Anything to avoid?</div>
                   <input type="text" value={avoidText || ""} onChange={e => setAvoidText(e.target.value)}
                     placeholder="e.g. crowds · seafood · long hikes · touristy spots"
@@ -306,7 +268,6 @@ export default function InterviewFlow({
                 [40,  "Local",       "~$30–50 / day",  "Street food, free sights, local spots"],
                 [120, "Comfortable", "~$75–120 / day", "Sit-down restaurants, paid attractions"],
                 [300, "Splurge",     "~$200+ / day",   "Fine dining, premium experiences"],
-                [0,   "Hosted",      "",               "Staying with locals, flexible spend"],
               ].map(([v, label, price, desc]) => {
                 const sel = budget === v;
                 return (

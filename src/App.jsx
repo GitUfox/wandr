@@ -261,8 +261,6 @@ export default function Wandr() {
                 logTransport={logTransport} setLogTransport={setLogTransport}
                 logPace={logPace} setLogPace={setLogPace}
                 logFocus={logFocus} setLogFocus={setLogFocus}
-                uploadedFiles={uploadedFiles} uploadError={uploadError} fileInputRef={fileInputRef}
-                handleFiles={handleFiles} removeFile={removeFile}
                 isValid={isValid()}
               />
             </Page>

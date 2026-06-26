@@ -22,11 +22,11 @@ export const STEPS = [
   },
   {
     id:"party",
-    q:"Who's joining you?",
+    q:"Who's going?",
     type:"chips+text",
     singleSelect:true,
     opts:["Solo","Couple","Friends","Group","Family"],
-    ph:"e.g. Me, my partner, and one other couple",
+    ph:"Add any details",
   },
   {
     id:"logistics",
@@ -47,8 +47,8 @@ export const STEPS = [
     groups:[
       { label:"Food & Drink",      opts:["Street food & markets","Sit-down dining","Cafés & coffee","Cocktails & wine","Cooking experiences"] },
       { label:"Outdoors & Active", opts:["Hiking & nature","Beaches & water","Adventure sports","Day trips"] },
-      { label:"Culture & Arts",    opts:["History & museums","Architecture","Contemporary art","Music & live shows","Festivals & events","Live sports"] },
-      { label:"Local Life",        opts:["Photo spots","Nightlife","Shopping","Wellness"] },
+      { label:"Culture & Arts",    opts:["History & museums","Architecture","Art & galleries","Live music & theatre","Festivals & events","Sports"] },
+      { label:"Local Life",        opts:["Scenic views","Nightlife","Shopping","Wellness"] },
     ],
   },
   {
