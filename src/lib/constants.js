@@ -77,6 +77,25 @@ export const FUTURE_MODES = [
   { id:"hidden", label:"Off the beaten path",desc:"Local secrets most visitors miss" },
 ];
 
+// ── Budget tiers ──────────────────────────────────────────────────────────────
+// Single source of truth for the budget selector — shared by the intake
+// interview (step 4) and the rebuild sheet (Trip Details) so the two can
+// never drift. `value` is the per-person daily USD figure stored on the trip.
+export const BUDGET_TIERS = [
+  { value: 40,  label: "Local",       price: "~$30–50 / day",  desc: "Street food, free sights, local spots" },
+  { value: 120, label: "Comfortable", price: "~$75–120 / day", desc: "Sit-down restaurants, paid attractions" },
+  { value: 300, label: "Splurge",     price: "~$200+ / day",   desc: "Fine dining, premium experiences" },
+];
+
+// Snap an arbitrary stored budget (incl. legacy slider values) to the nearest
+// tier, so a card is always selected. Defaults to Comfortable when unset.
+export function nearestBudgetTier(budget) {
+  if (typeof budget !== "number") return 120;
+  return BUDGET_TIERS.reduce((best, t) =>
+    Math.abs(t.value - budget) < Math.abs(best - budget) ? t.value : best,
+    BUDGET_TIERS[0].value);
+}
+
 // ── Loading messages ──────────────────────────────────────────────────────────
 export const LOAD_MSGS = [
   "Researching your destination…",

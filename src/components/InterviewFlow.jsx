@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { STEPS, T } from "../lib/constants.js";
 import DateRangePicker from "./DateRangePicker.jsx";
 import DictationButton from "./DictationButton.jsx";
+import BudgetTiers from "./BudgetTiers.jsx";
 
 // Mic position for single-line inputs (anchored to the input's top, so the
 // wrapper's bottom margin doesn't throw off vertical centering).
@@ -277,28 +278,7 @@ export default function InterviewFlow({
         {/* ── Budget ── */}
         {S.type === "budget" && (
           <div style={{ marginBottom:"1.25rem" }}>
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {[
-                [40,  "Local",       "~$30–50 / day",  "Street food, free sights, local spots"],
-                [120, "Comfortable", "~$75–120 / day", "Sit-down restaurants, paid attractions"],
-                [300, "Splurge",     "~$200+ / day",   "Fine dining, premium experiences"],
-              ].map(([v, label, price, desc]) => {
-                const sel = budget === v;
-                return (
-                  <button key={v} onClick={() => setBudget(v)}
-                    style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 14px", borderRadius:10, background:sel?"#2a1a12":T.bg1, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, cursor:"pointer", fontFamily:T.font, textAlign:"left", transition:"all .15s" }}>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:13, fontWeight:700, color:sel?T.accent:T.ink, marginBottom:1 }}>
-                        {label}
-                        {price && <span style={{ fontWeight:400, fontSize:12, color:sel?"#a06040":T.hint, marginLeft:8 }}>{price}</span>}
-                      </div>
-                      <div style={{ fontSize:11.5, color:sel?"#a06040":T.hint }}>{desc}</div>
-                    </div>
-                    {sel && <span style={{ fontSize:14, color:T.accent }}>✓</span>}
-                  </button>
-                );
-              })}
-            </div>
+            <BudgetTiers value={budget} onChange={setBudget} />
           </div>
         )}
 

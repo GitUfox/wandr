@@ -12,9 +12,10 @@
  * exit animation + unmounting. Dashboard renders this component always mounted.
  */
 import { useState } from "react";
-import { T } from "../lib/constants.js";
+import { T, nearestBudgetTier } from "../lib/constants.js";
 import { extractDayHeaders } from "../lib/utils.js";
 import DateRangePicker from "./DateRangePicker.jsx";
+import BudgetTiers from "./BudgetTiers.jsx";
 
 const VIBE_CHIPS = [
   "More relaxed",
@@ -102,7 +103,7 @@ const textareaStyle = {
   lineHeight: 1.6,
 };
 
-function SubmitBar({ label, enabled, loading, onSubmit, destructive }) {
+function SubmitBar({ label, enabled, loading, onSubmit }) {
   return (
     <div style={{ marginTop: 20 }}>
       <button
@@ -112,9 +113,7 @@ function SubmitBar({ label, enabled, loading, onSubmit, destructive }) {
           width: "100%",
           padding: "13px",
           borderRadius: 10,
-          background: !enabled || loading
-            ? T.bg3
-            : destructive ? "#8a1a1a" : T.accent,
+          background: !enabled || loading ? T.bg3 : T.accent,
           border: "none",
           color: !enabled || loading ? T.hint : "#fff",
           fontSize: 14,
@@ -167,11 +166,12 @@ export default function EditTripSheet({
   const [localDest, setLocalDest]     = useState(a.destination || "");
   const [localStart, setLocalStart]   = useState(a.dates?.start || "");
   const [localEnd, setLocalEnd]       = useState(a.dates?.end || "");
-  const [localBudget, setLocalBudget] = useState(a.budget ?? 150);
+  const [localBudget, setLocalBudget] = useState(() => nearestBudgetTier(a.budget));
   const [localParty, setLocalParty]   = useState(
     Array.isArray(a.party?.chips) ? a.party.chips[0] :
     typeof a.party === "string"   ? a.party : ""
   );
+  const [confirmRebuild, setConfirmRebuild] = useState(false);
 
   const dayHeaders = extractDayHeaders(planText || "");
   const hasPlan    = (planText || "").trim().length > 0;
@@ -181,6 +181,7 @@ export default function EditTripSheet({
     setSelectedDay(null);
     setPrompt("");
     setSelectedVibe([]);
+    setConfirmRebuild(false);
   }
 
   function toggleVibe(chip) {
@@ -221,19 +222,24 @@ export default function EditTripSheet({
       if (prompt.trim()) parts.push(prompt.trim());
       onEditPlan("full", parts.join(". "), null, null);
       onClose();
-    } else if (stage === "trip-details") {
-      const newAnswers = {
-        ...a,
-        destination: localDest.trim(),
-        dates: { ...(a.dates || {}), start: localStart, end: localEnd },
-        budget: localBudget,
-        party: typeof a.party === "object" && a.party !== null
-          ? { ...a.party, chips: [localParty] }
-          : localParty,
-      };
-      onEditTripDetails(newAnswers);
-      // Screen navigates to loading — sheet unmounts automatically
     }
+    // trip-details rebuilds go through doRebuild() (confirm popup), not here.
+  }
+
+  // Executed after the user confirms the rebuild popup.
+  function doRebuild() {
+    const newAnswers = {
+      ...a,
+      destination: localDest.trim(),
+      dates: { ...(a.dates || {}), start: localStart, end: localEnd },
+      budget: localBudget,
+      party: typeof a.party === "object" && a.party !== null
+        ? { ...a.party, chips: [localParty] }
+        : localParty,
+    };
+    setConfirmRebuild(false);
+    onEditTripDetails(newAnswers);
+    // Screen navigates to loading — sheet unmounts automatically
   }
 
   const stageTitle = {
@@ -247,6 +253,7 @@ export default function EditTripSheet({
   // Call parent's onClose and reset stage after the slide-out animation settles (~400ms)
   function handleClose() {
     onClose();
+    setConfirmRebuild(false);
     setTimeout(() => setStage("picker"), 420);
   }
 
@@ -520,23 +527,8 @@ export default function EditTripSheet({
                 />
               </Field>
 
-              <Field label={`Budget · ${localBudget === 0 ? "Staying with family/friends" : `~$${localBudget}/day`}`}>
-                <input
-                  type="range"
-                  min={0} max={500} step={25}
-                  value={localBudget}
-                  onChange={e => setLocalBudget(Number(e.target.value))}
-                  style={{ width: "100%", accentColor: T.accent, cursor: "pointer" }}
-                />
-                <div style={{
-                  display: "flex", justifyContent: "space-between",
-                  fontSize: 10, color: T.hint, marginTop: 3,
-                }}>
-                  <span>With family</span>
-                  <span>$100</span>
-                  <span>$250</span>
-                  <span>$500</span>
-                </div>
+              <Field label="Budget">
+                <BudgetTiers value={localBudget} onChange={setLocalBudget} />
               </Field>
 
               <Field label="Who's on this trip?">
@@ -567,31 +559,67 @@ export default function EditTripSheet({
                 </div>
               </Field>
 
-              {/* Destructive warning */}
-              <div style={{
-                background: "#1e1010",
-                border: "1px solid #3a1a1a",
-                borderRadius: 8,
-                padding: "10px 13px",
-                fontSize: 12,
-                color: "#b07070",
-                lineHeight: 1.55,
-              }}>
-                Rebuilding replaces your current trip and clears any generated plans. Your existing trip is kept until the new one is ready.
-              </div>
-
               <SubmitBar
                 label={getSubmitLabel()}
                 enabled={isSubmitEnabled()}
                 loading={planLoading}
-                onSubmit={handleSubmit}
-                destructive
+                onSubmit={() => setConfirmRebuild(true)}
               />
             </div>
           )}
 
         </div>
       </div>
+
+      {/* Rebuild confirmation — destructive action gate */}
+      {confirmRebuild && (
+        <div
+          onClick={() => setConfirmRebuild(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 200,
+            background: "rgba(0,0,0,0.7)", backdropFilter: "blur(2px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: T.bg1, border: `1px solid ${T.border}`, borderRadius: 14,
+              padding: "22px 20px", maxWidth: 340, width: "100%", fontFamily: T.font,
+            }}
+          >
+            <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 8 }}>
+              Rebuild this trip?
+            </div>
+            <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.55, marginBottom: 18 }}>
+              This replaces your current trip and clears any generated plans. Your current trip stays until the new one's ready.
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setConfirmRebuild(false)}
+                style={{
+                  flex: 1, padding: "11px", borderRadius: 9,
+                  background: T.bg3, border: `1px solid ${T.border}`, color: T.ink,
+                  fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: T.font,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={doRebuild}
+                style={{
+                  flex: 1, padding: "11px", borderRadius: 9,
+                  background: T.accent, border: "none", color: "#fff",
+                  fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: T.font,
+                }}
+              >
+                Rebuild
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
