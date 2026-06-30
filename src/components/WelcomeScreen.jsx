@@ -69,7 +69,7 @@ export default function WelcomeScreen({ onStart, savedTrip, onResume }) {
 
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "2.75rem" }}>
-          <WandrLogo size="lg" />
+          <WandrLogo size="lg" globe="animated" />
           <div style={{ fontSize: 14, fontWeight: 600, color: T.muted, letterSpacing: ".02em", marginTop: "1rem" }}>
             Make it your trip.
           </div>

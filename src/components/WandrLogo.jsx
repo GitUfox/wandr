@@ -3,11 +3,17 @@
  * Taken directly from the Wandr Design handoff (F · Paper plane).
  *
  * Props:
- *   size        "sm" | "md" | "lg"   (default "md")
- *   showTrail   bool                  (default true)
- *   trailColor  string                (default Wandr orange)
- *   wordColor   string                (default near-white)
+ *   size        "sm" | "md" | "lg"      (default "md")
+ *   showTrail   bool                     (default true)
+ *   trailColor  string                   (default Wandr orange)
+ *   wordColor   string                   (default near-white)
+ *   globe       "static" | "animated"    (default "static")
+ *               "animated" swaps the period for a rotating 3D globe (canvas).
+ *               It's lazy-loaded; the static SVG globe is the instant fallback.
  */
+import { lazy, Suspense } from "react";
+
+const Globe = lazy(() => import("./Globe.jsx"));
 const ORANGE = "#c96442";
 
 export default function WandrLogo({
@@ -15,12 +21,33 @@ export default function WandrLogo({
   showTrail  = true,
   trailColor = ORANGE,
   wordColor  = "#efefef",
+  globe      = "static",
 }) {
   const scale    = size === "sm" ? 0.38 : size === "lg" ? 0.80 : 0.58;
   const svgW     = Math.round(262 * scale);
   const svgH     = Math.round(56  * scale);
   const fontSize = Math.round(92  * scale);
   const gap      = Math.round(12  * scale);
+
+  // Globe seats like the period after the "r" — pixel-sized (not em) so the
+  // static SVG and the animated canvas occupy an identical box (no shift).
+  const globePx     = Math.round(fontSize * 0.5);
+  const globeMargin = Math.round(fontSize * 0.07);
+  const globeDrop   = -Math.round(fontSize * 0.04);
+  const globeStyle  = { marginLeft: globeMargin, verticalAlign: globeDrop, display: "inline-block" };
+
+  const staticGlobe = (
+    <svg viewBox="0 0 24 24" aria-hidden="true" style={{ width: globePx, height: globePx, ...globeStyle }}>
+      <circle cx="12" cy="12" r="11" fill={trailColor} />
+      <g stroke="#0d0d0d" strokeWidth="1.4" fill="none" strokeLinecap="round">
+        <line x1="2.2" y1="12" x2="21.8" y2="12" />
+        <line x1="4.6" y1="6.9" x2="19.4" y2="6.9" />
+        <line x1="4.6" y1="17.1" x2="19.4" y2="17.1" />
+        <line x1="12" y1="1" x2="12" y2="23" />
+        <ellipse cx="12" cy="12" rx="5" ry="11" />
+      </g>
+    </svg>
+  );
 
   return (
     <div style={{
@@ -68,26 +95,11 @@ export default function WandrLogo({
         fontSize,
         color:         wordColor,
       }}>
-        wandr<svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          style={{
-            height:        "0.5em",
-            width:         "0.5em",
-            marginLeft:    "0.07em",
-            verticalAlign: "-0.04em",
-            display:       "inline-block",
-          }}
-        >
-          <circle cx="12" cy="12" r="11" fill={trailColor} />
-          <g stroke="#0d0d0d" strokeWidth="1.4" fill="none" strokeLinecap="round">
-            <line x1="2.2" y1="12" x2="21.8" y2="12" />
-            <line x1="4.6" y1="6.9" x2="19.4" y2="6.9" />
-            <line x1="4.6" y1="17.1" x2="19.4" y2="17.1" />
-            <line x1="12" y1="1" x2="12" y2="23" />
-            <ellipse cx="12" cy="12" rx="5" ry="11" />
-          </g>
-        </svg>
+        wandr{globe === "animated" ? (
+          <Suspense fallback={staticGlobe}>
+            <Globe size={globePx} style={globeStyle} />
+          </Suspense>
+        ) : staticGlobe}
       </div>
 
     </div>
