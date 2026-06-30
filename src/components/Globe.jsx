@@ -70,7 +70,7 @@ export default function Globe({ size = 36, style }) {
 
     let raf;
     function loop(ms) {
-      draw((ms / 1000) * 9.2); // ~9.2°/s → a full turn every ~39s
+      draw((ms / 1000) * 11.04); // ~11°/s → a full turn every ~33s
       raf = requestAnimationFrame(loop);
     }
     draw(0);                       // guaranteed first paint
