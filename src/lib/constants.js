@@ -109,6 +109,6 @@ export const LOAD_MSGS = [
 
 // ── Welcome screen destination placeholders ───────────────────────────────────
 export const DEST_PLACEHOLDERS = [
-  "Oslo","Kyoto","Lisbon","Istanbul","Bangkok",
-  "Buenos Aires","Cape Town","Marrakech","Reykjavik","Porto",
+  "Los Angeles","Mexico City","Miami","London","Oslo",
+  "Lisbon","Istanbul","Bangkok","Sydney","Hong Kong",
 ];
