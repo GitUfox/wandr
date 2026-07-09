@@ -20,7 +20,6 @@ export const config = {
 };
 
 import {
-  LOCAL_ORIGINS,
   isAllowedOrigin,
   setCorsHeaders,
   handleAnthropicProxy,
@@ -56,8 +55,10 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Local origins bypass rate limiting — Vercel sees the real browser origin.
-  const isDev = LOCAL_ORIGINS.has(origin);
-
-  await handleAnthropicProxy(req, res, { key: KEY, isDev });
+  // This handler only runs on Vercel (production/preview), never local dev —
+  // local dev goes through server.js, which sets its own isDev from the socket
+  // address. So rate limiting must always apply here. Deriving isDev from the
+  // Origin header would be a bypass: Origin is client-controlled, so a spoofed
+  // "Origin: http://localhost:5173" could skip the limiter entirely.
+  await handleAnthropicProxy(req, res, { key: KEY, isDev: false });
 }

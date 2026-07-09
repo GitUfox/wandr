@@ -96,7 +96,13 @@ const redisLimiters = createRedisLimiters();
 // Exported so server.js can prune stale entries in its hourly setInterval.
 export const rateLimitStore = new Map();
 
-function getClientIp(req) {
+export function getClientIp(req) {
+  // Prefer x-real-ip: on Vercel the edge sets it to the actual connecting
+  // client, so (unlike the leftmost value of x-forwarded-for) a client can't
+  // prepend a spoofed IP to mint unlimited fresh rate-limit buckets.
+  const realIp = req.headers["x-real-ip"];
+  if (realIp) return String(realIp).trim();
+  // Fallback (off-Vercel / x-real-ip absent): XFF leftmost, then socket.
   const forwarded = req.headers["x-forwarded-for"];
   return (forwarded ? forwarded.split(",")[0] : req.socket?.remoteAddress || "unknown").trim();
 }
