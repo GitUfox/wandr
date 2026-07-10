@@ -68,6 +68,7 @@ export default function Wandr() {
   const [logTransport, setLogTransport]   = useState("");
   const [logPace, setLogPace]             = useState("");
   const [logFocus, setLogFocus]           = useState("");
+  const [includeFood, setIncludeFood]     = useState(true); // false = itinerary only, no food recs
 
   // Trip + dashboard
   const [trip, setTrip]               = useState(null);
@@ -126,12 +127,14 @@ export default function Wandr() {
       setChips([]); setCur(""); setKids("");
     }
     setAvoidText(st.id === "notes" ? (src.avoid || "") : "");
+    if (st.id === "interests") setIncludeFood(src.includeFood !== false);
   }
 
   // Stage the current step's edits into answers, returning the merged object.
   function stageCurrent() {
     const newAns = { ...answers, [S.id]: currentVal() };
     if (S.id === "notes") newAns.avoid = avoidText.trim();
+    if (S.id === "interests") newAns.includeFood = includeFood;
     return newAns;
   }
 
@@ -206,6 +209,7 @@ export default function Wandr() {
     setScreen("welcome"); setStep(0); setAnswers({}); setDir(1);
     setCur(""); setChips([]); setKids(""); setAvoidText("");
     setBudget(120); setD1(""); setD2(""); setLogStay(""); setLogTransport(""); setLogPace(""); setLogFocus("");
+    setIncludeFood(true);
     setTrip(null);
     resetFiles(); clearSavedPlan();
   }
@@ -261,6 +265,7 @@ export default function Wandr() {
                 logTransport={logTransport} setLogTransport={setLogTransport}
                 logPace={logPace} setLogPace={setLogPace}
                 logFocus={logFocus} setLogFocus={setLogFocus}
+                includeFood={includeFood} setIncludeFood={setIncludeFood}
                 isValid={isValid()}
               />
             </Page>

@@ -305,8 +305,14 @@ export function buildEditDayPrompt(dayLabel, dayContent, instruction, trip) {
   const allItems        = formatActivityItems(trip.categories);
   const restaurantIdeas = formatRestaurantItems(trip.categories);
 
+  // Trip-only travelers (includeFood === false) get no restaurant rows.
+  const includeFood       = a.includeFood !== false;
   const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [time] | **Place** | facts only, duration |\nENDTABLE`;
   const FOOD_BLOCK  = `FOOD:\n| Meal | Name | Order | Price |\n|------|------|-------|-------|\n| Breakfast | **Name** | what to order | $ |\n| Lunch | **Name** | what to order | $$ |\n| Dinner | **Name** | what to order | $$$ |\nENDFOOD`;
+  const mealClause        = includeFood ? " For each meal, prefer the ESSENTIAL restaurant." : "";
+  const restaurantSection = includeFood ? `\n\nRESTAURANT IDEAS:\n${restaurantIdeas || `Use your knowledge of restaurants in ${a.destination}`}` : "";
+  const foodOutput        = includeFood ? `\n\n${FOOD_BLOCK}` : "";
+  const foodOmitNote      = includeFood ? "" : "\n- Trip-only itinerary: do NOT output a FOOD section or any restaurant rows.";
 
   return `You are a travel planner. Regenerate ONE day of an itinerary for ${trip.destination}.
 
@@ -329,13 +335,10 @@ PARTY: ${partyInstruction(a)}
 ROUTING: ${stayInstruction(stayLine || "not specified")} ${transportInstruction(transportLine || "not specified")}
 BUDGET: ${budgetInstruction(a.budget)}${paceText ? `\nPACE: ${paceText}` : ""}${focusText ? `\nFOCUS: ${focusText}` : ""}${kidsText ? `\nKIDS: ${kidsText}` : ""}
 AVOID: Never suggest anything related to: ${avoidText}.
-PRIORITY: Activities and restaurants are tagged ESSENTIAL, RECOMMENDED, or OPTIONAL (activities listed essentials-first). Favour ESSENTIAL items for this day; use OPTIONAL only if there is spare time. For each meal, prefer the ESSENTIAL restaurant. Never drop an essential in favour of an optional.
+PRIORITY: Activities and restaurants are tagged ESSENTIAL, RECOMMENDED, or OPTIONAL (activities listed essentials-first). Favour ESSENTIAL items for this day; use OPTIONAL only if there is spare time.${mealClause} Never drop an essential in favour of an optional.
 
 ACTIVITIES TO USE (tagged by priority, essentials first):
-${allItems || `Use your knowledge of ${a.destination}`}
-
-RESTAURANT IDEAS:
-${restaurantIdeas || `Use your knowledge of restaurants in ${a.destination}`}
+${allItems || `Use your knowledge of ${a.destination}`}${restaurantSection}
 
 STRICT OUTPUT RULES:
 - Return ONLY the replacement day content. Nothing before or after.
@@ -344,14 +347,12 @@ STRICT OUTPUT RULES:
 
 ## ${dayLabel}
 
-${TABLE_BLOCK}
-
-${FOOD_BLOCK}
+${TABLE_BLOCK}${foodOutput}
 
 TIPS: [practical tip] | [logistics tip]
 
 - 3 to 5 activities max. No filler phrases. Facts only.
-- Bold place names inside table cells using **Name**
+- Bold place names inside table cells using **Name**${foodOmitNote}
 - ACCURACY: Only recommend venues you are confident are currently operating.`;
 }
 
@@ -426,8 +427,19 @@ export function buildPlanPrompt(mode, trip, editInstruction = null, editType = n
   const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [time] | **Place** | facts only, duration |\nENDTABLE`;
   const FOOD_BLOCK  = `FOOD:\n| Meal | Name | Order | Price |\n|------|------|-------|-------|\n| Breakfast | **Name** | what to order | $ |\n| Lunch | **Name** | what to order | $$ |\n| Dinner | **Name** | what to order | $$$ |\nENDFOOD`;
 
+  // Trip-only travelers (includeFood === false) get an activities-only plan —
+  // no FOOD blocks, restaurant references, or per-meal scheduling.
+  const includeFood       = a.includeFood !== false;
+  const fullFood          = includeFood ? `\n\n${FOOD_BLOCK}` : "";
+  const fullFoodRule      = includeFood ? " Food is suggestions only." : "";
+  const mealClause        = includeFood ? " For each meal, prefer the ESSENTIAL restaurant." : "";
+  const restaurantSection = includeFood ? `\n\nRESTAURANT IDEAS:\n${restaurantIdeas || `Use your knowledge of restaurants in ${a.destination}`}` : "";
+  const outputMarkersLine = includeFood
+    ? "- Tables exactly as shown with TABLE/ENDTABLE and FOOD/ENDFOOD markers"
+    : "- Tables exactly as shown with TABLE/ENDTABLE markers\n- Trip-only itinerary: do NOT output any FOOD section or restaurant rows";
+
   const modeInstructions = {
-    full:   `Create a ${trip.nights}-night itinerary. Use the DAY HEADERS list for exact day labels. For each day:\n\n## Day N — [exact label from DAY HEADERS]\n\n${TABLE_BLOCK}\n\n${FOOD_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]\n\nRules: 3–5 activities max per day. Food is suggestions only. Times realistic for ${a.destination}.`,
+    full:   `Create a ${trip.nights}-night itinerary. Use the DAY HEADERS list for exact day labels. For each day:\n\n## Day N — [exact label from DAY HEADERS]\n\n${TABLE_BLOCK}${fullFood}\n\nTIPS: [practical tip] | [logistics tip]\n\nRules: 3–5 activities max per day.${fullFoodRule} Times realistic for ${a.destination}.`,
     day:    `Design the single best day possible in ${a.destination}. Output EXACTLY ONE day — no other days, no multi-day structure.\n\n## The Ideal Day — [Weekday, Month Date]\n\n${TABLE_BLOCK}\n\n${FOOD_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]`,
     combo:  `Create 3 themed day combinations. For each:\n\n## [Theme name]\n[One sentence — what type of day this is]\n\n${TABLE_BLOCK}\n\n${FOOD_BLOCK}`,
     foodie: `Build a full restaurant reference.\n\n## Breakfast\n${TABLE_BLOCK}\n\n## Lunch\n${TABLE_BLOCK}\n\n## Dinner\n${TABLE_BLOCK}\n\n## Drinks\n${TABLE_BLOCK}`,
@@ -470,16 +482,13 @@ BUDGET: ${budgetInstruction(a.budget)}
 
 AVOID: Never suggest anything related to: ${avoidText}.
 
-PRIORITY: Activities and restaurants are tagged ESSENTIAL, RECOMMENDED, or OPTIONAL (activities listed essentials-first). Schedule ESSENTIAL items before RECOMMENDED, and use OPTIONAL only when there is genuine spare capacity (a relaxed pace or extra days). In a multi-day itinerary, every ESSENTIAL should appear at least once before any OPTIONAL is added. For each meal, prefer the ESSENTIAL restaurant. Never drop an essential in favour of an optional.
+PRIORITY: Activities and restaurants are tagged ESSENTIAL, RECOMMENDED, or OPTIONAL (activities listed essentials-first). Schedule ESSENTIAL items before RECOMMENDED, and use OPTIONAL only when there is genuine spare capacity (a relaxed pace or extra days). In a multi-day itinerary, every ESSENTIAL should appear at least once before any OPTIONAL is added.${mealClause} Never drop an essential in favour of an optional.
 
 ACTIVITIES TO USE (tagged by priority, essentials first):
-${allItems || `Use your knowledge of ${a.destination}`}
-
-RESTAURANT IDEAS:
-${restaurantIdeas || `Use your knowledge of restaurants in ${a.destination}`}
+${allItems || `Use your knowledge of ${a.destination}`}${restaurantSection}
 
 STRICT OUTPUT RULES:
-- Tables exactly as shown with TABLE/ENDTABLE and FOOD/ENDFOOD markers
+${outputMarkersLine}
 - 3 to 5 activities per day max
 - Bold place names inside table cells using **Name**
 - TIPS line format: TIPS: tip one | tip two${editInstruction ? `

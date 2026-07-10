@@ -363,3 +363,33 @@ describe("buildTweakActivityPrompt", () => {
     expect(p).toContain("120");
   });
 });
+
+// ── Food toggle (trip + food vs trip only) ─────────────────────────────────────
+describe("includeFood toggle", () => {
+  const noFoodTrip = { ...BASE_TRIP, answers: { ...BASE_ANSWERS, includeFood: false } };
+
+  it("buildPlanPrompt(full) emits a FOOD block by default (includeFood absent)", () => {
+    const p = buildPlanPrompt("full", BASE_TRIP);
+    expect(p).toContain("FOOD:");
+    expect(p).toContain("TABLE:");
+    expect(p).toContain("RESTAURANT IDEAS:");
+  });
+
+  it("buildPlanPrompt(full) omits food entirely when includeFood is false", () => {
+    const p = buildPlanPrompt("full", noFoodTrip);
+    expect(p).not.toContain("FOOD:");
+    expect(p).not.toContain("ENDFOOD");
+    expect(p).not.toContain("RESTAURANT IDEAS:");
+    expect(p).toContain("TABLE:");                 // activities still present
+    expect(p).toContain("do NOT output any FOOD");  // explicit suppression
+  });
+
+  it("buildEditDayPrompt drops the FOOD block when includeFood is false", () => {
+    const withFood = buildEditDayPrompt("Day 1 — Mon", "## Day 1 — Mon", "refresh", BASE_TRIP);
+    const noFood   = buildEditDayPrompt("Day 1 — Mon", "## Day 1 — Mon", "refresh", noFoodTrip);
+    expect(withFood).toContain("FOOD:");
+    expect(noFood).not.toContain("FOOD:");
+    expect(noFood).toContain("TABLE:");
+    expect(noFood).toContain("Trip-only itinerary");
+  });
+});

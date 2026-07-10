@@ -5,7 +5,7 @@
  * Owns no state of its own — purely presentational.
  */
 import { AnimatePresence, motion } from "framer-motion";
-import { STEPS, T } from "../lib/constants.js";
+import { STEPS, T, FOOD_GROUP_LABEL } from "../lib/constants.js";
 import DateRangePicker from "./DateRangePicker.jsx";
 import DictationButton from "./DictationButton.jsx";
 import BudgetTiers from "./BudgetTiers.jsx";
@@ -42,10 +42,21 @@ export default function InterviewFlow({
   logTransport, setLogTransport,
   logPace, setLogPace,
   logFocus, setLogFocus,
+  includeFood, setIncludeFood,
   isValid,
 }) {
   const S   = STEPS[step];
   const pct = Math.round((step / STEPS.length) * 100);
+
+  // Toggle the "Trip + food / Trip only" choice. Turning food off clears any
+  // already-selected Food & Drink interest chips, since the group hides.
+  function setFood(on) {
+    setIncludeFood(on);
+    if (!on && S.groups) {
+      const foodOpts = S.groups.find(g => g.label === FOOD_GROUP_LABEL)?.opts || [];
+      setChips(p => p.filter(c => !foodOpts.includes(c)));
+    }
+  }
 
   function toggleChip(o) {
     if (S.singleSelect) {
@@ -208,10 +219,29 @@ export default function InterviewFlow({
         {/* ── Chips + text (interests / party) ── */}
         {S.type === "chips+text" && (
           <div style={{ marginBottom:"1.25rem" }}>
+            {/* Plan-scope toggle (interests step only) — trip + food vs trip only */}
+            {S.id === "interests" && (
+              <div style={{ marginBottom:16 }}>
+                <div style={{ display:"flex", gap:7 }}>
+                  {[["Trip + food", true], ["Trip only", false]].map(([label, on]) => {
+                    const sel = includeFood === on;
+                    return (
+                      <button key={label} className="wandr-chip" data-label={label} onClick={() => setFood(on)}
+                        style={{ flex:1, padding:"9px 14px", fontSize:12.5, borderRadius:10, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {!includeFood && (
+                  <div style={{ fontSize:11, color:T.hint, marginTop:7 }}>We'll skip restaurants and leave dining up to you.</div>
+                )}
+              </div>
+            )}
             {/* Grouped chips (interests) */}
             {S.groups ? (
               <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:10 }}>
-                {S.groups.map(group => (
+                {S.groups.filter(group => includeFood || group.label !== FOOD_GROUP_LABEL).map(group => (
                   <div key={group.label}>
                     <div style={{ fontSize:10, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:6 }}>{group.label}</div>
                     <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>

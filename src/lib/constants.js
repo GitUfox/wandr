@@ -59,6 +59,11 @@ export const STEPS = [
   },
 ];
 
+// The interests group whose chips only matter when food recs are included.
+// Single source of truth for both hiding the group and clearing its chips
+// when the traveler picks "Trip only" (see InterviewFlow food toggle).
+export const FOOD_GROUP_LABEL = "Food & Drink";
+
 // ── Plan generation modes ─────────────────────────────────────────────────────
 // Only "full" ships today — it's the core experience. The other modes are
 // back-burnered on the roadmap (see FUTURE_MODES). Their prompt logic still
