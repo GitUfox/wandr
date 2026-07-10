@@ -177,7 +177,7 @@ export default function Dashboard({
         <div style={{ background:T.bg1, borderBottom:`1px solid ${T.border}`, padding:"1.75rem 1.75rem 1.375rem" }}>
           {/* Brand bar */}
           <div style={{ marginBottom:"1.25rem" }}>
-            <WandrLogo size="sm" showTrail={false} />
+            <WandrLogo size="sm" showTrail={false} globe="animated" />
           </div>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, flexWrap:"wrap", marginBottom:10 }}>
             <div>
