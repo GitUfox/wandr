@@ -88,7 +88,7 @@ export default function WelcomeScreen({ onStart, savedTrip, onResume }) {
               style={{ width: "100%", padding: "14px 16px", fontSize: 16, fontWeight: 600, background: T.bg1, border: `1.5px solid ${T.accent}`, borderRadius: 10, color: T.ink, outline: "none", fontFamily: T.font, colorScheme: "dark", transition: "border-color .2s", boxSizing: "border-box" }}
             />
             {dest.length === 0 && (
-              <div style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", fontSize: 16, fontWeight: 600, color: T.hint, pointerEvents: "none", opacity: placeholderFade ? 1 : 0, transition: "opacity .18s ease" }}>
+              <div style={{ position: "absolute", left: 24, top: "50%", transform: "translateY(-50%)", fontSize: 16, fontWeight: 600, color: T.hint, pointerEvents: "none", opacity: placeholderFade ? 1 : 0, transition: "opacity .18s ease" }}>
                 {DEST_PLACEHOLDERS[placeholderIdx]}
               </div>
             )}
