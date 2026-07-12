@@ -50,7 +50,7 @@ export default function WelcomeScreen({ onStart, savedTrip, onResume }) {
             </div>
             {[
               ["A day-by-day itinerary", "Every day planned, morning to night"],
-              ["Dining for every meal", "Where to eat and what to order, to your budget"],
+              ["Activities picked for you", "Matched to your pace, interests, and budget"],
               ["Tips built into each day", "Timing, getting around, and what to skip"],
             ].map(([title, desc]) => (
               <div key={title} style={{ display: "flex", gap: 9, marginBottom: 11 }}>

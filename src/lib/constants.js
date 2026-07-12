@@ -36,16 +36,15 @@ export const STEPS = [
   {
     id:"budget",
     q:"What's your daily budget?",
-    sub:"Per person, per day — food, activities, and drinks",
+    sub:"Per person, per day — activities and experiences",
     type:"budget",
   },
   {
     id:"interests",
     q:"What do you enjoy?",
     type:"chips+text",
-    ph:"e.g. Love craft beer bars, record shops, live football",
+    ph:"e.g. Love record shops, live football, architecture",
     groups:[
-      { label:"Food & Drink",      opts:["Street food & markets","Sit-down dining","Cafés & coffee","Cocktails & wine","Cooking experiences"] },
       { label:"Outdoors & Active", opts:["Hiking & nature","Beaches & water","Adventure sports","Day trips"] },
       { label:"Culture & Arts",    opts:["History & museums","Architecture","Art & galleries","Live music & theatre","Festivals & events","Sports"] },
       { label:"Local Life",        opts:["Scenic views","Nightlife","Shopping","Wellness"] },
@@ -58,11 +57,6 @@ export const STEPS = [
     ph:"e.g. Want to catch a live match · Anniversary trip · Love slow mornings",
   },
 ];
-
-// The interests group whose chips only matter when food recs are included.
-// Single source of truth for both hiding the group and clearing its chips
-// when the traveler picks "Trip only" (see InterviewFlow food toggle).
-export const FOOD_GROUP_LABEL = "Food & Drink";
 
 // ── Plan generation modes ─────────────────────────────────────────────────────
 // Only "full" ships today — it's the core experience. The other modes are
@@ -78,7 +72,6 @@ export const MODES = [
 export const FUTURE_MODES = [
   { id:"day",    label:"Perfect single day", desc:"The one ideal day, hour by hour" },
   { id:"combo",  label:"Activity combos",    desc:"3 themed days or standout picks" },
-  { id:"foodie", label:"Food & drink guide", desc:"Every meal and drink, mapped out" },
   { id:"hidden", label:"Off the beaten path",desc:"Local secrets most visitors miss" },
 ];
 
@@ -87,9 +80,9 @@ export const FUTURE_MODES = [
 // interview (step 4) and the rebuild sheet (Trip Details) so the two can
 // never drift. `value` is the per-person daily USD figure stored on the trip.
 export const BUDGET_TIERS = [
-  { value: 40,  label: "Local",       price: "~$30–50 / day",  desc: "Street food, free sights, local spots" },
-  { value: 120, label: "Comfortable", price: "~$75–120 / day", desc: "Sit-down restaurants, paid attractions" },
-  { value: 300, label: "Splurge",     price: "~$200+ / day",   desc: "Fine dining, premium experiences" },
+  { value: 40,  label: "Local",       price: "~$30–50 / day",  desc: "Free sights, local spots" },
+  { value: 120, label: "Comfortable", price: "~$75–120 / day", desc: "Standard paid attractions" },
+  { value: 300, label: "Splurge",     price: "~$200+ / day",   desc: "Premium experiences, no expense spared" },
 ];
 
 // Snap an arbitrary stored budget (incl. legacy slider values) to the nearest

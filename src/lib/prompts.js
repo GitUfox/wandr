@@ -8,18 +8,22 @@ import { arr, calcNights, parseISODate } from "./utils.js";
 // field — those default to "recommended" so behaviour degrades gracefully
 // (nothing is wrongly promoted or demoted).
 
-const RESTAURANT_BINS = ["breakfast", "lunch", "dinner"];
 const PRIORITY_RANK = { essential: 0, recommended: 1, optional: 2 };
+
+// Trips built before food was removed from the schema may still carry these
+// keys in localStorage. Excluded here so a resumed legacy trip never leaks
+// old meal recs back in as generic "activities".
+const LEGACY_FOOD_BINS = ["breakfast", "lunch", "dinner"];
 
 function normalizePriority(p) {
   const v = String(p ?? "").toLowerCase().trim();
   return v === "essential" || v === "optional" ? v : "recommended";
 }
 
-// Flatten non-food categories into a priority-tagged, essentials-first list.
+// Flatten categories into a priority-tagged, essentials-first list.
 function formatActivityItems(categories) {
   return Object.entries(categories || {})
-    .filter(([cat]) => !RESTAURANT_BINS.includes(cat))
+    .filter(([cat]) => !LEGACY_FOOD_BINS.includes(cat))
     .flatMap(([cat, items]) =>
       (Array.isArray(items) ? items : []).map(it => ({ cat, it, prio: normalizePriority(it.priority) }))
     )
@@ -27,19 +31,6 @@ function formatActivityItems(categories) {
     .map(({ cat, it, prio }) =>
       `[${cat.toUpperCase()} · ${prio.toUpperCase()}] ${it.name}: ${it.description}${it.proTip ? ` | TIP: ${it.proTip}` : ""}`
     )
-    .join("\n");
-}
-
-// Flatten food categories into a priority-tagged restaurant reference.
-function formatRestaurantItems(categories) {
-  return RESTAURANT_BINS
-    .flatMap(meal => {
-      const items = categories?.[meal];
-      if (!Array.isArray(items) || items.length === 0) return [];
-      return items.map(it =>
-        `[${meal.toUpperCase()} · ${normalizePriority(it.priority).toUpperCase()}] ${it.name}: ${it.description}${it.mustOrder ? ` — order ${it.mustOrder}` : ""}`
-      );
-    })
     .join("\n");
 }
 
@@ -60,15 +51,15 @@ function partyInstruction(a) {
   const extra = a.party?.text?.trim() ? ` Additional context: ${a.party.text.trim()}.` : "";
   const rules = {
     "Solo":
-      "Traveler is solo. Prioritise activities that work comfortably alone — communal cafés, street food, self-guided walks, local bars with counter seating. Avoid awkward solo situations. Flag anything that's notably better with a companion.",
+      "Traveler is solo. Prioritise activities that work comfortably alone — self-guided walks, museums, low-key solo-friendly experiences. Avoid awkward solo situations. Flag anything that's notably better with a companion.",
     "Couple":
-      "Traveling as a couple. Lean romantic and intimate — shared experiences, candlelit dining, quieter neighbourhoods over crowded tourist spots. Avoid large group-tour style activities.",
+      "Traveling as a couple. Lean romantic and intimate — shared experiences, quieter neighbourhoods over crowded tourist spots. Avoid large group-tour style activities.",
     "Friends":
-      "Small group of friends. Prioritise social, shareable activities — lively restaurants, group-friendly bars, experiences that generate shared memories. Energy and atmosphere matter.",
+      "Small group of friends. Prioritise social, shareable activities — group-friendly venues, experiences that generate shared memories. Energy and atmosphere matter.",
     "Group":
-      "Larger group. Restaurants and venues must accommodate groups — flag reservation requirements. Activities should be group-bookable. Communal, high-energy experiences.",
+      "Larger group. Venues must accommodate groups — flag reservation requirements. Activities should be group-bookable. Communal, high-energy experiences.",
     "Family":
-      "Family trip. All activity and dining selections must be family-appropriate. Include child-friendly timing (early dinners, morning activities). Exclude nightlife, late-night venues, and adult-only experiences entirely.",
+      "Family trip. All activity selections must be family-appropriate. Include child-friendly timing (morning activities, manageable pacing). Exclude nightlife, late-night venues, and adult-only experiences entirely.",
   };
   return (rules[chip] || `Tailor all selections to this group: ${arr(a.party)}.`) + extra;
 }
@@ -86,14 +77,14 @@ function transportInstruction(transportLine) {
 
 function budgetInstruction(budget) {
   if (budget === 0)
-    return "Staying with family/friends — no accommodation cost. Focus on free and low-cost activities. Street food and casual local dining. Flag any paid options as optional splurges.";
+    return "Staying with family/friends — no accommodation cost. Focus on free and low-cost activities. Flag any paid options as optional splurges.";
   if (budget <= 60)
-    return "Low budget (~$30–50/day). Street food, markets, free sights. Skip paid attractions where free alternatives exist.";
+    return "Low budget (~$30–50/day). Markets, free sights, budget-friendly experiences. Skip paid attractions where free alternatives exist.";
   if (budget <= 150)
-    return "Comfortable budget (~$75–120/day). Sit-down restaurants, standard paid attractions. Occasional premium experience is fine.";
+    return "Comfortable budget (~$75–120/day). Standard paid attractions and experiences. Occasional premium experience is fine.";
   if (budget <= 300)
-    return "Higher budget (~$200+/day). Quality dining and premium experiences. Skip budget-only options.";
-  return "Luxury budget (~$450+/day). High-end throughout — tasting menus, private experiences, exclusive venues.";
+    return "Higher budget (~$200+/day). Quality, premium experiences. Skip budget-only options.";
+  return "Luxury budget (~$450+/day). High-end throughout — private experiences, exclusive venues, top-tier access.";
 }
 
 function paceInstruction(pace) {
@@ -118,8 +109,8 @@ function kidsInstruction(kids) {
   if (!kids || kids === "No kids") return "";
   const map = {
     "Under 5":  "Toddlers in the group (under 5). Stroller-accessible venues only. Short activity blocks. Nap-schedule-friendly timing. Avoid long waits and loud venues.",
-    "5 to 12":  "School-age kids (5–12). Hands-on and interactive experiences. Kid-friendly dining with familiar options. Keep pace manageable.",
-    "Teens":    "Teenagers in the group. Skip anything 'too young'. Include culture, food, and independence-friendly spots. Energy matters more than educational value.",
+    "5 to 12":  "School-age kids (5–12). Hands-on and interactive experiences. Keep pace manageable.",
+    "Teens":    "Teenagers in the group. Skip anything 'too young'. Include culture and independence-friendly spots. Energy matters more than educational value.",
   };
   return map[kids] || "";
 }
@@ -154,9 +145,6 @@ function buildDayLabels(startISO, nights) {
 
 const CATEGORIES_BODY =
 `"categories":{
-"breakfast":[{"name":"","description":"","price":"$","mustOrder":"","neighborhood":"","proTip":"","priority":"essential|recommended|optional"}],
-"lunch":[{"name":"","description":"","price":"$$","mustOrder":"","neighborhood":"","proTip":"","priority":"essential|recommended|optional"}],
-"dinner":[{"name":"","description":"","price":"$$$","mustOrder":"","neighborhood":"","proTip":"","priority":"essential|recommended|optional"}],
 "nature":[{"name":"","description":"","duration":"","difficulty":"","proTip":"","priority":"essential|recommended|optional"}],
 "culture":[{"name":"","description":"","duration":"","admission":"","proTip":"","priority":"essential|recommended|optional"}],
 "nightlife":[{"name":"","description":"","vibe":"","proTip":"","priority":"essential|recommended|optional"}],
@@ -243,7 +231,7 @@ AVOID: Never include anything related to: ${avoidLine}. If a category would only
 
 Rules: 3 items max per category. All strings concise (1 sentence max). Use local currency equivalents for prices.
 
-ACCURACY: Only include venues, restaurants, and services you have high confidence are currently operating. Do not suggest bike-share programs, municipal transit apps, or any service that may have shut down. If a venue's current status is uncertain, omit it entirely — a shorter list of reliable options is better than a longer list with stale picks.`;
+ACCURACY: Only include venues and services you have high confidence are currently operating. Do not suggest bike-share programs, municipal transit apps, or any service that may have shut down. If a venue's current status is uncertain, omit it entirely — a shorter list of reliable options is better than a longer list with stale picks.`;
 
   return { contextText, imageBlocks, n, safeStart, safeEnd };
 }
@@ -266,7 +254,7 @@ export function buildTripPrompt(answers, uploadedFiles) {
 }
 
 /**
- * Heavy half of the split build — the 8 food/activity categories.
+ * Heavy half of the split build — the 5 activity categories.
  * Returns { messageContent, n }.
  */
 export function buildTripCategoriesPrompt(answers, uploadedFiles) {
@@ -302,17 +290,9 @@ export function buildEditDayPrompt(dayLabel, dayContent, instruction, trip) {
   const focusText     = focus ? focusInstruction(a.destination, focus)  : "";
   const kidsText      = kidsVal ? kidsInstruction(kidsVal)              : "";
 
-  const allItems        = formatActivityItems(trip.categories);
-  const restaurantIdeas = formatRestaurantItems(trip.categories);
+  const allItems = formatActivityItems(trip.categories);
 
-  // Trip-only travelers (includeFood === false) get no restaurant rows.
-  const includeFood       = a.includeFood !== false;
   const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [time] | **Place** | facts only, duration |\nENDTABLE`;
-  const FOOD_BLOCK  = `FOOD:\n| Meal | Name | Order | Price |\n|------|------|-------|-------|\n| Breakfast | **Name** | what to order | $ |\n| Lunch | **Name** | what to order | $$ |\n| Dinner | **Name** | what to order | $$$ |\nENDFOOD`;
-  const mealClause        = includeFood ? " For each meal, prefer the ESSENTIAL restaurant." : "";
-  const restaurantSection = includeFood ? `\n\nRESTAURANT IDEAS:\n${restaurantIdeas || `Use your knowledge of restaurants in ${a.destination}`}` : "";
-  const foodOutput        = includeFood ? `\n\n${FOOD_BLOCK}` : "";
-  const foodOmitNote      = includeFood ? "" : "\n- Trip-only itinerary: do NOT output a FOOD section or any restaurant rows.";
 
   return `You are a travel planner. Regenerate ONE day of an itinerary for ${trip.destination}.
 
@@ -335,10 +315,10 @@ PARTY: ${partyInstruction(a)}
 ROUTING: ${stayInstruction(stayLine || "not specified")} ${transportInstruction(transportLine || "not specified")}
 BUDGET: ${budgetInstruction(a.budget)}${paceText ? `\nPACE: ${paceText}` : ""}${focusText ? `\nFOCUS: ${focusText}` : ""}${kidsText ? `\nKIDS: ${kidsText}` : ""}
 AVOID: Never suggest anything related to: ${avoidText}.
-PRIORITY: Activities and restaurants are tagged ESSENTIAL, RECOMMENDED, or OPTIONAL (activities listed essentials-first). Favour ESSENTIAL items for this day; use OPTIONAL only if there is spare time.${mealClause} Never drop an essential in favour of an optional.
+PRIORITY: Activities are tagged ESSENTIAL, RECOMMENDED, or OPTIONAL (listed essentials-first). Favour ESSENTIAL items for this day; use OPTIONAL only if there is spare time. Never drop an essential in favour of an optional.
 
 ACTIVITIES TO USE (tagged by priority, essentials first):
-${allItems || `Use your knowledge of ${a.destination}`}${restaurantSection}
+${allItems || `Use your knowledge of ${a.destination}`}
 
 STRICT OUTPUT RULES:
 - Return ONLY the replacement day content. Nothing before or after.
@@ -347,12 +327,12 @@ STRICT OUTPUT RULES:
 
 ## ${dayLabel}
 
-${TABLE_BLOCK}${foodOutput}
+${TABLE_BLOCK}
 
 TIPS: [practical tip] | [logistics tip]
 
 - 3 to 5 activities max. No filler phrases. Facts only.
-- Bold place names inside table cells using **Name**${foodOmitNote}
+- Bold place names inside table cells using **Name**
 - ACCURACY: Only recommend venues you are confident are currently operating.`;
 }
 
@@ -400,8 +380,7 @@ ENDTABLE`;
 export function buildPlanPrompt(mode, trip, editInstruction = null, editType = null) {
   const a = trip.answers;
 
-  const allItems        = formatActivityItems(trip.categories);
-  const restaurantIdeas = formatRestaurantItems(trip.categories);
+  const allItems = formatActivityItems(trip.categories);
 
   const stayLine      = a.logistics?.stay || "";
   const transportLine = a.logistics?.transport ? arr(a.logistics.transport) : "";
@@ -425,24 +404,11 @@ export function buildPlanPrompt(mode, trip, editInstruction = null, editType = n
     : "";
 
   const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [time] | **Place** | facts only, duration |\nENDTABLE`;
-  const FOOD_BLOCK  = `FOOD:\n| Meal | Name | Order | Price |\n|------|------|-------|-------|\n| Breakfast | **Name** | what to order | $ |\n| Lunch | **Name** | what to order | $$ |\n| Dinner | **Name** | what to order | $$$ |\nENDFOOD`;
-
-  // Trip-only travelers (includeFood === false) get an activities-only plan —
-  // no FOOD blocks, restaurant references, or per-meal scheduling.
-  const includeFood       = a.includeFood !== false;
-  const fullFood          = includeFood ? `\n\n${FOOD_BLOCK}` : "";
-  const fullFoodRule      = includeFood ? " Food is suggestions only." : "";
-  const mealClause        = includeFood ? " For each meal, prefer the ESSENTIAL restaurant." : "";
-  const restaurantSection = includeFood ? `\n\nRESTAURANT IDEAS:\n${restaurantIdeas || `Use your knowledge of restaurants in ${a.destination}`}` : "";
-  const outputMarkersLine = includeFood
-    ? "- Tables exactly as shown with TABLE/ENDTABLE and FOOD/ENDFOOD markers"
-    : "- Tables exactly as shown with TABLE/ENDTABLE markers\n- Trip-only itinerary: do NOT output any FOOD section or restaurant rows";
 
   const modeInstructions = {
-    full:   `Create a ${trip.nights}-night itinerary. Use the DAY HEADERS list for exact day labels. For each day:\n\n## Day N — [exact label from DAY HEADERS]\n\n${TABLE_BLOCK}${fullFood}\n\nTIPS: [practical tip] | [logistics tip]\n\nRules: 3–5 activities max per day.${fullFoodRule} Times realistic for ${a.destination}.`,
-    day:    `Design the single best day possible in ${a.destination}. Output EXACTLY ONE day — no other days, no multi-day structure.\n\n## The Ideal Day — [Weekday, Month Date]\n\n${TABLE_BLOCK}\n\n${FOOD_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]`,
-    combo:  `Create 3 themed day combinations. For each:\n\n## [Theme name]\n[One sentence — what type of day this is]\n\n${TABLE_BLOCK}\n\n${FOOD_BLOCK}`,
-    foodie: `Build a full restaurant reference.\n\n## Breakfast\n${TABLE_BLOCK}\n\n## Lunch\n${TABLE_BLOCK}\n\n## Dinner\n${TABLE_BLOCK}\n\n## Drinks\n${TABLE_BLOCK}`,
+    full:   `Create a ${trip.nights}-night itinerary. Use the DAY HEADERS list for exact day labels. For each day:\n\n## Day N — [exact label from DAY HEADERS]\n\n${TABLE_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]\n\nRules: 3–5 activities max per day. Times realistic for ${a.destination}.`,
+    day:    `Design the single best day possible in ${a.destination}. Output EXACTLY ONE day — no other days, no multi-day structure.\n\n## The Ideal Day — [Weekday, Month Date]\n\n${TABLE_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]`,
+    combo:  `Create 3 themed day combinations. For each:\n\n## [Theme name]\n[One sentence — what type of day this is]\n\n${TABLE_BLOCK}`,
     hidden: `List 5 local spots most visitors miss.\n\n${TABLE_BLOCK}`,
   };
 
@@ -474,21 +440,21 @@ ${kidsText ? `KIDS: ${kidsText}` : ""}
 TEMPORAL GROUNDING: Today is ${today}. Trip dates: ${safeStart} → ${safeEnd}.${mode === "full" && dayHeaderBlock ? `\n${dayHeaderBlock}` : ""} Always use these exact day labels — never guess or infer day-of-week independently.
 
 ACCURACY RULES:
-- OPERATING HOURS: Before placing a venue in a time slot, verify it is open on that specific day of week and at that time. Many restaurants do not serve dinner on Sundays; museums are often closed Mondays or Tuesdays; brunch-only spots cannot fill a dinner slot. If a venue's hours make a slot implausible, substitute a different option from the same category.
+- OPERATING HOURS: Before placing a venue in a time slot, verify it is open on that specific day of week and at that time. Museums are often closed Mondays or Tuesdays; some attractions have seasonal or day-specific hours. If a venue's hours make a slot implausible, substitute a different option from the same category.
 - LIVE EVENTS: Never assert that a specific sports game, concert, or ticketed event is scheduled on a particular date — team schedules, touring dates, and event lineups change. Instead write: "Check schedule: [venue or team name]" as an optional add-on.
-- CLOSED VENUES: Do not recommend any bike-share program, transit app, or dining establishment you cannot confidently confirm is currently operating. Omit uncertain venues entirely rather than risk sending the traveler somewhere that no longer exists.
+- CLOSED VENUES: Do not recommend any bike-share program or transit app you cannot confidently confirm is currently operating. Omit uncertain venues entirely rather than risk sending the traveler somewhere that no longer exists.
 
 BUDGET: ${budgetInstruction(a.budget)}
 
 AVOID: Never suggest anything related to: ${avoidText}.
 
-PRIORITY: Activities and restaurants are tagged ESSENTIAL, RECOMMENDED, or OPTIONAL (activities listed essentials-first). Schedule ESSENTIAL items before RECOMMENDED, and use OPTIONAL only when there is genuine spare capacity (a relaxed pace or extra days). In a multi-day itinerary, every ESSENTIAL should appear at least once before any OPTIONAL is added.${mealClause} Never drop an essential in favour of an optional.
+PRIORITY: Activities are tagged ESSENTIAL, RECOMMENDED, or OPTIONAL (listed essentials-first). Schedule ESSENTIAL items before RECOMMENDED, and use OPTIONAL only when there is genuine spare capacity (a relaxed pace or extra days). In a multi-day itinerary, every ESSENTIAL should appear at least once before any OPTIONAL is added. Never drop an essential in favour of an optional.
 
 ACTIVITIES TO USE (tagged by priority, essentials first):
-${allItems || `Use your knowledge of ${a.destination}`}${restaurantSection}
+${allItems || `Use your knowledge of ${a.destination}`}
 
 STRICT OUTPUT RULES:
-${outputMarkersLine}
+- Tables exactly as shown with TABLE/ENDTABLE markers
 - 3 to 5 activities per day max
 - Bold place names inside table cells using **Name**
 - TIPS line format: TIPS: tip one | tip two${editInstruction ? `

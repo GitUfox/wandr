@@ -19,7 +19,6 @@ import BudgetTiers from "./BudgetTiers.jsx";
 
 const VIBE_CHIPS = [
   "More relaxed",
-  "More foodie",
   "Less touristy",
   "More adventurous",
   "More budget-friendly",
@@ -378,7 +377,7 @@ export default function EditTripSheet({
               </div>
               <textarea
                 autoFocus
-                placeholder={"e.g. Swap the museum visit for something outdoors\n         Change the Yankees game to a Knicks game\n         Add more food markets across the trip"}
+                placeholder={"e.g. Swap the museum visit for something outdoors\n         Change the Yankees game to a Knicks game\n         Add another day trip outside the city"}
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
                 rows={4}
@@ -443,7 +442,7 @@ export default function EditTripSheet({
                 What should change? <span style={{ fontWeight: 400, color: T.border2 }}>(optional)</span>
               </div>
               <textarea
-                placeholder="e.g. Add a morning hike · More local food · Less museums — or leave blank to refresh the day"
+                placeholder="e.g. Add a morning hike · More local markets · Less museums — or leave blank to refresh the day"
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
                 rows={3}

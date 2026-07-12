@@ -19,7 +19,7 @@ const BASE_ANSWERS = {
     stay: "Hotel in Shinjuku",
     transport: { chips: ["Public transit"], text: "" },
   },
-  interests: { chips: ["Street food & markets", "Photography"], text: "love record shops", avoidChips: [] },
+  interests: { chips: ["Architecture", "Photography"], text: "love record shops", avoidChips: [] },
   notes: "Want to catch a baseball game",
 };
 
@@ -28,7 +28,6 @@ const BASE_TRIP = {
   nights: 6,
   season: "Hot and humid — pack light, expect rain",
   categories: {
-    breakfast: [{ name: "Ichiran Ramen", description: "Solo booth ramen", mustOrder: "tonkotsu", price: "¥1200" }],
     culture: [{ name: "Senso-ji", description: "Ancient Buddhist temple in Asakusa", duration: "1–2 hours", proTip: "Go early" }],
     exploration: [{ name: "Shimokitazawa", description: "Indie neighbourhood for records and vintage", proTip: "Weekday morning is quietest" }],
   },
@@ -118,9 +117,16 @@ describe("split trip build", () => {
   it("categories half asks for categories but not the meta sections", () => {
     const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []);
     expect(messageContent).toContain('"categories"');
-    expect(messageContent).toContain('"breakfast"');
+    expect(messageContent).toContain('"nature"');
     expect(messageContent).not.toContain('"photoSpots"');
     expect(messageContent).not.toContain('"practical"');
+  });
+
+  it("categories half never asks for food categories", () => {
+    const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []);
+    expect(messageContent).not.toContain('"breakfast"');
+    expect(messageContent).not.toContain('"lunch"');
+    expect(messageContent).not.toContain('"dinner"');
   });
 
   it("meta half asks for the header sections but not the category list", () => {
@@ -156,7 +162,7 @@ describe("split trip build", () => {
 
 describe("buildPlanPrompt", () => {
   it("returns a non-empty string for every mode", () => {
-    for (const mode of ["full", "day", "combo", "foodie", "hidden"]) {
+    for (const mode of ["full", "day", "combo", "hidden"]) {
       const result = buildPlanPrompt(mode, BASE_TRIP);
       expect(typeof result).toBe("string");
       expect(result.length).toBeGreaterThan(100);
@@ -164,9 +170,9 @@ describe("buildPlanPrompt", () => {
   });
 
   it("each mode produces different output", () => {
-    const outputs = ["full", "day", "combo", "foodie", "hidden"].map(m => buildPlanPrompt(m, BASE_TRIP));
+    const outputs = ["full", "day", "combo", "hidden"].map(m => buildPlanPrompt(m, BASE_TRIP));
     const unique = new Set(outputs);
-    expect(unique.size).toBe(5);
+    expect(unique.size).toBe(4);
   });
 
   it("includes destination and season", () => {
@@ -186,23 +192,19 @@ describe("buildPlanPrompt", () => {
     expect(result).toContain("Shimokitazawa");
   });
 
-  it("includes restaurant ideas from trip.categories", () => {
-    const result = buildPlanPrompt("foodie", BASE_TRIP);
-    expect(result).toContain("Ichiran Ramen");
-  });
-
   it("falls back gracefully when categories is empty", () => {
     const emptyTrip = { ...BASE_TRIP, categories: {} };
     const result = buildPlanPrompt("full", emptyTrip);
     expect(result).toContain("Use your knowledge of");
   });
 
-  it("includes TABLE/ENDTABLE and FOOD/ENDFOOD markers in format instructions", () => {
+  it("includes TABLE/ENDTABLE markers but never emits food markers", () => {
     const result = buildPlanPrompt("full", BASE_TRIP);
     expect(result).toContain("TABLE:");
     expect(result).toContain("ENDTABLE");
-    expect(result).toContain("FOOD:");
-    expect(result).toContain("ENDFOOD");
+    expect(result).not.toContain("FOOD:");
+    expect(result).not.toContain("ENDFOOD");
+    expect(result).not.toMatch(/restaurant/i);
   });
 
   it("includes traveler logistics", () => {
@@ -248,7 +250,6 @@ describe("buildPlanPrompt — activity priority", () => {
   const PRIORITY_TRIP = {
     ...BASE_TRIP,
     categories: {
-      breakfast: [{ name: "Ichiran Ramen", description: "Solo booth ramen", mustOrder: "tonkotsu", priority: "essential" }],
       culture: [
         { name: "Optional Gallery", description: "Minor gallery", priority: "optional" },
         { name: "Senso-ji", description: "Ancient temple", priority: "essential" },
@@ -279,9 +280,17 @@ describe("buildPlanPrompt — activity priority", () => {
     expect(result).toContain("Never drop an essential");
   });
 
-  it("tags restaurants with their priority tier", () => {
-    const result = buildPlanPrompt("foodie", PRIORITY_TRIP);
-    expect(result).toContain("[BREAKFAST · ESSENTIAL]");
+  it("excludes legacy breakfast/lunch/dinner categories from a resumed old trip", () => {
+    const legacyTrip = {
+      ...BASE_TRIP,
+      categories: {
+        ...BASE_TRIP.categories,
+        breakfast: [{ name: "Ichiran Ramen", description: "Solo booth ramen", priority: "essential" }],
+      },
+    };
+    const result = buildPlanPrompt("full", legacyTrip);
+    expect(result).not.toContain("Ichiran Ramen");
+    expect(result).not.toContain("[BREAKFAST");
   });
 
   it("defaults missing priority to RECOMMENDED (legacy trips)", () => {
@@ -364,32 +373,30 @@ describe("buildTweakActivityPrompt", () => {
   });
 });
 
-// ── Food toggle (trip + food vs trip only) ─────────────────────────────────────
-describe("includeFood toggle", () => {
-  const noFoodTrip = { ...BASE_TRIP, answers: { ...BASE_ANSWERS, includeFood: false } };
-
-  it("buildPlanPrompt(full) emits a FOOD block by default (includeFood absent)", () => {
-    const p = buildPlanPrompt("full", BASE_TRIP);
-    expect(p).toContain("FOOD:");
-    expect(p).toContain("TABLE:");
-    expect(p).toContain("RESTAURANT IDEAS:");
+// ── No food, full stop ──────────────────────────────────────────────────────────
+describe("food removed from the pipeline", () => {
+  it("buildPlanPrompt never emits food markers or restaurant language, in any mode", () => {
+    for (const mode of ["full", "day", "combo", "hidden"]) {
+      const p = buildPlanPrompt(mode, BASE_TRIP);
+      expect(p).not.toContain("FOOD:");
+      expect(p).not.toContain("ENDFOOD");
+      expect(p).not.toMatch(/restaurant/i);
+      expect(p).not.toMatch(/\bdining\b/i);
+    }
   });
 
-  it("buildPlanPrompt(full) omits food entirely when includeFood is false", () => {
-    const p = buildPlanPrompt("full", noFoodTrip);
+  it("buildEditDayPrompt never emits food markers or restaurant language", () => {
+    const p = buildEditDayPrompt("Day 1 — Mon", "## Day 1 — Mon", "refresh", BASE_TRIP);
     expect(p).not.toContain("FOOD:");
     expect(p).not.toContain("ENDFOOD");
-    expect(p).not.toContain("RESTAURANT IDEAS:");
-    expect(p).toContain("TABLE:");                 // activities still present
-    expect(p).toContain("do NOT output any FOOD");  // explicit suppression
+    expect(p).not.toMatch(/restaurant/i);
+    expect(p).toContain("TABLE:"); // activities still present
   });
 
-  it("buildEditDayPrompt drops the FOOD block when includeFood is false", () => {
-    const withFood = buildEditDayPrompt("Day 1 — Mon", "## Day 1 — Mon", "refresh", BASE_TRIP);
-    const noFood   = buildEditDayPrompt("Day 1 — Mon", "## Day 1 — Mon", "refresh", noFoodTrip);
-    expect(withFood).toContain("FOOD:");
-    expect(noFood).not.toContain("FOOD:");
-    expect(noFood).toContain("TABLE:");
-    expect(noFood).toContain("Trip-only itinerary");
+  it("buildTripCategoriesPrompt never asks for meal categories", () => {
+    const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []);
+    for (const bin of ["breakfast", "lunch", "dinner"]) {
+      expect(messageContent).not.toContain(`"${bin}"`);
+    }
   });
 });
