@@ -95,6 +95,16 @@ function paceInstruction(pace) {
   return "Balanced pace — 3–4 activities per day, mix of planned and unstructured time.";
 }
 
+// Daily rhythm — when the day starts/ends, distinct from pace (how much per day).
+// "Flexible" returns "" so no instruction is injected.
+function rhythmInstruction(rhythm) {
+  if (rhythm === "Early riser")
+    return "Traveler is an early riser. Start days earlier (7–8am activities are welcome) and wind down evenings sooner — avoid stacking late-night activities as the plan's finale.";
+  if (rhythm === "Night owl")
+    return "Traveler is a night owl. Mornings can start later (skip early-AM activities); lean into evening and nightlife options where they match the traveler's interests.";
+  return "";
+}
+
 function focusInstruction(dest, focus) {
   if (focus === "Famous sights")
     return `Traveler wants the famous sights of ${dest} — the iconic must-sees and classics that define the destination. Lead with these; treat hidden gems as secondary.`;
@@ -180,6 +190,7 @@ function tripContext(answers, uploadedFiles) {
   const transportLine = a.logistics?.transport ? arr(a.logistics.transport) : "not specified";
   const pace          = a.logistics?.pace     || "";
   const focus         = a.logistics?.focus    || "";
+  const rhythm        = a.logistics?.rhythm   || "";
   const kidsVal       = a.party?.kids         || "";
 
   const interestsLine   = arr(a.interests);
@@ -187,6 +198,7 @@ function tripContext(answers, uploadedFiles) {
 
   const paceText      = pace  ? paceInstruction(pace)                   : "";
   const focusText     = focus ? focusInstruction(a.destination, focus)  : "";
+  const rhythmText    = rhythm ? rhythmInstruction(rhythm)              : "";
   const kidsText      = kidsVal ? kidsInstruction(kidsVal)              : "";
 
   const textFileContext = (uploadedFiles || [])
@@ -208,7 +220,7 @@ TRANSPORT: ${transportLine}
 BUDGET: ${budgetLine}
 INTERESTS (listed most-important-first): ${interestsLine}
 AVOID: ${avoidLine}
-NOTES: ${a.notes || "none"}${pace ? `\nPACE: ${pace}` : ""}${focus ? `\nFOCUS: ${focus}` : ""}
+NOTES: ${a.notes || "none"}${pace ? `\nPACE: ${pace}` : ""}${focus ? `\nFOCUS: ${focus}` : ""}${rhythm ? `\nRHYTHM: ${rhythm}` : ""}
 ${textFileContext ? `\nUPLOADED CONTEXT:\n${textFileContext}` : ""}
 
 INSTRUCTIONS — apply these to every selection you make:
@@ -222,6 +234,7 @@ TRANSPORT: ${transportInstruction(transportLine)}
 BUDGET: ${budgetInstruction(a.budget)}
 ${paceText ? `\nPACE: ${paceText}` : ""}
 ${focusText ? `FOCUS: ${focusText}` : ""}
+${rhythmText ? `RHYTHM: ${rhythmText}` : ""}
 ${kidsText ? `KIDS: ${kidsText}` : ""}
 INTERESTS: Only include categories that genuinely match the traveler's stated interests. If an interest category has no relevant match, omit it entirely rather than filling it with generic picks. The interests are listed most-important-first — weight earlier interests more heavily when deciding what to include and how to rank it.
 
@@ -285,9 +298,11 @@ export function buildEditDayPrompt(dayLabel, dayContent, instruction, trip) {
   const avoidText     = resolveAvoid(a);
   const pace          = a.logistics?.pace     || "";
   const focus         = a.logistics?.focus    || "";
+  const rhythm        = a.logistics?.rhythm   || "";
   const kidsVal       = a.party?.kids         || "";
   const paceText      = pace  ? paceInstruction(pace)                   : "";
   const focusText     = focus ? focusInstruction(a.destination, focus)  : "";
+  const rhythmText    = rhythm ? rhythmInstruction(rhythm)              : "";
   const kidsText      = kidsVal ? kidsInstruction(kidsVal)              : "";
 
   const allItems = formatActivityItems(trip.categories);
@@ -306,14 +321,14 @@ TRAVELER
 - Party: ${arr(a.party)}${kidsVal ? ` · Kids: ${kidsVal}` : ""}
 - Budget: ${budgetLabel}
 - Staying: ${stayLine || "not specified"}
-- Transport: ${transportLine || "not specified"}${pace ? `\n- Pace: ${pace}` : ""}${focus ? `\n- Focus: ${focus}` : ""}
+- Transport: ${transportLine || "not specified"}${pace ? `\n- Pace: ${pace}` : ""}${focus ? `\n- Focus: ${focus}` : ""}${rhythm ? `\n- Rhythm: ${rhythm}` : ""}
 - Interests: ${arr(a.interests)}
 - Avoid: ${avoidText}
 
 APPLY THESE RULES:
 PARTY: ${partyInstruction(a)}
 ROUTING: ${stayInstruction(stayLine || "not specified")} ${transportInstruction(transportLine || "not specified")}
-BUDGET: ${budgetInstruction(a.budget)}${paceText ? `\nPACE: ${paceText}` : ""}${focusText ? `\nFOCUS: ${focusText}` : ""}${kidsText ? `\nKIDS: ${kidsText}` : ""}
+BUDGET: ${budgetInstruction(a.budget)}${paceText ? `\nPACE: ${paceText}` : ""}${focusText ? `\nFOCUS: ${focusText}` : ""}${rhythmText ? `\nRHYTHM: ${rhythmText}` : ""}${kidsText ? `\nKIDS: ${kidsText}` : ""}
 AVOID: Never suggest anything related to: ${avoidText}.
 PRIORITY: Activities are tagged ESSENTIAL, RECOMMENDED, or OPTIONAL (listed essentials-first). Favour ESSENTIAL items for this day; use OPTIONAL only if there is spare time. Never drop an essential in favour of an optional.
 
@@ -388,9 +403,11 @@ export function buildPlanPrompt(mode, trip, editInstruction = null, editType = n
   const avoidText     = resolveAvoid(a);
   const pace          = a.logistics?.pace     || "";
   const focus         = a.logistics?.focus    || "";
+  const rhythm        = a.logistics?.rhythm   || "";
   const kidsVal       = a.party?.kids         || "";
   const paceText      = pace  ? paceInstruction(pace)                   : "";
   const focusText     = focus ? focusInstruction(a.destination, focus)  : "";
+  const rhythmText    = rhythm ? rhythmInstruction(rhythm)              : "";
   const kidsText      = kidsVal ? kidsInstruction(kidsVal)              : "";
 
   const today       = new Date().toISOString().slice(0, 10);
@@ -423,7 +440,7 @@ TRAVELER
 - Party: ${arr(a.party)}${kidsVal ? ` · Kids: ${kidsVal}` : ""}
 - Budget: ${budgetLabel}
 - Staying: ${stayLine || "not specified"}
-- Transport: ${transportLine || "not specified"}${pace ? `\n- Pace: ${pace}` : ""}${focus ? `\n- Focus: ${focus}` : ""}
+- Transport: ${transportLine || "not specified"}${pace ? `\n- Pace: ${pace}` : ""}${focus ? `\n- Focus: ${focus}` : ""}${rhythm ? `\n- Rhythm: ${rhythm}` : ""}
 - Interests: ${arr(a.interests)}
 - Avoid: ${avoidText}
 - Notes: ${a.notes || "none"}
@@ -436,6 +453,7 @@ PARTY: ${partyInstruction(a)}
 ROUTING: ${stayInstruction(stayLine || "not specified")} ${transportInstruction(transportLine || "not specified")}
 ${paceText ? `\nPACE: ${paceText}` : ""}
 ${focusText ? `FOCUS: ${focusText}` : ""}
+${rhythmText ? `RHYTHM: ${rhythmText}` : ""}
 ${kidsText ? `KIDS: ${kidsText}` : ""}
 TEMPORAL GROUNDING: Today is ${today}. Trip dates: ${safeStart} → ${safeEnd}.${mode === "full" && dayHeaderBlock ? `\n${dayHeaderBlock}` : ""} Always use these exact day labels — never guess or infer day-of-week independently.
 

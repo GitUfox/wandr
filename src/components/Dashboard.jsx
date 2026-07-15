@@ -27,6 +27,9 @@ export default function Dashboard({
   onTweakActivity,
   tweakingId,
   onReset,
+  showProfilePrompt,
+  onSaveProfile,
+  onDismissProfilePrompt,
 }) {
   const [copied, setCopied]           = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
@@ -227,6 +230,23 @@ export default function Dashboard({
         </div>
 
         <div style={{ padding:"1.25rem", background:T.bg0, minHeight:400 }}>
+
+          {/* One-time "save these as your defaults?" prompt (first-time users) */}
+          {showProfilePrompt && (
+            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", background:"#2a1a12", border:`1px solid ${T.accent}`, borderRadius:10, marginBottom:12 }}>
+              <div style={{ flex:1, fontSize:12.5, color:T.ink, lineHeight:1.4 }}>
+                Save these as your <strong style={{ color:T.accent }}>defaults</strong>? Skip the questions next time.
+              </div>
+              <button onClick={onSaveProfile}
+                style={{ padding:"7px 14px", borderRadius:8, fontSize:12.5, fontWeight:700, color:T.white, background:T.accent, border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>
+                Save
+              </button>
+              <button onClick={onDismissProfilePrompt}
+                style={{ padding:"7px 4px", fontSize:12, fontWeight:600, color:T.hint, background:"none", border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>
+                Not now
+              </button>
+            </div>
+          )}
 
           {/* Itinerary */}
           <div>

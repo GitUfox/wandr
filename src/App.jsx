@@ -49,6 +49,38 @@ function loadSavedTrip() {
   try { return JSON.parse(localStorage.getItem("wandr_trip") || "null"); } catch { return null; }
 }
 
+// ── Profile (saved preferences) ───────────────────────────────────────────────
+// The profile is a plain snapshot of the profile-backed answer fields, in the
+// exact shapes prompts.js already consumes — so it needs no migration when
+// those shapes evolve. It's the default fill for a returning user's interview.
+const PROFILE_KEY = "wandr_profile";
+const PROFILE_DECLINED_KEY = "wandr_profile_declined";
+
+// Steps whose answers come from the saved profile — skipped in "continue" mode.
+// dates is always trip-specific; notes is always shown (add something for THIS trip).
+const PROFILE_BACKED_STEP_IDS = ["party", "logistics", "budget", "interests"];
+
+function loadProfile() {
+  try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || "null"); } catch { return null; }
+}
+
+// Snapshot the profile-backed fields from a completed answers object.
+function saveProfile(answers) {
+  try {
+    const profile = {
+      version:   1,
+      party:     answers.party,
+      logistics: answers.logistics,
+      budget:    answers.budget,
+      interests: answers.interests,
+      avoid:     answers.avoid || "",
+      savedAt:   new Date().toISOString(),
+    };
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    return profile;
+  } catch { return null; }
+}
+
 export default function Wandr() {
   // ── Screen + interview state ──────────────────────────────────────────────
   const [screen, setScreen]   = useState("welcome");
@@ -68,10 +100,18 @@ export default function Wandr() {
   const [logTransport, setLogTransport]   = useState("");
   const [logPace, setLogPace]             = useState("");
   const [logFocus, setLogFocus]           = useState("");
+  const [logRhythm, setLogRhythm]         = useState("");
 
   // Trip + dashboard
   const [trip, setTrip]               = useState(null);
   const [savedTrip, setSavedTrip]     = useState(loadSavedTrip);
+
+  // Profile state
+  const [savedProfile, setSavedProfile]   = useState(loadProfile);
+  const [interviewMode, setInterviewMode] = useState("fresh"); // "fresh" | "continue" | "edit"
+  const [profilePromptDismissed, setProfilePromptDismissed] = useState(() => {
+    try { return localStorage.getItem(PROFILE_DECLINED_KEY) === "1"; } catch { return false; }
+  });
 
   const fileInputRef = useRef(null);
   const S = STEPS[step];
@@ -90,7 +130,7 @@ export default function Wandr() {
     }
     if (S.type === "daterange")  return { start: d1, end: d2 };
     if (S.type === "budget")     return budget;
-    if (S.type === "logistics")  return { stay: logStay, transport: logTransport, pace: logPace, focus: logFocus };
+    if (S.type === "logistics")  return { stay: logStay, transport: logTransport, pace: logPace, focus: logFocus, rhythm: logRhythm };
     return cur;
   }
 
@@ -135,16 +175,28 @@ export default function Wandr() {
     return newAns;
   }
 
+  // In "continue" mode, profile-backed steps are pre-answered — skip over them.
+  // Guards keep the result within [0, last] (never skips dates or notes).
+  function nextVisibleStep(from, dir) {
+    let i = from + dir;
+    if (interviewMode === "continue") {
+      while (i > 0 && i < STEPS.length - 1 && PROFILE_BACKED_STEP_IDS.includes(STEPS[i].id)) {
+        i += dir;
+      }
+    }
+    return i;
+  }
+
   function advance() {
     const newAns = stageCurrent();
     setAnswers(newAns);
     if (step < STEPS.length - 1) {
       setDir(1);
-      const next = step + 1;
+      const next = nextVisibleStep(step, 1);
       setStep(next);
       hydrate(next, newAns);
     } else {
-      handleBuildTrip(newAns);
+      handleBuildTrip(newAns, { fromInterview: true });
     }
   }
 
@@ -153,21 +205,38 @@ export default function Wandr() {
     const newAns = stageCurrent();
     setAnswers(newAns);
     setDir(-1);
-    const prev = step - 1;
+    const prev = nextVisibleStep(step, -1);
     setStep(prev);
     hydrate(prev, newAns);
   }
 
   // ── API actions ───────────────────────────────────────────────────────────
-  async function handleBuildTrip(a) {
+  async function handleBuildTrip(a, opts = {}) {
     setScreen("loading");
     const result = await doBuildTrip(a, uploadedFiles);
     if (!result._error) {
       try { localStorage.setItem("wandr_trip", JSON.stringify(result)); setSavedTrip(result); } catch {}
       clearSavedPlan(); // a fresh/rebuilt trip — drop any saved plan from the previous one
+      // "Edit preferences" is the deliberate moment to update saved defaults.
+      if (opts.fromInterview && interviewMode === "edit") {
+        const p = saveProfile(a);
+        if (p) setSavedProfile(p);
+      }
     }
     setTrip(result);
     setScreen("dashboard");
+  }
+
+  // Accept the one-time "save these as your defaults?" prompt (first-time users).
+  function handleSaveProfile() {
+    const p = saveProfile(trip?.answers || answers);
+    if (p) setSavedProfile(p);
+  }
+
+  // Decline it — persist so it doesn't nag on future trips.
+  function handleDismissProfilePrompt() {
+    try { localStorage.setItem(PROFILE_DECLINED_KEY, "1"); } catch { /* ignore */ }
+    setProfilePromptDismissed(true);
   }
 
   function handleGenerate(mode) {
@@ -205,7 +274,8 @@ export default function Wandr() {
   function resetAll() {
     setScreen("welcome"); setStep(0); setAnswers({}); setDir(1);
     setCur(""); setChips([]); setKids(""); setAvoidText("");
-    setBudget(120); setD1(""); setD2(""); setLogStay(""); setLogTransport(""); setLogPace(""); setLogFocus("");
+    setBudget(120); setD1(""); setD2(""); setLogStay(""); setLogTransport(""); setLogPace(""); setLogFocus(""); setLogRhythm("");
+    setInterviewMode("fresh");
     setTrip(null);
     resetFiles(); clearSavedPlan();
   }
@@ -214,6 +284,49 @@ export default function Wandr() {
     setTrip(savedTrip);
     restorePlan(); // bring back the saved itinerary + edits, if any
     setScreen("dashboard");
+  }
+
+  /**
+   * Start a new interview. mode:
+   *   "fresh"    — blank interview (first-ever, or "Start fresh" escape hatch)
+   *   "continue" — pre-fill from profile + skip profile-backed steps (dates → notes)
+   *   "edit"     — pre-fill from profile, show every step (update defaults on build)
+   * Dates are always trip-specific and start blank.
+   */
+  function startInterview(dest, mode = "fresh") {
+    setInterviewMode(mode);
+    const p = (mode === "continue" || mode === "edit") ? savedProfile : null;
+    if (p) {
+      // Dedicated (non-hydrated) state vars — needed so Edit-mode steps render
+      // pre-filled. hydrate() fills the shared chips/cur/kids on step nav.
+      setBudget(typeof p.budget === "number" ? p.budget : 120);
+      setLogStay(p.logistics?.stay || "");
+      setLogTransport(p.logistics?.transport || "");
+      setLogPace(p.logistics?.pace || "");
+      setLogFocus(p.logistics?.focus || "");
+      setLogRhythm(p.logistics?.rhythm || "");
+      setAvoidText(p.avoid || "");
+      setChips([]); setCur(""); setKids("");
+      // Pre-populate answers so steps skipped in "continue" mode still contribute.
+      setAnswers({
+        destination: dest,
+        party:     p.party,
+        logistics: p.logistics,
+        budget:    p.budget,
+        interests: p.interests,
+        avoid:     p.avoid || "",
+      });
+    } else {
+      // Fresh — blank all per-step state so nothing bleeds into the new trip.
+      setCur(""); setChips([]); setKids(""); setAvoidText("");
+      setBudget(120);
+      setLogStay(""); setLogTransport(""); setLogPace(""); setLogFocus(""); setLogRhythm("");
+      setAnswers({ destination: dest });
+    }
+    setD1(""); setD2("");
+    setDir(1);
+    setScreen("interview");
+    setStep(0);
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -227,16 +340,8 @@ export default function Wandr() {
           {screen === "welcome" && (
             <Page key="welcome">
               <WelcomeScreen
-                onStart={dest => {
-                  // Reset all per-step form state so stale values don't bleed into a new trip
-                  setCur(""); setChips([]); setKids(""); setAvoidText("");
-                  setBudget(120); setD1(""); setD2("");
-                  setLogStay(""); setLogTransport(""); setLogPace(""); setLogFocus("");
-                  setDir(1);
-                  setAnswers({ destination: dest });
-                  setScreen("interview");
-                  setStep(0);
-                }}
+                onStart={startInterview}
+                hasProfile={!!savedProfile}
                 savedTrip={savedTrip}
                 onResume={handleResume}
               />
@@ -261,6 +366,7 @@ export default function Wandr() {
                 logTransport={logTransport} setLogTransport={setLogTransport}
                 logPace={logPace} setLogPace={setLogPace}
                 logFocus={logFocus} setLogFocus={setLogFocus}
+                logRhythm={logRhythm} setLogRhythm={setLogRhythm}
                 isValid={isValid()}
               />
             </Page>
@@ -290,6 +396,9 @@ export default function Wandr() {
                   onTweakActivity={(dayIdx, actId, instruction) => tweakActivity(dayIdx, actId, instruction, trip)}
                   tweakingId={tweakingId}
                   onReset={resetAll}
+                  showProfilePrompt={!!trip && !trip._error && !savedProfile && !profilePromptDismissed}
+                  onSaveProfile={handleSaveProfile}
+                  onDismissProfilePrompt={handleDismissProfilePrompt}
                 />
               </ErrorBoundary>
             </Page>

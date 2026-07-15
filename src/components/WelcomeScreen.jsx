@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { T, DEST_PLACEHOLDERS } from "../lib/constants.js";
 import WandrLogo from "./WandrLogo.jsx";
 
-export default function WelcomeScreen({ onStart, savedTrip, onResume }) {
+export default function WelcomeScreen({ onStart, hasProfile, savedTrip, onResume }) {
   const [dest, setDest]                     = useState("");
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [placeholderFade, setPlaceholderFade] = useState(true);
@@ -20,9 +20,9 @@ export default function WelcomeScreen({ onStart, savedTrip, onResume }) {
     return () => clearInterval(intervalRef.current);
   }, [dest]);
 
-  function handleStart() {
+  function handleStart(mode = "fresh") {
     if (!destValid) return;
-    onStart(dest.trim());
+    onStart(dest.trim(), mode);
   }
 
   return (
@@ -84,7 +84,7 @@ export default function WelcomeScreen({ onStart, savedTrip, onResume }) {
               type="text"
               value={dest}
               onChange={e => setDest(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleStart()}
+              onKeyDown={e => e.key === "Enter" && handleStart(hasProfile ? "continue" : "fresh")}
               style={{ width: "100%", padding: "14px 16px", fontSize: 16, fontWeight: 600, background: T.bg1, border: `1.5px solid ${T.accent}`, borderRadius: 10, color: T.ink, outline: "none", fontFamily: T.font, colorScheme: "dark", transition: "border-color .2s", boxSizing: "border-box" }}
             />
             {dest.length === 0 && (
@@ -95,12 +95,31 @@ export default function WelcomeScreen({ onStart, savedTrip, onResume }) {
           </div>
         </div>
 
-        {/* CTA */}
-        {destValid && (
-          <button onClick={handleStart} className="fade-up"
+        {/* CTA — single "Let's go" for first-timers; three-way entry once a
+            profile exists (Continue / Edit / Start fresh). */}
+        {destValid && !hasProfile && (
+          <button onClick={() => handleStart("fresh")} className="fade-up"
             style={{ width: "100%", background: T.accent, color: T.white, padding: "14px 0", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", border: "none", fontFamily: T.font, marginBottom: "1rem" }}>
             Let's go →
           </button>
+        )}
+        {destValid && hasProfile && (
+          <div className="fade-up" style={{ marginBottom: "1rem" }}>
+            <button onClick={() => handleStart("continue")}
+              style={{ width: "100%", background: T.accent, color: T.white, padding: "14px 0", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", border: "none", fontFamily: T.font, marginBottom: 8 }}>
+              Continue with my preferences →
+            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => handleStart("edit")}
+                style={{ flex: 1, padding: "10px 0", borderRadius: 10, fontSize: 13, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, cursor: "pointer", fontFamily: T.font }}>
+                Edit preferences
+              </button>
+              <button onClick={() => handleStart("fresh")}
+                style={{ flex: 1, padding: "10px 0", borderRadius: 10, fontSize: 13, fontWeight: 600, color: T.hint, background: "transparent", border: `1px solid ${T.border}`, cursor: "pointer", fontFamily: T.font }}>
+                Start fresh
+              </button>
+            </div>
+          </div>
         )}
         {!destValid && <div style={{ height: 16 }} />}
 

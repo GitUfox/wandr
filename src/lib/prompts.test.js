@@ -353,6 +353,41 @@ describe("avoid wiring", () => {
   });
 });
 
+// ── Rhythm wiring (early riser / night owl) ─────────────────────────────────────
+describe("rhythm wiring", () => {
+  const earlyAnswers = { ...BASE_ANSWERS, logistics: { ...BASE_ANSWERS.logistics, rhythm: "Early riser" } };
+
+  it("early riser reaches the trip build prompt", () => {
+    const { messageContent } = buildTripPrompt(earlyAnswers, []);
+    expect(messageContent).toContain("RHYTHM:");
+    expect(messageContent).toContain("early riser");
+  });
+
+  it("early riser reaches both plan and edit-day prompts", () => {
+    const trip = { ...BASE_TRIP, answers: earlyAnswers };
+    expect(buildPlanPrompt("full", trip)).toContain("early riser");
+    expect(buildEditDayPrompt("Mon", "## Mon\nx", "tweak", trip)).toContain("early riser");
+  });
+
+  it("night owl produces its own distinct instruction", () => {
+    const owl = { ...BASE_TRIP, answers: { ...BASE_ANSWERS, logistics: { ...BASE_ANSWERS.logistics, rhythm: "Night owl" } } };
+    expect(buildPlanPrompt("full", owl)).toContain("night owl");
+  });
+
+  it("Flexible injects no behavioural rhythm instruction", () => {
+    const flex = { ...BASE_TRIP, answers: { ...BASE_ANSWERS, logistics: { ...BASE_ANSWERS.logistics, rhythm: "Flexible" } } };
+    // Shows in the traveler summary as context ("- Rhythm: Flexible") but the
+    // uppercase RHYTHM: instruction label is only emitted for a real instruction.
+    expect(buildPlanPrompt("full", flex)).not.toContain("RHYTHM:");
+  });
+
+  it("absent rhythm leaks nothing (backward compatible with older trips)", () => {
+    const { messageContent } = buildTripPrompt(BASE_ANSWERS, []); // no rhythm field
+    expect(messageContent).not.toContain("RHYTHM:");
+    expect(messageContent).not.toContain("- Rhythm:");
+  });
+});
+
 describe("buildTweakActivityPrompt", () => {
   const activity = { time: "1:00 PM", title: "**Sao Jorge Castle**", details: "Hilltop fortress, steep climb" };
 

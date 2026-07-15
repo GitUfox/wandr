@@ -45,6 +45,7 @@ export default function InterviewFlow({
   logTransport, setLogTransport,
   logPace, setLogPace,
   logFocus, setLogFocus,
+  logRhythm, setLogRhythm,
   isValid,
 }) {
   const S   = STEPS[step];
@@ -127,6 +128,22 @@ export default function InterviewFlow({
                   const sel = logPace === o;
                   return (
                     <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogPace(p => p === o ? "" : o)}
+                      style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                      {o}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Rhythm — when the day starts/ends (distinct from Pace = how much per day) */}
+            <div>
+              <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>Rhythm</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+                {["Early riser", "Flexible", "Night owl"].map(o => {
+                  const sel = logRhythm === o;
+                  return (
+                    <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogRhythm(p => p === o ? "" : o)}
                       style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                       {o}
                     </button>
