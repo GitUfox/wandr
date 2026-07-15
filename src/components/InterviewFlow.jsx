@@ -2,8 +2,11 @@
  * InterviewFlow — the 6-step trip interview screen.
  *
  * Receives all form state and handlers from App.jsx via props.
- * Owns no state of its own — purely presentational.
+ * Owns no app state of its own — purely presentational. The one exception is
+ * `expanded` (which interest-chip groups are showing all options): pure UI
+ * state, doesn't feed the answer payload, doesn't need to survive step nav.
  */
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { STEPS, T } from "../lib/constants.js";
 import DateRangePicker from "./DateRangePicker.jsx";
@@ -46,6 +49,7 @@ export default function InterviewFlow({
 }) {
   const S   = STEPS[step];
   const pct = Math.round((step / STEPS.length) * 100);
+  const [expanded, setExpanded] = useState(new Set());
 
   function toggleChip(o) {
     if (S.singleSelect) {
@@ -208,25 +212,43 @@ export default function InterviewFlow({
         {/* ── Chips + text (interests / party) ── */}
         {S.type === "chips+text" && (
           <div style={{ marginBottom:"1.25rem" }}>
-            {/* Grouped chips (interests) */}
+            {/* Grouped chips (interests) — each group shows its curated default
+                tags; "Show N more" reveals the rest, so ~60 tags across 9
+                groups doesn't render as one overwhelming wall of chips. */}
             {S.groups ? (
               <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:10 }}>
-                {S.groups.map(group => (
-                  <div key={group.label}>
-                    <div style={{ fontSize:10, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:6 }}>{group.label}</div>
-                    <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                      {group.opts.map(o => {
-                        const sel = chips.includes(o);
-                        return (
-                          <button key={o} className="wandr-chip" data-label={o} onClick={() => setChips(p => p.includes(o) ? p.filter(x => x !== o) : [...p, o])}
-                            style={{ padding:"6px 13px", fontSize:12, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
-                            {o}
+                {S.groups.map(group => {
+                  const isOpen  = expanded.has(group.label);
+                  const count   = group.defaultCount ?? group.opts.length;
+                  const visible = isOpen ? group.opts : group.opts.slice(0, count);
+                  const hidden  = group.opts.length - count;
+                  return (
+                    <div key={group.label}>
+                      <div style={{ fontSize:10, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:6 }}>{group.label}</div>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:6, alignItems:"center" }}>
+                        {visible.map(o => {
+                          const sel = chips.includes(o);
+                          return (
+                            <button key={o} className="wandr-chip" data-label={o} onClick={() => setChips(p => p.includes(o) ? p.filter(x => x !== o) : [...p, o])}
+                              style={{ padding:"6px 13px", fontSize:12, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                              {o}
+                            </button>
+                          );
+                        })}
+                        {hidden > 0 && (
+                          <button onClick={() => setExpanded(p => {
+                              const next = new Set(p);
+                              next.has(group.label) ? next.delete(group.label) : next.add(group.label);
+                              return next;
+                            })}
+                            style={{ padding:"6px 4px", fontSize:11.5, fontWeight:600, color:T.accent, background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>
+                            {isOpen ? "Show less" : `Show ${hidden} more →`}
                           </button>
-                        );
-                      })}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               /* Flat chips (party step) */

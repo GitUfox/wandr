@@ -44,10 +44,20 @@ export const STEPS = [
     q:"What do you enjoy?",
     type:"chips+text",
     ph:"e.g. Love record shops, live football, architecture",
+    // Groups are UI navigation only — a selected chip is stored as a bare tag
+    // string (see App.jsx `chips`), same as before this taxonomy expanded.
+    // `defaultCount` = how many of `opts` (ordered default-first) render
+    // before the "Show N more" toggle in InterviewFlow.jsx.
     groups:[
-      { label:"Outdoors & Active", opts:["Hiking & nature","Beaches & water","Adventure sports","Day trips"] },
-      { label:"Culture & Arts",    opts:["History & museums","Architecture","Art & galleries","Live music & theatre","Festivals & events","Sports"] },
-      { label:"Local Life",        opts:["Scenic views","Nightlife","Shopping","Wellness"] },
+      { label:"Active",    defaultCount:5, opts:["Golf","Pickleball","Tennis","Rock climbing","Cycling","Volleyball","Batting cages","Bowling","Kayaking"] },
+      { label:"Spectate",  defaultCount:4, opts:["Baseball","Basketball","Football","Spring training","Hockey","Soccer","College sports"] },
+      { label:"Outdoors",  defaultCount:4, opts:["Hiking","Desert","Trails","Lake","Beach","Camping","Stargazing","Water park","Tubing"] },
+      { label:"Tours",     defaultCount:4, opts:["ATV","Horseback","Ghost tour","Jeep tour","Segway","Helicopter","Boat tour","Historic tour"] },
+      { label:"Arts",      defaultCount:4, opts:["Museums","Theater","Live music","Galleries","Architecture","Public art","Festivals"] },
+      { label:"Nightlife", defaultCount:4, opts:["Bars","Breweries","Clubs","Cocktails","Wineries","Casino","Pool club"] },
+      { label:"Wellness",  defaultCount:4, opts:["Spa","Yoga","Hot springs","Meditation"] },
+      { label:"Games",     defaultCount:2, opts:["Escape room","Mini golf","Axe throwing","Comedy","Arcade"] },
+      { label:"Local",     defaultCount:3, opts:["Shopping","Markets","Scenic views","Neighborhoods","Zoo"] },
     ],
   },
   {
