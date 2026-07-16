@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { arr, parseISODate, calcNights, recoverJSON } from "./utils.js";
+import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes } from "./utils.js";
 
 // ── arr ───────────────────────────────────────────────────────────────────────
 
@@ -128,5 +128,115 @@ describe("recoverJSON", () => {
   it("throws when JSON is unrecoverable", () => {
     expect(() => recoverJSON("this is not json at all")).toThrow("Couldn't read the trip data. You can still generate a plan below.");
     expect(() => recoverJSON("")).toThrow();
+  });
+});
+
+// ── parseTime ─────────────────────────────────────────────────────────────────
+
+describe("parseTime", () => {
+  it("parses 12-hour clock times with meridiem", () => {
+    expect(parseTime("9:00 AM")).toBe(540);
+    expect(parseTime("1:30 PM")).toBe(810);
+    expect(parseTime("6:00 PM")).toBe(1080);
+    expect(parseTime("9 AM")).toBe(540);      // no minutes
+    expect(parseTime("2pm")).toBe(840);        // no space
+  });
+
+  it("handles noon and midnight edge cases", () => {
+    expect(parseTime("12:00 PM")).toBe(720);   // noon
+    expect(parseTime("12:00 AM")).toBe(0);     // midnight
+    expect(parseTime("12 PM")).toBe(720);
+    expect(parseTime("12 AM")).toBe(0);
+  });
+
+  it("parses 24-hour times without meridiem", () => {
+    expect(parseTime("14:00")).toBe(840);
+    expect(parseTime("9:00")).toBe(540);
+  });
+
+  it("strips markdown bold and whitespace", () => {
+    expect(parseTime("**10:15 AM**")).toBe(615);
+    expect(parseTime("  3:45 PM ")).toBe(945);
+  });
+
+  it("returns null for non-clock times", () => {
+    expect(parseTime("Morning")).toBeNull();
+    expect(parseTime("Evening")).toBeNull();
+    expect(parseTime("")).toBeNull();
+    expect(parseTime(null)).toBeNull();
+    expect(parseTime("25:00")).toBeNull();     // invalid hour
+  });
+});
+
+// ── formatTime ────────────────────────────────────────────────────────────────
+
+describe("formatTime", () => {
+  it("formats minutes to a 12-hour clock string", () => {
+    expect(formatTime(540)).toBe("9:00 AM");
+    expect(formatTime(810)).toBe("1:30 PM");
+    expect(formatTime(1080)).toBe("6:00 PM");
+    expect(formatTime(720)).toBe("12:00 PM");  // noon
+    expect(formatTime(0)).toBe("12:00 AM");    // midnight
+  });
+
+  it("round-trips with parseTime", () => {
+    for (const t of ["9:00 AM", "1:30 PM", "6:00 PM", "12:00 PM", "12:00 AM"]) {
+      expect(formatTime(parseTime(t))).toBe(t);
+    }
+  });
+});
+
+// ── resequenceTimes ───────────────────────────────────────────────────────────
+
+describe("resequenceTimes", () => {
+  it("re-sorts times ascending after a within-day drag", () => {
+    // Drag a 9 AM activity to the end: [12 PM, 3 PM, 9 AM] → times ascend again
+    const dragged = [
+      { id: "b", time: "12:00 PM", title: "B", details: "" },
+      { id: "c", time: "3:00 PM",  title: "C", details: "" },
+      { id: "a", time: "9:00 AM",  title: "A", details: "" },
+    ];
+    const out = resequenceTimes(dragged);
+    expect(out.map(x => x.time)).toEqual(["9:00 AM", "12:00 PM", "3:00 PM"]);
+    // positions/identities preserved — only the time field changes
+    expect(out.map(x => x.id)).toEqual(["b", "c", "a"]);
+    expect(out[2].title).toBe("A");
+  });
+
+  it("gives a moved-in activity the day's latest slot when appended last", () => {
+    // A 9 AM activity appended to a [10 AM, 1 PM, 6 PM] day
+    const target = [
+      { id: "x", time: "10:00 AM", title: "X", details: "" },
+      { id: "y", time: "1:00 PM",  title: "Y", details: "" },
+      { id: "z", time: "6:00 PM",  title: "Z", details: "" },
+      { id: "m", time: "9:00 AM",  title: "Moved", details: "" },
+    ];
+    const out = resequenceTimes(target);
+    expect(out.map(x => x.time)).toEqual(["9:00 AM", "10:00 AM", "1:00 PM", "6:00 PM"]);
+    expect(out[3].id).toBe("m");     // moved item stays last, gets the 6 PM slot
+  });
+
+  it("leaves non-clock times ('Morning') in place and untouched", () => {
+    const acts = [
+      { id: "a", time: "3:00 PM",  title: "A", details: "" },
+      { id: "b", time: "Morning",  title: "B", details: "" },
+      { id: "c", time: "9:00 AM",  title: "C", details: "" },
+    ];
+    const out = resequenceTimes(acts);
+    // clock slots [9,15] fill positions 0 and 2; "Morning" holds position 1
+    expect(out.map(x => x.time)).toEqual(["9:00 AM", "Morning", "3:00 PM"]);
+  });
+
+  it("returns input unchanged when not an array", () => {
+    expect(resequenceTimes(null)).toBeNull();
+    expect(resequenceTimes(undefined)).toBeUndefined();
+  });
+
+  it("is a no-op for an already-ascending day", () => {
+    const acts = [
+      { id: "a", time: "9:00 AM",  title: "A", details: "" },
+      { id: "b", time: "12:00 PM", title: "B", details: "" },
+    ];
+    expect(resequenceTimes(acts).map(x => x.time)).toEqual(["9:00 AM", "12:00 PM"]);
   });
 });

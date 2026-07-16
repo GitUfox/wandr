@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { stream, consumeStream, complete } from "../lib/api.js";
 import { buildPlanPrompt, buildEditDayPrompt, buildTweakActivityPrompt } from "../lib/prompts.js";
-import { spliceDayInPlan } from "../lib/utils.js";
+import { spliceDayInPlan, resequenceTimes } from "../lib/utils.js";
 import { parsePlan, serializePlan } from "../lib/planModel.js";
 
 const PLAN_KEY = "wandr_plan";
@@ -71,13 +71,17 @@ export function useGenerate() {
     });
   }
 
-  /** Replace a day's activity order (from a within-day drag reorder). */
+  /**
+   * Replace a day's activity order (from a within-day drag reorder).
+   * Re-times the day so clock times stay ascending after the move (§6 #4).
+   */
   function reorderDayActivities(dayIdx, newActivities) {
     const prev = modelRef.current;
     if (!prev) return;
+    const resequenced = resequenceTimes(newActivities);
     commitModel({
       ...prev,
-      days: prev.days.map((d, i) => i !== dayIdx ? d : { ...d, activities: newActivities }),
+      days: prev.days.map((d, i) => i !== dayIdx ? d : { ...d, activities: resequenced }),
     });
   }
 
@@ -124,7 +128,11 @@ export function useGenerate() {
     }
   }
 
-  /** Move one activity from one day to the end of another. */
+  /**
+   * Move one activity from one day to the end of another.
+   * Re-times the destination day so the moved activity slots into the day's
+   * own time range instead of keeping its origin-day time (§6 #4).
+   */
   function moveActivity(fromDayIdx, actId, toDayIdx) {
     const prev = modelRef.current;
     if (!prev || fromDayIdx === toDayIdx) return;
@@ -134,7 +142,7 @@ export function useGenerate() {
       ...prev,
       days: prev.days.map((d, i) => {
         if (i === fromDayIdx) return { ...d, activities: d.activities.filter(a => a.id !== actId) };
-        if (i === toDayIdx)   return { ...d, activities: [...d.activities, act] };
+        if (i === toDayIdx)   return { ...d, activities: resequenceTimes([...d.activities, act]) };
         return d;
       }),
     });

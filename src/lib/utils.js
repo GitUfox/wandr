@@ -81,6 +81,51 @@ export function recoverJSON(raw) {
 }
 
 /**
+ * Parse a free-text time cell ("9:00 AM", "2 PM", "14:00") to minutes since
+ * midnight. Returns null for anything without a clock time ("Morning",
+ * "Evening", blank) so callers can leave those untouched.
+ */
+export function parseTime(str) {
+  if (!str || typeof str !== "string") return null;
+  const s = str.replace(/\*\*/g, "").trim().toLowerCase();
+  const m = s.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/);
+  if (!m) return null;
+  let hour = parseInt(m[1], 10);
+  const min = m[2] ? parseInt(m[2], 10) : 0;
+  const mer = m[3];
+  if (mer === "pm" && hour < 12) hour += 12;
+  if (mer === "am" && hour === 12) hour = 0;
+  if (hour > 23 || min > 59) return null;
+  return hour * 60 + min;
+}
+
+/** Format minutes-since-midnight back to a "9:00 AM" style clock string. */
+export function formatTime(mins) {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const mer = h < 12 ? "AM" : "PM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${mer}`;
+}
+
+/**
+ * Re-time a reordered list of activities so their clock times stay ascending.
+ * Reuses the day's own existing times as a sorted slot pool — position i gets
+ * the i-th earliest time — so nothing is invented and the day's span is
+ * preserved. Activities with non-clock times ("Morning") keep their text and
+ * hold their position. Returns new activity objects (id/title/details intact).
+ */
+export function resequenceTimes(activities) {
+  if (!Array.isArray(activities)) return activities;
+  const mins = activities.map(a => parseTime(a?.time));
+  const slots = mins.filter(v => v !== null).sort((x, y) => x - y);
+  let s = 0;
+  return activities.map((a, i) =>
+    mins[i] === null ? a : { ...a, time: formatTime(slots[s++]) }
+  );
+}
+
+/**
  * Extract day headers from a generated full-itinerary plan string.
  * Returns [{ index, label, pos }, ...] where label = "Day 1 — Wednesday, June 11, 2025".
  */
