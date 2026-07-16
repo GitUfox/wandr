@@ -9,7 +9,12 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { STEPS, T } from "../lib/constants.js";
+import { MLB_TEAMS } from "../lib/mlbTeams.js";
 import DateRangePicker from "./DateRangePicker.jsx";
+
+// Interest chips that reveal the favorite-team picker (§7 personalization).
+const BASEBALL_TAGS = ["Baseball", "Spring-training"];
+const TEAM_OPTIONS = [...MLB_TEAMS].sort((a, b) => a.name.localeCompare(b.name));
 import DictationButton from "./DictationButton.jsx";
 import BudgetTiers from "./BudgetTiers.jsx";
 
@@ -38,6 +43,7 @@ export default function InterviewFlow({
   cur, setCur,
   chips, setChips,
   priorityChips, setPriorityChips,
+  teams, setTeams,
   kids, setKids,
   avoidText, setAvoidText,
   budget, setBudget,
@@ -326,6 +332,18 @@ export default function InterviewFlow({
                 <span style={{ fontSize:11, color:T.hint, marginLeft:8 }}>
                   · tap ☆ to prioritize{priorityChips.length > 0 ? ` (★ ${priorityChips.length})` : ""}
                 </span>
+              </div>
+            )}
+            {/* Favorite-team picker — appears only when baseball is an interest (§7).
+                We flag your team's games at any destination, home or away. */}
+            {S.id === "interests" && chips.some(c => BASEBALL_TAGS.includes(c)) && (
+              <div style={{ marginTop:12, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                <span style={{ fontSize:12, color:T.ink }}>⚾ Favorite team?</span>
+                <select value={teams[0] || ""} onChange={e => setTeams(e.target.value ? [e.target.value] : [])}
+                  style={{ flex:"1 1 180px", minWidth:0, padding:"7px 10px", border:`1px solid ${T.border}`, borderRadius:8, background:T.bg3, color:teams[0] ? T.ink : T.hint, outline:"none", fontSize:12.5, fontFamily:T.font, colorScheme:"dark" }}>
+                  <option value="">No favorite (just love the game)</option>
+                  {TEAM_OPTIONS.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
+                </select>
               </div>
             )}
           </div>

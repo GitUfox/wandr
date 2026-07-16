@@ -7,6 +7,7 @@
 import { useState } from "react";
 import { MODES, T, FEATURES } from "../lib/constants.js";
 import { arr, formatShortDate } from "../lib/utils.js";
+import { TEAM_SHORT } from "../lib/mlbTeams.js";
 import Md from "./Md.jsx";
 import ItineraryEditor from "./ItineraryEditor.jsx";
 import WandrLogo from "./WandrLogo.jsx";
@@ -260,16 +261,25 @@ export default function Dashboard({
                 <button onClick={() => setEventsDismissed(true)} title="Dismiss"
                   style={{ padding:"2px 6px", fontSize:12, color:T.hint, background:"none", border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>✕</button>
               </div>
-              <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
-                {tripGames.slice(0, 4).map((g, i) => (
-                  <div key={i} style={{ display:"flex", alignItems:"baseline", gap:8, fontSize:12 }}>
-                    <span style={{ color:T.accent, fontWeight:700, flexShrink:0, width:70 }}>{formatShortDate(g.date)}</span>
-                    <span style={{ color:T.ink, lineHeight:1.4 }}>
-                      {g.away} <span style={{ color:T.hint }}>@</span> {g.home}
-                      {g.venue && <span style={{ color:T.muted }}> · {g.venue}</span>}
-                    </span>
-                  </div>
-                ))}
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {tripGames.slice(0, 4).map((g, i) => {
+                  const favShort = g.yours ? TEAM_SHORT[g.role === "away" ? g.away : g.home] : null;
+                  return (
+                    <div key={i} style={{ display:"flex", alignItems:"baseline", gap:8, fontSize:12,
+                      ...(g.yours ? { borderLeft:`2px solid ${T.accent}`, paddingLeft:9, marginLeft:-2 } : {}) }}>
+                      <span style={{ color:T.accent, fontWeight:700, flexShrink:0, width:64 }}>{formatShortDate(g.date)}</span>
+                      <span style={{ lineHeight:1.4 }}>
+                        {g.yours && (
+                          <span style={{ display:"block", color:T.accent, fontWeight:800, marginBottom:1 }}>
+                            Your {favShort} {g.role === "away" ? "are in town" : "are home"}
+                          </span>
+                        )}
+                        <span style={{ color:T.ink }}>{g.away} <span style={{ color:T.hint }}>@</span> {g.home}</span>
+                        {g.venue && <span style={{ color:T.muted }}> · {g.venue}</span>}
+                      </span>
+                    </div>
+                  );
+                })}
                 {tripGames.length > 4 && (
                   <div style={{ fontSize:11, color:T.hint, marginTop:1 }}>+{tripGames.length - 4} more during your dates</div>
                 )}
