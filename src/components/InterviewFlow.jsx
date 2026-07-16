@@ -37,6 +37,7 @@ export default function InterviewFlow({
   onWelcome, onAdvance, onBack,
   cur, setCur,
   chips, setChips,
+  priorityChips, setPriorityChips,
   kids, setKids,
   avoidText, setAvoidText,
   budget, setBudget,
@@ -244,11 +245,24 @@ export default function InterviewFlow({
                       <div style={{ fontSize:10, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:6 }}>{group.label}</div>
                       <div style={{ display:"flex", flexWrap:"wrap", gap:6, alignItems:"center" }}>
                         {visible.map(o => {
-                          const sel = chips.includes(o);
+                          const sel  = chips.includes(o);
+                          const prio = priorityChips.includes(o);
                           return (
-                            <button key={o} className="wandr-chip" data-label={o} onClick={() => setChips(p => p.includes(o) ? p.filter(x => x !== o) : [...p, o])}
+                            <button key={o} className="wandr-chip" data-label={o}
+                              onClick={() => {
+                                const isSel = chips.includes(o);
+                                setChips(p => isSel ? p.filter(x => x !== o) : [...p, o]);
+                                if (isSel) setPriorityChips(pc => pc.filter(x => x !== o)); // deselect drops priority
+                              }}
                               style={{ padding:"6px 13px", fontSize:12, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                               {o}
+                              {sel && (
+                                <span onClick={e => { e.stopPropagation(); setPriorityChips(pc => pc.includes(o) ? pc.filter(x => x !== o) : [...pc, o]); }}
+                                  title={prio ? "Priority — wins scheduling conflicts" : "Mark as a priority"}
+                                  style={{ marginLeft:5, fontSize:13, lineHeight:1, color:prio?T.accent:T.hint, cursor:"pointer" }}>
+                                  {prio ? "★" : "☆"}
+                                </span>
+                              )}
                             </button>
                           );
                         })}
@@ -309,6 +323,9 @@ export default function InterviewFlow({
             {S.id === "interests" && chips.length > 0 && (
               <div style={{ marginTop:8 }}>
                 <span style={{ fontSize:11, color:T.accent }}>{chips.length} interest{chips.length !== 1 ? "s" : ""} selected</span>
+                <span style={{ fontSize:11, color:T.hint, marginLeft:8 }}>
+                  · tap ☆ to prioritize{priorityChips.length > 0 ? ` (★ ${priorityChips.length})` : ""}
+                </span>
               </div>
             )}
           </div>

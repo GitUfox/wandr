@@ -194,6 +194,7 @@ function tripContext(answers, uploadedFiles) {
   const kidsVal       = a.party?.kids         || "";
 
   const interestsLine   = arr(a.interests);
+  const priorityLine    = arr(a.interests?.priorityChips); // starred interests — win conflicts
   const avoidLine       = resolveAvoid(a);
 
   const paceText      = pace  ? paceInstruction(pace)                   : "";
@@ -219,6 +220,7 @@ STAYING: ${stayLine}
 TRANSPORT: ${transportLine}
 BUDGET: ${budgetLine}
 INTERESTS (listed most-important-first): ${interestsLine}
+PRIORITY INTERESTS (resolve any conflict in favour of these over other interests): ${priorityLine || "none specified — use the interests order above as priority"}
 AVOID: ${avoidLine}
 NOTES: ${a.notes || "none"}${pace ? `\nPACE: ${pace}` : ""}${focus ? `\nFOCUS: ${focus}` : ""}${rhythm ? `\nRHYTHM: ${rhythm}` : ""}
 ${textFileContext ? `\nUPLOADED CONTEXT:\n${textFileContext}` : ""}
@@ -239,6 +241,8 @@ ${kidsText ? `KIDS: ${kidsText}` : ""}
 INTERESTS: Only include categories that genuinely match the traveler's stated interests. If an interest category has no relevant match, omit it entirely rather than filling it with generic picks. The interests are listed most-important-first — weight earlier interests more heavily when deciding what to include and how to rank it.
 
 RANKING: Give every item a "priority" of exactly "essential", "recommended", or "optional", reflecting how strongly it matches the traveler's top interests and stated focus. Reserve "essential" for genuine must-dos — at most one per category, and never mark everything essential. The tiers exist to prioritise a limited daily schedule, so be discerning.${focus === "Famous sights" ? " The traveler wants famous sights, so iconic must-sees that define the destination should rank essential." : focus === "Hidden gems" ? " The traveler wants hidden gems, so distinctive local-only spots should rank essential over obvious landmarks." : ""}
+
+CONFLICTS: When two candidate activities within the same category compete and only one can reasonably become essential, prefer whichever matches a PRIORITY INTEREST over one that doesn't. If both or neither match a priority interest, fall back to whichever interest is listed first in INTERESTS.
 
 AVOID: Never include anything related to: ${avoidLine}. If a category would only contain avoided items, leave it empty.
 
@@ -322,7 +326,7 @@ TRAVELER
 - Budget: ${budgetLabel}
 - Staying: ${stayLine || "not specified"}
 - Transport: ${transportLine || "not specified"}${pace ? `\n- Pace: ${pace}` : ""}${focus ? `\n- Focus: ${focus}` : ""}${rhythm ? `\n- Rhythm: ${rhythm}` : ""}
-- Interests: ${arr(a.interests)}
+- Interests: ${arr(a.interests)}${arr(a.interests?.priorityChips) ? ` · priority: ${arr(a.interests.priorityChips)}` : ""}
 - Avoid: ${avoidText}
 
 APPLY THESE RULES:
@@ -372,7 +376,7 @@ CHANGE REQUEST: ${instruction}
 TRAVELER CONTEXT (respect these):
 - Party: ${arr(a.party)}${kidsVal ? ` · Kids: ${kidsVal}` : ""}
 - Budget: ${budgetLabel}
-- Interests: ${arr(a.interests)}
+- Interests: ${arr(a.interests)}${arr(a.interests?.priorityChips) ? ` · priority: ${arr(a.interests.priorityChips)}` : ""}
 - Avoid: ${avoidText}
 
 Apply the change request. Keep the same time slot unless the request implies otherwise.
@@ -441,7 +445,7 @@ TRAVELER
 - Budget: ${budgetLabel}
 - Staying: ${stayLine || "not specified"}
 - Transport: ${transportLine || "not specified"}${pace ? `\n- Pace: ${pace}` : ""}${focus ? `\n- Focus: ${focus}` : ""}${rhythm ? `\n- Rhythm: ${rhythm}` : ""}
-- Interests: ${arr(a.interests)}
+- Interests: ${arr(a.interests)}${arr(a.interests?.priorityChips) ? ` · priority: ${arr(a.interests.priorityChips)}` : ""}
 - Avoid: ${avoidText}
 - Notes: ${a.notes || "none"}
 - Season: ${trip.season || ""}

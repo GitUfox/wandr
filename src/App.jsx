@@ -91,6 +91,7 @@ export default function Wandr() {
   // Per-step form state
   const [cur, setCur]                     = useState("");
   const [chips, setChips]                 = useState([]);
+  const [priorityChips, setPriorityChips] = useState([]); // starred interests — win conflicts
   const [kids, setKids]                   = useState("");
   const [avoidText, setAvoidText]         = useState("");
   const [budget, setBudget]               = useState(120);
@@ -125,7 +126,8 @@ export default function Wandr() {
   function currentVal() {
     if (S.type === "chips")      return chips;
     if (S.type === "chips+text") {
-      if (S.id === "party" && kids) return { chips, text: cur, kids };
+      if (S.id === "party")     return kids ? { chips, text: cur, kids } : { chips, text: cur };
+      if (S.id === "interests") return { chips, text: cur, priorityChips };
       return { chips, text: cur };
     }
     if (S.type === "daterange")  return { start: d1, end: d2 };
@@ -165,6 +167,7 @@ export default function Wandr() {
     } else {
       setChips([]); setCur(""); setKids("");
     }
+    setPriorityChips(st.id === "interests" ? (a?.priorityChips || []) : []);
     setAvoidText(st.id === "notes" ? (src.avoid || "") : "");
   }
 
@@ -273,7 +276,7 @@ export default function Wandr() {
   // ── Reset / resume ────────────────────────────────────────────────────────
   function resetAll() {
     setScreen("welcome"); setStep(0); setAnswers({}); setDir(1);
-    setCur(""); setChips([]); setKids(""); setAvoidText("");
+    setCur(""); setChips([]); setPriorityChips([]); setKids(""); setAvoidText("");
     setBudget(120); setD1(""); setD2(""); setLogStay(""); setLogTransport(""); setLogPace(""); setLogFocus(""); setLogRhythm("");
     setInterviewMode("fresh");
     setTrip(null);
@@ -306,7 +309,7 @@ export default function Wandr() {
       setLogFocus(p.logistics?.focus || "");
       setLogRhythm(p.logistics?.rhythm || "");
       setAvoidText(p.avoid || "");
-      setChips([]); setCur(""); setKids("");
+      setChips([]); setPriorityChips([]); setCur(""); setKids("");
       // Pre-populate answers so steps skipped in "continue" mode still contribute.
       setAnswers({
         destination: dest,
@@ -318,7 +321,7 @@ export default function Wandr() {
       });
     } else {
       // Fresh — blank all per-step state so nothing bleeds into the new trip.
-      setCur(""); setChips([]); setKids(""); setAvoidText("");
+      setCur(""); setChips([]); setPriorityChips([]); setKids(""); setAvoidText("");
       setBudget(120);
       setLogStay(""); setLogTransport(""); setLogPace(""); setLogFocus(""); setLogRhythm("");
       setAnswers({ destination: dest });
@@ -358,6 +361,7 @@ export default function Wandr() {
                 onBack={goBack}
                 cur={cur} setCur={setCur}
                 chips={chips} setChips={setChips}
+                priorityChips={priorityChips} setPriorityChips={setPriorityChips}
                 kids={kids} setKids={setKids}
                 avoidText={avoidText} setAvoidText={setAvoidText}
                 budget={budget} setBudget={setBudget}

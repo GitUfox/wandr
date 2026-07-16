@@ -388,6 +388,44 @@ describe("rhythm wiring", () => {
   });
 });
 
+// ── Priority interests (star-to-prioritize / conflict resolution) ───────────────
+describe("priority interests", () => {
+  const prioAnswers = {
+    ...BASE_ANSWERS,
+    interests: { ...BASE_ANSWERS.interests, priorityChips: ["Architecture"] },
+  };
+
+  it("surfaces a PRIORITY INTERESTS line with the starred value in the trip build", () => {
+    const { messageContent } = buildTripCategoriesPrompt(prioAnswers, []);
+    expect(messageContent).toContain("PRIORITY INTERESTS");
+    expect(messageContent).toMatch(/PRIORITY INTERESTS.*Architecture/);
+  });
+
+  it("includes the CONFLICTS tie-break instruction", () => {
+    const { messageContent } = buildTripCategoriesPrompt(prioAnswers, []);
+    expect(messageContent).toContain("CONFLICTS:");
+    expect(messageContent).toContain("prefer whichever matches a PRIORITY INTEREST");
+  });
+
+  it("meta half carries the same priority signal (shared context)", () => {
+    const { messageContent } = buildTripMetaPrompt(prioAnswers, []);
+    expect(messageContent).toMatch(/PRIORITY INTERESTS.*Architecture/);
+  });
+
+  it("reflects priority in the plan and edit-day traveler lines", () => {
+    const trip = { ...BASE_TRIP, answers: prioAnswers };
+    expect(buildPlanPrompt("full", trip)).toContain("priority: Architecture");
+    expect(buildEditDayPrompt("Mon", "## Mon\nx", "tweak", trip)).toContain("priority: Architecture");
+  });
+
+  it("no priorityChips → placeholder text + fallback to order, no leakage (backward compatible)", () => {
+    // BASE_ANSWERS has no priorityChips
+    const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []);
+    expect(messageContent).toContain("none specified");
+    expect(buildPlanPrompt("full", BASE_TRIP)).not.toContain("priority:");
+  });
+});
+
 describe("buildTweakActivityPrompt", () => {
   const activity = { time: "1:00 PM", title: "**Sao Jorge Castle**", details: "Hilltop fortress, steep climb" };
 

@@ -29,6 +29,13 @@ export function useBuildTrip() {
     const { messageContent: catsMsg, n } = buildTripCategoriesPrompt(answers, uploadedFiles);
     const { messageContent: metaMsg }     = buildTripMetaPrompt(answers, uploadedFiles);
 
+    // Dev-only: inspect the assembled prompt (interests weighting, conflict rule,
+    // etc.). Gated behind import.meta.env.DEV so it never ships to production.
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.log("[Wandr] trip prompt →", catsMsg);
+    }
+
     const oneCall = async (content, maxTokens) => {
       const data = await complete([{ role: "user", content }], maxTokens);
       const raw  = data.content?.find(b => b.type === "text")?.text || "";
