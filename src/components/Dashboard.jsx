@@ -6,7 +6,7 @@
  */
 import { useState } from "react";
 import { MODES, T, FEATURES } from "../lib/constants.js";
-import { arr } from "../lib/utils.js";
+import { arr, formatShortDate } from "../lib/utils.js";
 import Md from "./Md.jsx";
 import ItineraryEditor from "./ItineraryEditor.jsx";
 import WandrLogo from "./WandrLogo.jsx";
@@ -14,6 +14,7 @@ import EditTripSheet from "./EditTripSheet.jsx";
 
 export default function Dashboard({
   trip,
+  tripGames,
   planText, planModel, planLoading, planMode,
   patchError,
   debugMsg,
@@ -34,6 +35,7 @@ export default function Dashboard({
 }) {
   const [copied, setCopied]           = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [eventsDismissed, setEventsDismissed] = useState(false);
 
   function stripMarkdown(text) {
     return text.split("\n").map(line => {
@@ -246,6 +248,32 @@ export default function Dashboard({
                 style={{ padding:"7px 4px", fontSize:12, fontWeight:600, color:T.hint, background:"none", border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>
                 Not now
               </button>
+            </div>
+          )}
+
+          {/* Happening during your trip — real MLB games at the destination (§7) */}
+          {Array.isArray(tripGames) && tripGames.length > 0 && !eventsDismissed && (
+            <div style={{ padding:"13px 15px", background:T.bg1, border:`1px solid ${T.border2}`, borderRadius:12, marginBottom:12 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:9 }}>
+                <span style={{ fontSize:14 }}>⚾</span>
+                <span style={{ flex:1, fontSize:12.5, fontWeight:800, color:T.ink }}>Happening during your trip</span>
+                <button onClick={() => setEventsDismissed(true)} title="Dismiss"
+                  style={{ padding:"2px 6px", fontSize:12, color:T.hint, background:"none", border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>✕</button>
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                {tripGames.slice(0, 4).map((g, i) => (
+                  <div key={i} style={{ display:"flex", alignItems:"baseline", gap:8, fontSize:12 }}>
+                    <span style={{ color:T.accent, fontWeight:700, flexShrink:0, width:70 }}>{formatShortDate(g.date)}</span>
+                    <span style={{ color:T.ink, lineHeight:1.4 }}>
+                      {g.away} <span style={{ color:T.hint }}>@</span> {g.home}
+                      {g.venue && <span style={{ color:T.muted }}> · {g.venue}</span>}
+                    </span>
+                  </div>
+                ))}
+                {tripGames.length > 4 && (
+                  <div style={{ fontSize:11, color:T.hint, marginTop:1 }}>+{tripGames.length - 4} more during your dates</div>
+                )}
+              </div>
             </div>
           )}
 

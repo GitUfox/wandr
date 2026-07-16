@@ -126,6 +126,20 @@ export function resequenceTimes(activities) {
 }
 
 /**
+ * Format an ISO date ("2026-08-02") as a short, friendly label ("Sun, Aug 2").
+ * Returns the raw input unchanged if it isn't a valid date.
+ */
+export function formatShortDate(iso) {
+  const d = parseISODate(iso);
+  if (!d) return iso || "";
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  // parseISODate builds the Date at local midnight, so local getters return
+  // the intended calendar day (UTC getters would drift by the tz offset).
+  return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
+}
+
+/**
  * Time-of-day buckets for the alternate itinerary view. Morning < 12pm,
  * Afternoon 12–5pm, Evening ≥ 5pm. Anchors are the default clock time an
  * activity gets when it's moved into an otherwise-empty bucket.

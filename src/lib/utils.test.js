@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket } from "./utils.js";
+import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate } from "./utils.js";
 
 // ── arr ───────────────────────────────────────────────────────────────────────
 
@@ -315,5 +315,21 @@ describe("retimeIntoBucket", () => {
 
   it("caps at 11:59 PM", () => {
     expect(retimeIntoBucket("Evening", [{ time: "11:30 PM" }])).toBe("11:59 PM");
+  });
+});
+
+// ── formatShortDate ───────────────────────────────────────────────────────────
+
+describe("formatShortDate", () => {
+  it("formats an ISO date as 'Ddd, Mon D'", () => {
+    expect(formatShortDate("2026-08-02")).toBe("Sun, Aug 2");
+    expect(formatShortDate("2026-01-01")).toBe("Thu, Jan 1");
+    expect(formatShortDate("2026-12-25")).toBe("Fri, Dec 25");
+  });
+
+  it("returns the raw input when it isn't a valid date", () => {
+    expect(formatShortDate("not-a-date")).toBe("not-a-date");
+    expect(formatShortDate("")).toBe("");
+    expect(formatShortDate(null)).toBe("");
   });
 });

@@ -5,6 +5,7 @@ import { STEPS, T } from "./lib/constants.js";
 import { useBuildTrip } from "./hooks/useBuildTrip.js";
 import { useGenerate } from "./hooks/useGenerate.js";
 import { useFileUpload } from "./hooks/useFileUpload.js";
+import { useLocalEvents } from "./hooks/useLocalEvents.js";
 import WelcomeScreen from "./components/WelcomeScreen.jsx";
 import LoadingScreen from "./components/LoadingScreen.jsx";
 import InterviewFlow from "./components/InterviewFlow.jsx";
@@ -120,6 +121,7 @@ export default function Wandr() {
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const { buildTrip: doBuildTrip, loadMsg, error: buildError } = useBuildTrip();
   const { planText, planModel, planMode, planLoading, patchError, tweakingId, generate: doGenerate, patchDay: doPatchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity } = useGenerate();
+  const { games: tripGames } = useLocalEvents(trip);
   const { uploadedFiles, uploadError, handleFiles, removeFile, resetFiles } = useFileUpload();
 
   // ── Interview helpers ─────────────────────────────────────────────────────
@@ -387,6 +389,7 @@ export default function Wandr() {
               <ErrorBoundary>
                 <Dashboard
                   trip={trip}
+                  tripGames={tripGames}
                   planText={planText} planModel={planModel} planLoading={planLoading} planMode={planMode}
                   patchError={patchError}
                   debugMsg={buildError}
