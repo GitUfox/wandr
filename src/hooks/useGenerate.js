@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { stream, consumeStream, complete } from "../lib/api.js";
 import { buildPlanPrompt, buildEditDayPrompt, buildTweakActivityPrompt } from "../lib/prompts.js";
-import { spliceDayInPlan, resequenceTimes } from "../lib/utils.js";
+import { spliceDayInPlan, resequenceTimes, bucketOf, retimeIntoBucket, sortDayByTime } from "../lib/utils.js";
 import { parsePlan, serializePlan } from "../lib/planModel.js";
 
 const PLAN_KEY = "wandr_plan";
@@ -149,6 +149,26 @@ export function useGenerate() {
   }
 
   /**
+   * Move an activity into a different time-of-day bucket (Buckets view, §6 #5).
+   * Re-times it into the target bucket's range, then re-sorts the day so the
+   * Timeline view stays consistent. No-op if it's already in that bucket.
+   */
+  function moveActivityToBucket(dayIdx, actId, bucket) {
+    const prev = modelRef.current;
+    if (!prev) return;
+    const day = prev.days[dayIdx];
+    const act = day?.activities.find(a => a.id === actId);
+    if (!act || bucketOf(act.time) === bucket) return;
+    const targetMembers = day.activities.filter(a => a.id !== actId && bucketOf(a.time) === bucket);
+    const newTime = retimeIntoBucket(bucket, targetMembers);
+    const updated = day.activities.map(a => a.id === actId ? { ...a, time: newTime } : a);
+    commitModel({
+      ...prev,
+      days: prev.days.map((d, i) => i !== dayIdx ? d : { ...d, activities: sortDayByTime(updated) }),
+    });
+  }
+
+  /**
    * Generate (or re-generate) a plan in the given mode.
    * editInstruction — optional free-text instruction for Full Itinerary / Specific Activities edits.
    * editType        — "activities" | null — controls prompt framing.
@@ -278,5 +298,5 @@ export function useGenerate() {
     resetPlan();
   }
 
-  return { planText, planModel, planMode, planLoading, patchError, tweakingId, generate, patchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, tweakActivity };
+  return { planText, planModel, planMode, planLoading, patchError, tweakingId, generate, patchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity };
 }

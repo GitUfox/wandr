@@ -12,6 +12,7 @@
 import { useState } from "react";
 import { Reorder, useDragControls } from "framer-motion";
 import { T } from "../lib/constants.js";
+import { BUCKETS, bucketOf, timeSortKey } from "../lib/utils.js";
 
 const clean = s => (s || "").replace(/\*\*/g, "").trim();
 
@@ -157,7 +158,57 @@ function FoodRow({ f }) {
   );
 }
 
-function DayCard({ day, dayIdx, days, tweakingId, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onTweakActivity }) {
+/* ── Buckets view ─────────────────────────────────────────────────────────
+   Compact, read-only cards grouped by time-of-day. Tap a "→ Bucket" chip to
+   re-time an activity into another bucket. Detailed edits live in Timeline. */
+function BucketCard({ a, dayIdx, bucket, onMoveToBucket }) {
+  return (
+    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 9, padding: "8px 10px", marginBottom: 6 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+        <span style={{ fontSize: 10.5, color: T.accent, fontWeight: 700, flexShrink: 0, width: 54 }}>{clean(a.time)}</span>
+        <span style={{ fontSize: 12, color: T.ink, fontWeight: 700, lineHeight: 1.3 }}>{clean(a.title)}</span>
+      </div>
+      {a.details && <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.5, marginTop: 3, marginLeft: 62 }}>{clean(a.details)}</div>}
+      <div style={{ display: "flex", gap: 5, marginTop: 6, marginLeft: 62, alignItems: "center" }}>
+        <span style={{ fontSize: 10, color: T.hint }}>Move to:</span>
+        {BUCKETS.filter(b => b !== bucket).map(b => (
+          <button key={b} onClick={() => onMoveToBucket(dayIdx, a.id, b)}
+            style={{ ...iconBtn, fontSize: 10.5, color: T.accent, border: `1px solid ${T.border2}`, padding: "2px 8px" }}>
+            {b}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function BucketView({ day, dayIdx, onMoveToBucket }) {
+  return (
+    <div>
+      {BUCKETS.map(bucket => {
+        const items = day.activities
+          .filter(a => bucketOf(a.time) === bucket)
+          .sort((x, y) => timeSortKey(x.time) - timeSortKey(y.time));
+        return (
+          <div key={bucket} style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7 }}>
+              <span style={{ fontSize: 10.5, fontWeight: 800, color: T.hint, textTransform: "uppercase", letterSpacing: ".07em" }}>{bucket}</span>
+              <span style={{ flex: 1, height: 1, background: T.border }} />
+              <span style={{ fontSize: 10, color: T.hint }}>{items.length || ""}</span>
+            </div>
+            {items.length === 0 ? (
+              <div style={{ fontSize: 11, color: T.hint, fontStyle: "italic", paddingLeft: 2, marginBottom: 4 }}>Nothing planned.</div>
+            ) : (
+              items.map(a => <BucketCard key={a.id} a={a} dayIdx={dayIdx} bucket={bucket} onMoveToBucket={onMoveToBucket} />)
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DayCard({ day, dayIdx, days, viewMode, tweakingId, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onMoveToBucket, onTweakActivity }) {
   return (
     <div style={{ marginBottom: 22 }}>
       <div style={{ fontSize: 15, fontWeight: 800, color: T.ink, margin: "0 0 12px", paddingBottom: 6, borderBottom: `1px solid ${T.border}` }}>
@@ -168,6 +219,8 @@ function DayCard({ day, dayIdx, days, tweakingId, onEditActivity, onDeleteActivi
         <div style={{ fontSize: 12, color: T.hint, fontStyle: "italic", padding: "8px 0", marginBottom: 8 }}>
           No activities left for this day.
         </div>
+      ) : viewMode === "buckets" ? (
+        <BucketView day={day} dayIdx={dayIdx} onMoveToBucket={onMoveToBucket} />
       ) : (
         <Reorder.Group axis="y" as="div" values={day.activities} onReorder={next => onReorderDay(dayIdx, next)}>
           {day.activities.map(a => (
@@ -200,18 +253,31 @@ function DayCard({ day, dayIdx, days, tweakingId, onEditActivity, onDeleteActivi
   );
 }
 
-export default function ItineraryEditor({ model, tweakingId, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onTweakActivity }) {
+const viewTab = active => ({
+  ...iconBtn, fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 6,
+  color: active ? T.white : T.muted, background: active ? T.accent : "transparent",
+});
+
+export default function ItineraryEditor({ model, tweakingId, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onMoveToBucket, onTweakActivity }) {
+  const [viewMode, setViewMode] = useState("timeline"); // "timeline" | "buckets" — presentation only
   if (!model?.days?.length) return null;
   const days = model.days.map((d, idx) => ({ idx, label: d.label }));
   return (
     <div style={{ fontFamily: T.font }}>
+      {/* View toggle — Timeline (drag/edit) vs Buckets (fast time-of-day rearrange) */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
+        <div style={{ display: "flex", gap: 2, padding: 2, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 8 }}>
+          <button onClick={() => setViewMode("timeline")} style={viewTab(viewMode === "timeline")}>Timeline</button>
+          <button onClick={() => setViewMode("buckets")}  style={viewTab(viewMode === "buckets")}>Buckets</button>
+        </div>
+      </div>
       {model.intro && (
         <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.7, marginBottom: 18 }}>{model.intro}</div>
       )}
       {model.days.map((day, i) => (
-        <DayCard key={i} day={day} dayIdx={i} days={days} tweakingId={tweakingId}
+        <DayCard key={i} day={day} dayIdx={i} days={days} viewMode={viewMode} tweakingId={tweakingId}
           onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity}
-          onReorderDay={onReorderDay} onMoveActivity={onMoveActivity} onTweakActivity={onTweakActivity} />
+          onReorderDay={onReorderDay} onMoveActivity={onMoveActivity} onMoveToBucket={onMoveToBucket} onTweakActivity={onTweakActivity} />
       ))}
     </div>
   );

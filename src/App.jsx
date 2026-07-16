@@ -119,7 +119,7 @@ export default function Wandr() {
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const { buildTrip: doBuildTrip, loadMsg, error: buildError } = useBuildTrip();
-  const { planText, planModel, planMode, planLoading, patchError, tweakingId, generate: doGenerate, patchDay: doPatchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, tweakActivity } = useGenerate();
+  const { planText, planModel, planMode, planLoading, patchError, tweakingId, generate: doGenerate, patchDay: doPatchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity } = useGenerate();
   const { uploadedFiles, uploadError, handleFiles, removeFile, resetFiles } = useFileUpload();
 
   // ── Interview helpers ─────────────────────────────────────────────────────
@@ -397,6 +397,7 @@ export default function Wandr() {
                   onDeleteActivity={removeActivity}
                   onReorderDay={reorderDayActivities}
                   onMoveActivity={moveActivity}
+                  onMoveToBucket={moveActivityToBucket}
                   onTweakActivity={(dayIdx, actId, instruction) => tweakActivity(dayIdx, actId, instruction, trip)}
                   tweakingId={tweakingId}
                   onReset={resetAll}

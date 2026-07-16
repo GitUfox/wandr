@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes } from "./utils.js";
+import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket } from "./utils.js";
 
 // ── arr ───────────────────────────────────────────────────────────────────────
 
@@ -238,5 +238,82 @@ describe("resequenceTimes", () => {
       { id: "b", time: "12:00 PM", title: "B", details: "" },
     ];
     expect(resequenceTimes(acts).map(x => x.time)).toEqual(["9:00 AM", "12:00 PM"]);
+  });
+});
+
+// ── bucketOf ──────────────────────────────────────────────────────────────────
+
+describe("bucketOf", () => {
+  it("buckets clock times by boundary (Morning <12pm, Afternoon 12–5pm, Evening ≥5pm)", () => {
+    expect(bucketOf("9:00 AM")).toBe("Morning");
+    expect(bucketOf("11:59 AM")).toBe("Morning");
+    expect(bucketOf("12:00 PM")).toBe("Afternoon");
+    expect(bucketOf("4:59 PM")).toBe("Afternoon");
+    expect(bucketOf("5:00 PM")).toBe("Evening");
+    expect(bucketOf("9:00 PM")).toBe("Evening");
+  });
+
+  it("routes non-clock times by keyword", () => {
+    expect(bucketOf("Morning")).toBe("Morning");
+    expect(bucketOf("Lunch")).toBe("Afternoon");
+    expect(bucketOf("Dinner")).toBe("Evening");
+    expect(bucketOf("Evening stroll")).toBe("Evening");
+  });
+
+  it("defaults unrecognized text to Morning", () => {
+    expect(bucketOf("Anytime")).toBe("Morning");
+    expect(bucketOf("")).toBe("Morning");
+  });
+});
+
+// ── sortDayByTime ─────────────────────────────────────────────────────────────
+
+describe("sortDayByTime", () => {
+  it("sorts activities ascending by time", () => {
+    const acts = [
+      { id: "c", time: "6:00 PM" },
+      { id: "a", time: "9:00 AM" },
+      { id: "b", time: "1:00 PM" },
+    ];
+    expect(sortDayByTime(acts).map(x => x.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("sorts non-clock times into their bucket region via anchor", () => {
+    // "Dinner" (Evening, anchor 6pm) should sort after a 1pm clock time
+    const acts = [
+      { id: "dinner", time: "Dinner" },
+      { id: "one", time: "1:00 PM" },
+      { id: "morning", time: "Morning" },
+    ];
+    expect(sortDayByTime(acts).map(x => x.id)).toEqual(["morning", "one", "dinner"]);
+  });
+
+  it("returns input unchanged when not an array", () => {
+    expect(sortDayByTime(null)).toBeNull();
+  });
+});
+
+// ── retimeIntoBucket ──────────────────────────────────────────────────────────
+
+describe("retimeIntoBucket", () => {
+  it("uses the bucket anchor when the bucket is empty", () => {
+    expect(retimeIntoBucket("Morning", [])).toBe("9:00 AM");
+    expect(retimeIntoBucket("Afternoon", [])).toBe("1:00 PM");
+    expect(retimeIntoBucket("Evening", [])).toBe("6:00 PM");
+  });
+
+  it("lands 60min after the bucket's latest activity when occupied", () => {
+    expect(retimeIntoBucket("Evening", [{ time: "6:00 PM" }, { time: "7:30 PM" }])).toBe("8:30 PM");
+  });
+
+  it("keeps the anchor when existing times are earlier than it", () => {
+    // anchor 1pm beats a stray 12:15pm + 60 = 1:15pm? no — max(780, 795)=795 → 1:15 PM
+    expect(retimeIntoBucket("Afternoon", [{ time: "12:15 PM" }])).toBe("1:15 PM");
+    // existing well before anchor → anchor wins
+    expect(retimeIntoBucket("Evening", [{ time: "1:00 PM" }])).toBe("6:00 PM");
+  });
+
+  it("caps at 11:59 PM", () => {
+    expect(retimeIntoBucket("Evening", [{ time: "11:30 PM" }])).toBe("11:59 PM");
   });
 });

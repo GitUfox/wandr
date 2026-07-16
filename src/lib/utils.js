@@ -126,6 +126,55 @@ export function resequenceTimes(activities) {
 }
 
 /**
+ * Time-of-day buckets for the alternate itinerary view. Morning < 12pm,
+ * Afternoon 12–5pm, Evening ≥ 5pm. Anchors are the default clock time an
+ * activity gets when it's moved into an otherwise-empty bucket.
+ */
+export const BUCKETS = ["Morning", "Afternoon", "Evening"];
+const BUCKET_ANCHOR = { Morning: 540, Afternoon: 780, Evening: 1080 }; // 9am / 1pm / 6pm
+
+/** Which time-of-day bucket an activity's time falls in. Falls back to keyword
+ *  matching for non-clock times ("dinner" → Evening), else Morning. */
+export function bucketOf(time) {
+  const min = parseTime(time);
+  if (min !== null) {
+    if (min < 720)  return "Morning";
+    if (min < 1020) return "Afternoon";
+    return "Evening";
+  }
+  const s = (time || "").toLowerCase();
+  if (s.includes("morning")) return "Morning";
+  if (s.includes("afternoon") || s.includes("noon") || s.includes("lunch")) return "Afternoon";
+  if (s.includes("evening") || s.includes("night") || s.includes("dinner")) return "Evening";
+  return "Morning";
+}
+
+/** Sort key for a time — its parsed minutes, or its bucket's anchor when the
+ *  time is non-clock text, so free-text activities still sort into the right region. */
+export function timeSortKey(time) {
+  const min = parseTime(time);
+  return min !== null ? min : BUCKET_ANCHOR[bucketOf(time)];
+}
+
+/** Sort a day's activities ascending by time (stable — equal times keep order). */
+export function sortDayByTime(activities) {
+  if (!Array.isArray(activities)) return activities;
+  return [...activities].sort((a, b) => timeSortKey(a?.time) - timeSortKey(b?.time));
+}
+
+/**
+ * Pick a clock time for an activity being moved into a bucket: the bucket's
+ * anchor if it's empty, else 60min after the bucket's current latest activity
+ * (capped at 11:59pm) so the newcomer lands after what's already there.
+ */
+export function retimeIntoBucket(bucket, bucketActivities) {
+  const anchor = BUCKET_ANCHOR[bucket];
+  const existing = (bucketActivities || []).map(a => parseTime(a?.time)).filter(v => v !== null);
+  const min = existing.length ? Math.min(1439, Math.max(anchor, Math.max(...existing) + 60)) : anchor;
+  return formatTime(min);
+}
+
+/**
  * Extract day headers from a generated full-itinerary plan string.
  * Returns [{ index, label, pos }, ...] where label = "Day 1 — Wednesday, June 11, 2025".
  */
