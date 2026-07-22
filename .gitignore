@@ -28,3 +28,10 @@ vite.config.js.timestamp-*
 # Claude — personal context, never commit
 CLAUDE.md
 .claude/
+
+# Service map — security posture, never commit (public repo)
+SERVICE_MAP.md
+SESSION_HANDOFF.md
+
+# Phase planning — internal roadmap, intentionally local-only
+PHASE2_PLANNING.md
