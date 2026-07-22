@@ -24,7 +24,9 @@ const app  = express();
 const PORT = process.env.PORT ?? 3001;
 const KEY  = process.env.ANTHROPIC_API_KEY;
 
-app.use(express.json({ limit: "20mb" }));
+// Mirror Vercel's 4.5MB serverless body cap so local dev rejects what prod would.
+// Client-side upload limits in useFileUpload.js are sized to fit under this.
+app.use(express.json({ limit: "4500kb" }));
 
 // Prune expired rate-limit entries hourly — only meaningful in a long-running process.
 setInterval(() => {

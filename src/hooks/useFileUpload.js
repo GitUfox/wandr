@@ -1,12 +1,32 @@
 import { useState } from "react";
 
-const MAX_FILES = 5;
-const MAX_MB    = 10;
+// Limits sized to the smallest real ceiling: Vercel serverless caps request
+// bodies at 4.5MB (platform limit, not configurable on Hobby). Worst case here
+// is 3 files × 1MB × 4/3 base64 ≈ 4MB + prompt text — fits with headroom.
+// Previously 5 × 10MB, which the client accepted and the proxy then rejected.
+export const MAX_FILES = 3;
+export const MAX_MB    = 1;
+
 const ALLOWED_TYPES = [
   "image/jpeg","image/png","image/webp","image/gif",
-  "application/pdf","text/plain","text/csv","application/json",
+  "text/plain","text/csv","application/json",
 ];
-const ALLOWED_EXTS = /\.(txt|pdf|csv|json|jpg|jpeg|png|webp|gif)$/i;
+const ALLOWED_EXTS = /\.(txt|csv|json|jpg|jpeg|png|webp|gif)$/i;
+const PDF_EXT = /\.pdf$/i;
+
+// Pure validation — returns a friendly rejection message, or null if the file is fine.
+// PDFs are rejected explicitly: reader.readAsText() on PDF binary produced mojibake
+// that silently polluted the prompt as "trip context" (PHASE2_PLANNING §13.2).
+// Checked by both MIME type and extension so a mislabeled file can't slip through.
+export function fileError(file) {
+  if (file.type === "application/pdf" || PDF_EXT.test(file.name))
+    return `${file.name}: PDFs aren't supported yet — a screenshot works great instead`;
+  if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTS.test(file.name))
+    return `${file.name}: we can't read this file type — images or plain text work best`;
+  if (file.size > MAX_MB * 1024 * 1024)
+    return `${file.name}: too big — keep each file under ${MAX_MB}MB`;
+  return null;
+}
 
 export function useFileUpload() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -17,7 +37,7 @@ export function useFileUpload() {
     const incoming = Array.from(fileList);
 
     if (uploadedFiles.length + incoming.length > MAX_FILES) {
-      setUploadError(`Max ${MAX_FILES} files.`);
+      setUploadError(`Up to ${MAX_FILES} files per trip.`);
       return;
     }
 
@@ -25,12 +45,9 @@ export function useFileUpload() {
       incoming.map(
         file =>
           new Promise(resolve => {
-            if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTS.test(file.name)) {
-              resolve({ error: `${file.name}: unsupported type` });
-              return;
-            }
-            if (file.size > MAX_MB * 1024 * 1024) {
-              resolve({ error: `${file.name}: exceeds ${MAX_MB}MB` });
+            const err = fileError(file);
+            if (err) {
+              resolve({ error: err });
               return;
             }
             const reader  = new FileReader();
@@ -43,7 +60,7 @@ export function useFileUpload() {
               preview: isImage ? e.target.result : null,
               size:    (file.size / 1024).toFixed(0) + " KB",
             });
-            reader.onerror = () => resolve({ error: `${file.name}: failed to read` });
+            reader.onerror = () => resolve({ error: `${file.name}: couldn't be read — try again?` });
             if (isImage) reader.readAsDataURL(file);
             else         reader.readAsText(file);
           })
