@@ -2,6 +2,20 @@
 // Kill switches for in-progress features. Flip to false to fall back instantly.
 export const FEATURES = {
   editableItinerary: true, // render the Full itinerary as editable blocks (else read-only Md)
+  venueGrounding:    true, // verify venues via /api/places after build (no-op until the server key exists)
+};
+
+// ── Venue grounding (PHASE2_PLANNING §12, phase 1) ───────────────────────────
+export const GROUNDING = {
+  // Which trip-DB categories get verified. Phase 1 grounds ONE POI-dense
+  // category so a miss means our matching is wrong, not Google's coverage.
+  // Expanding coverage = add category names here — but re-check the quota
+  // math in §12.2 first (each category ≈ 8 lookups per build).
+  categories: ["culture"],
+  // Hard ceiling on how long verification may delay a build. It runs inside
+  // the ~44s build await (blocking on purpose — single state write, no race
+  // with navigation); on timeout the trip proceeds ungrounded.
+  timeoutMs: 8000,
 };
 
 // ── Design tokens ────────────────────────────────────────────────────────────

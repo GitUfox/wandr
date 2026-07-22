@@ -19,6 +19,7 @@ dotenv.config({ path: resolve(__dirname, ".env.local") });
 
 import express from "express";
 import { handleAnthropicProxy, rateLimitStore, WINDOW_MS } from "./api/shared.js";
+import { handlePlacesRequest } from "./api/places-shared.js";
 
 const app  = express();
 const PORT = process.env.PORT ?? 3001;
@@ -52,6 +53,21 @@ app.post("/api/anthropic", async (req, res) => {
   const isDev = ["::1", "127.0.0.1", "::ffff:127.0.0.1"].includes(ip);
 
   await handleAnthropicProxy(req, res, { key: KEY, isDev });
+});
+
+// ── Venue grounding endpoint ──────────────────────────────────────────────────
+// Mirrors api/places.js (Vercel). Keyless ⇒ { available: false } stub — the
+// app runs exactly as before grounding existed until GOOGLE_PLACES_API_KEY is
+// set in .env.local.
+
+app.post("/api/places", async (req, res) => {
+  const ip    = req.socket?.remoteAddress || "";
+  const isDev = ["::1", "127.0.0.1", "::ffff:127.0.0.1"].includes(ip);
+
+  await handlePlacesRequest(req, res, {
+    key: process.env.GOOGLE_PLACES_API_KEY,
+    isDev,
+  });
 });
 
 // ── Serve built frontend in production ────────────────────────────────────────

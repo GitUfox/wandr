@@ -3,6 +3,7 @@ import { complete } from "../lib/api.js";
 import { buildTripCategoriesPrompt, buildTripMetaPrompt } from "../lib/prompts.js";
 import { recoverJSON } from "../lib/utils.js";
 import { LOAD_MSGS } from "../lib/constants.js";
+import { verifyTripVenues } from "../lib/places.js";
 
 export function useBuildTrip() {
   const [loading, setLoading]   = useState(false);
@@ -70,6 +71,15 @@ export function useBuildTrip() {
           parsed = await tryBuild();
         } else throw e;
       }
+      // Venue grounding (phase 1) — verify GROUNDING.categories against real
+      // places data and merge additive fields. Blocking on purpose: sub-second
+      // for one category (hard timeout inside), and it means the trip is
+      // written to state/localStorage once, complete — no post-save patching
+      // race with navigation. Fail-open twice over: verifyTripVenues never
+      // throws, and .catch here guarantees a grounding bug can't fail a build.
+      const grounded = await verifyTripVenues({ ...parsed, answers }).catch(() => null);
+      if (grounded) parsed = { ...parsed, categories: grounded.categories };
+
       clearInterval(loadRef.current);
       setLoading(false);
       return { ...parsed, answers, nights: n };

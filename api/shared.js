@@ -52,6 +52,11 @@ export function setCorsHeaders(res, origin) {
 // each logical trip consumes two against this counter. 6 ⇒ ~3 trips per IP/day.
 const LIMIT_TRIPS = 6;
 const LIMIT_PLANS = 10;
+// Venue-grounding lookups (api/places). One call per trip build normally;
+// 20 leaves headroom for retries while bounding per-IP Google-quota spend.
+// (The structural backstop is the request cap set in Google Cloud Console —
+// app-layer limits alone must never be the only thing between us and a bill.)
+const LIMIT_PLACES = 20;
 export const WINDOW_MS = 24 * 60 * 60 * 1000;
 
 // ── Redis-backed limiters (production) ───────────────────────────────────────
@@ -81,6 +86,11 @@ function createRedisLimiters() {
       redis,
       limiter: Ratelimit.slidingWindow(LIMIT_PLANS, "24 h"),
       prefix:  "wandr:plans",
+    }),
+    places: new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(LIMIT_PLACES, "24 h"),
+      prefix:  "wandr:places",
     }),
   };
 }
@@ -156,6 +166,35 @@ async function checkRateLimit(ip, isStream) {
     }
   }
   return checkRateLimitMemory(ip, isStream);
+}
+
+/**
+ * Per-IP limit for venue-grounding lookups (api/places). Additive sibling of
+ * checkRateLimit — the trips/plans paths are deliberately untouched. Returns
+ * an error string when over limit, null when allowed. The client treats any
+ * places error as "grounding unavailable" and builds the trip regardless, so
+ * this message is a log line, not UX.
+ */
+export async function checkPlacesRateLimit(ip) {
+  if (redisLimiters) {
+    try {
+      const { success } = await redisLimiters.places.limit(ip);
+      return success ? null : "Daily verification limit reached.";
+    } catch (err) {
+      console.error("[wandr places] Redis rate limit error, falling back to memory:", err.message);
+    }
+  }
+  const now = Date.now();
+  let entry = rateLimitStore.get(ip);
+  if (!entry || now > entry.resetAt) {
+    entry = { trips: 0, plans: 0, places: 0, resetAt: now + WINDOW_MS };
+    rateLimitStore.set(ip, entry);
+  }
+  // Entries created before this counter existed lack .places — tolerate them.
+  entry.places = entry.places || 0;
+  if (entry.places >= LIMIT_PLACES) return "Daily verification limit reached.";
+  entry.places++;
+  return null;
 }
 
 // ── Core proxy handler ────────────────────────────────────────────────────────
