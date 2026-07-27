@@ -473,3 +473,85 @@ describe("food removed from the pipeline", () => {
     }
   });
 });
+
+// ── Traveler-context single source of truth ───────────────────────────────────
+//
+// These lock the invariant the travelerContext() dedup exists to guarantee:
+// one answers object renders the SAME traveler values in every prompt. Before
+// the dedup, four builders each did their own extraction and defaulting, and
+// stay/transport had already drifted apart. If someone re-inlines an
+// extraction, these fail.
+
+describe("traveler context is consistent across every prompt builder", () => {
+  // Renders every builder from one answers object. Returns [label, text] pairs.
+  const renderAll = (answers) => {
+    const trip = { destination: answers.destination, answers, nights: 3, season: "mild", categories: {} };
+    return [
+      ["tripPrompt",       buildTripPrompt(answers).messageContent],
+      ["tripCategories",   buildTripCategoriesPrompt(answers).messageContent],
+      ["tripMeta",         buildTripMetaPrompt(answers).messageContent],
+      ["planFull",         buildPlanPrompt("full", trip)],
+      ["planDay",          buildPlanPrompt("day", trip)],
+      ["editDay",          buildEditDayPrompt("Monday, July 1, 2024", "## old", "swap it", trip)],
+      ["tweakActivity",    buildTweakActivityPrompt(trip, "Day 1", { time: "9am", title: "T", details: "d" }, "cheaper")],
+    ];
+  };
+
+  it("an empty transport selection reads 'not specified' everywhere, never blank", () => {
+    // [] is truthy, so arr() yields "" — this used to print "TRANSPORT: " blank
+    // in the trip-build prompts while the plan prompts said "not specified".
+    const answers = { ...BASE_ANSWERS, logistics: { ...BASE_ANSWERS.logistics, transport: [] } };
+    for (const [label, text] of renderAll(answers)) {
+      expect(text, label).not.toMatch(/TRANSPORT: *\n/);
+      expect(text, label).not.toMatch(/- Transport: *\n/);
+      expect(text, label).not.toContain("reachable by the traveler's transport: .");
+    }
+  });
+
+  it("a missing logistics object degrades to 'not specified', not empty output", () => {
+    const answers = { ...BASE_ANSWERS, logistics: undefined };
+    for (const [label, text] of renderAll(answers)) {
+      expect(text, label).not.toMatch(/TRANSPORT: *\n/);
+      expect(text, label).not.toMatch(/- Staying: *\n/);
+    }
+  });
+
+  it("every builder that prints a traveler value agrees on it", () => {
+    const answers = {
+      ...BASE_ANSWERS,
+      party: { chips: ["Family"], text: "", kids: "Teens" },
+      avoid: "crowds",
+      interests: { chips: ["Museums", "Baseball"], text: "", priorityChips: ["Baseball"] },
+    };
+    const rendered = renderAll(answers);
+
+    // Kids, priority interests, and the avoid list are the three fields most
+    // recently added — exactly the ones a 4×-touch change tends to miss.
+    for (const [label, text] of rendered) {
+      if (text.includes("Kids:")) expect(text, label).toContain("Kids: Teens");
+      if (text.includes("priority:")) expect(text, label).toContain("priority: Baseball");
+      if (text.includes("Avoid:")) expect(text, label).toContain("Avoid: crowds");
+    }
+
+    // Not merely "each is self-consistent" — the field must actually reach the
+    // builders that are supposed to carry it, or the loop above passes vacuously.
+    const carriers = rendered.filter(([, t]) => t.includes("priority: Baseball"));
+    expect(carriers.map(([l]) => l).sort())
+      .toEqual(["editDay", "planDay", "planFull", "tweakActivity"]);
+  });
+
+  it("budget phrasing stays split by surface: verbose for trip build, compact for traveler blocks", () => {
+    const [, tripText] = renderAll(BASE_ANSWERS)[0];
+    const planText = renderAll(BASE_ANSWERS).find(([l]) => l === "planFull")[1];
+    expect(tripText).toContain("approx. USD 120/day per person");
+    expect(planText).toContain("~120 USD/day");
+  });
+
+  it("budget 0 reads as staying with family/friends in both phrasings", () => {
+    const answers = { ...BASE_ANSWERS, budget: 0 };
+    const [, tripText] = renderAll(answers)[0];
+    const planText = renderAll(answers).find(([l]) => l === "planFull")[1];
+    expect(tripText).toContain("Staying with family/friends — no accommodation cost");
+    expect(planText).toContain("staying with family/friends");
+  });
+});

@@ -131,6 +131,71 @@ function stayInstruction(stayLine) {
   return `Traveler is staying: "${stayLine}". Cluster each day's activities near this area or along a logical route from it. Minimise dead travel time within a single day. Reference this neighbourhood where relevant for nearby options.`;
 }
 
+// ── Traveler context — single source of truth ────────────────────────────────
+//
+// Every prompt builder derives its traveler values from here. Before this
+// existed the same extraction-and-defaulting block was repeated in
+// tripContext(), buildEditDayPrompt(), buildTweakActivityPrompt(), and
+// buildPlanPrompt() — so each new answer field (rhythm, then priorityChips)
+// was a 4× touch, and stay/transport had already drifted into two different
+// default representations. Adding a field is now one edit here, plus one line
+// at each site that should actually print it.
+
+function travelerContext(a) {
+  const stayLine      = a.logistics?.stay || "not specified";
+  // An empty transport array is truthy, so arr() can legitimately yield "" —
+  // the trailing || is what makes "no chips selected" read as "not specified"
+  // in every prompt. Previously it read as blank in the trip-build prompt and
+  // "not specified" in the plan prompts.
+  const transportLine = (a.logistics?.transport ? arr(a.logistics.transport) : "") || "not specified";
+  const pace          = a.logistics?.pace   || "";
+  const focus         = a.logistics?.focus  || "";
+  const rhythm        = a.logistics?.rhythm || "";
+  const kidsVal       = a.party?.kids       || "";
+  const priorityLine  = arr(a.interests?.priorityChips);
+
+  return {
+    stayLine, transportLine, pace, focus, rhythm, kidsVal, priorityLine,
+    partyLine:     arr(a.party),
+    interestsLine: arr(a.interests),
+    avoidLine:     resolveAvoid(a),
+
+    // Two intentionally different budget phrasings — verbose for the trip-DB
+    // context header, compact for the TRAVELER blocks. Not drift; keep both.
+    budgetVerbose: a.budget === 0
+      ? "Staying with family/friends — no accommodation cost"
+      : `approx. USD ${a.budget}/day per person`,
+    budgetLabel:   a.budget === 0 ? "staying with family/friends" : `~${a.budget} USD/day`,
+
+    // Conditional fragments reused verbatim across builders.
+    kidsSuffix:     kidsVal ? ` · Kids: ${kidsVal}` : "",
+    prioritySuffix: priorityLine ? ` · priority: ${priorityLine}` : "",
+
+    // Instruction texts.
+    partyText:     partyInstruction(a),
+    stayText:      stayInstruction(stayLine),
+    transportText: transportInstruction(transportLine),
+    budgetText:    budgetInstruction(a.budget),
+    paceText:      pace    ? paceInstruction(pace)                  : "",
+    focusText:     focus   ? focusInstruction(a.destination, focus) : "",
+    rhythmText:    rhythm  ? rhythmInstruction(rhythm)              : "",
+    kidsText:      kidsVal ? kidsInstruction(kidsVal)               : "",
+  };
+}
+
+// The TRAVELER summary block shared by buildEditDayPrompt and buildPlanPrompt.
+// buildPlanPrompt appends its own Notes/Season lines.
+function travelerBlock(a, c) {
+  return `TRAVELER
+- Destination: ${a.destination}
+- Party: ${c.partyLine}${c.kidsSuffix}
+- Budget: ${c.budgetLabel}
+- Staying: ${c.stayLine}
+- Transport: ${c.transportLine}${c.pace ? `\n- Pace: ${c.pace}` : ""}${c.focus ? `\n- Focus: ${c.focus}` : ""}${c.rhythm ? `\n- Rhythm: ${c.rhythm}` : ""}
+- Interests: ${c.interestsLine}${c.prioritySuffix}
+- Avoid: ${c.avoidLine}`;
+}
+
 function buildDayLabels(startISO, nights) {
   const start = parseISODate(startISO);
   if (!start || !nights) return [];
@@ -175,32 +240,13 @@ const FULL_SCHEMA            = (n) => `{${META_BODY(n)},\n${CATEGORIES_BODY}}`;
  */
 function tripContext(answers, uploadedFiles) {
   const a = answers;
+  const c = travelerContext(a);
   const d1 = parseISODate(a.dates?.start);
   const d2 = parseISODate(a.dates?.end);
   const n  = calcNights(a.dates?.start, a.dates?.end);
 
   const safeStart = (d1 ? d1.toISOString().slice(0, 10) : a.dates?.start) || "?";
   const safeEnd   = (d2 ? d2.toISOString().slice(0, 10) : a.dates?.end)   || "?";
-
-  const budgetLine    = a.budget === 0
-    ? "Staying with family/friends — no accommodation cost"
-    : `approx. USD ${a.budget}/day per person`;
-
-  const stayLine      = a.logistics?.stay || "not specified";
-  const transportLine = a.logistics?.transport ? arr(a.logistics.transport) : "not specified";
-  const pace          = a.logistics?.pace     || "";
-  const focus         = a.logistics?.focus    || "";
-  const rhythm        = a.logistics?.rhythm   || "";
-  const kidsVal       = a.party?.kids         || "";
-
-  const interestsLine   = arr(a.interests);
-  const priorityLine    = arr(a.interests?.priorityChips); // starred interests — win conflicts
-  const avoidLine       = resolveAvoid(a);
-
-  const paceText      = pace  ? paceInstruction(pace)                   : "";
-  const focusText     = focus ? focusInstruction(a.destination, focus)  : "";
-  const rhythmText    = rhythm ? rhythmInstruction(rhythm)              : "";
-  const kidsText      = kidsVal ? kidsInstruction(kidsVal)              : "";
 
   const textFileContext = (uploadedFiles || [])
     .filter(f => !f.isImage)
@@ -215,36 +261,36 @@ function tripContext(answers, uploadedFiles) {
 
 DESTINATION: ${a.destination}
 DATES: ${safeStart} → ${safeEnd} (${n} nights)
-PARTY: ${arr(a.party)}${kidsVal ? ` · Kids: ${kidsVal}` : ""}
-STAYING: ${stayLine}
-TRANSPORT: ${transportLine}
-BUDGET: ${budgetLine}
-INTERESTS (listed most-important-first): ${interestsLine}
-PRIORITY INTERESTS (resolve any conflict in favour of these over other interests): ${priorityLine || "none specified — use the interests order above as priority"}
-AVOID: ${avoidLine}
-NOTES: ${a.notes || "none"}${pace ? `\nPACE: ${pace}` : ""}${focus ? `\nFOCUS: ${focus}` : ""}${rhythm ? `\nRHYTHM: ${rhythm}` : ""}
+PARTY: ${c.partyLine}${c.kidsSuffix}
+STAYING: ${c.stayLine}
+TRANSPORT: ${c.transportLine}
+BUDGET: ${c.budgetVerbose}
+INTERESTS (listed most-important-first): ${c.interestsLine}
+PRIORITY INTERESTS (resolve any conflict in favour of these over other interests): ${c.priorityLine || "none specified — use the interests order above as priority"}
+AVOID: ${c.avoidLine}
+NOTES: ${a.notes || "none"}${c.pace ? `\nPACE: ${c.pace}` : ""}${c.focus ? `\nFOCUS: ${c.focus}` : ""}${c.rhythm ? `\nRHYTHM: ${c.rhythm}` : ""}
 ${textFileContext ? `\nUPLOADED CONTEXT:\n${textFileContext}` : ""}
 
 INSTRUCTIONS — apply these to every selection you make:
 
-PARTY: ${partyInstruction(a)}
+PARTY: ${c.partyText}
 
-LOCATION: ${stayInstruction(stayLine)}
+LOCATION: ${c.stayText}
 
-TRANSPORT: ${transportInstruction(transportLine)}
+TRANSPORT: ${c.transportText}
 
-BUDGET: ${budgetInstruction(a.budget)}
-${paceText ? `\nPACE: ${paceText}` : ""}
-${focusText ? `FOCUS: ${focusText}` : ""}
-${rhythmText ? `RHYTHM: ${rhythmText}` : ""}
-${kidsText ? `KIDS: ${kidsText}` : ""}
+BUDGET: ${c.budgetText}
+${c.paceText ? `\nPACE: ${c.paceText}` : ""}
+${c.focusText ? `FOCUS: ${c.focusText}` : ""}
+${c.rhythmText ? `RHYTHM: ${c.rhythmText}` : ""}
+${c.kidsText ? `KIDS: ${c.kidsText}` : ""}
 INTERESTS: Only include categories that genuinely match the traveler's stated interests. If an interest category has no relevant match, omit it entirely rather than filling it with generic picks. The interests are listed most-important-first — weight earlier interests more heavily when deciding what to include and how to rank it.
 
-RANKING: Give every item a "priority" of exactly "essential", "recommended", or "optional", reflecting how strongly it matches the traveler's top interests and stated focus. Reserve "essential" for genuine must-dos — at most one per category, and never mark everything essential. The tiers exist to prioritise a limited daily schedule, so be discerning.${focus === "Famous sights" ? " The traveler wants famous sights, so iconic must-sees that define the destination should rank essential." : focus === "Hidden gems" ? " The traveler wants hidden gems, so distinctive local-only spots should rank essential over obvious landmarks." : ""}
+RANKING: Give every item a "priority" of exactly "essential", "recommended", or "optional", reflecting how strongly it matches the traveler's top interests and stated focus. Reserve "essential" for genuine must-dos — at most one per category, and never mark everything essential. The tiers exist to prioritise a limited daily schedule, so be discerning.${c.focus === "Famous sights" ? " The traveler wants famous sights, so iconic must-sees that define the destination should rank essential." : c.focus === "Hidden gems" ? " The traveler wants hidden gems, so distinctive local-only spots should rank essential over obvious landmarks." : ""}
 
 CONFLICTS: When two candidate activities within the same category compete and only one can reasonably become essential, prefer whichever matches a PRIORITY INTEREST over one that doesn't. If both or neither match a priority interest, fall back to whichever interest is listed first in INTERESTS.
 
-AVOID: Never include anything related to: ${avoidLine}. If a category would only contain avoided items, leave it empty.
+AVOID: Never include anything related to: ${c.avoidLine}. If a category would only contain avoided items, leave it empty.
 
 Rules: 3 items max per category. All strings concise (1 sentence max). Use local currency equivalents for prices.
 
@@ -296,18 +342,7 @@ export function buildTripMetaPrompt(answers, uploadedFiles) {
  */
 export function buildEditDayPrompt(dayLabel, dayContent, instruction, trip) {
   const a = trip.answers;
-  const stayLine      = a.logistics?.stay || "";
-  const transportLine = a.logistics?.transport ? arr(a.logistics.transport) : "";
-  const budgetLabel   = a.budget === 0 ? "staying with family/friends" : `~${a.budget} USD/day`;
-  const avoidText     = resolveAvoid(a);
-  const pace          = a.logistics?.pace     || "";
-  const focus         = a.logistics?.focus    || "";
-  const rhythm        = a.logistics?.rhythm   || "";
-  const kidsVal       = a.party?.kids         || "";
-  const paceText      = pace  ? paceInstruction(pace)                   : "";
-  const focusText     = focus ? focusInstruction(a.destination, focus)  : "";
-  const rhythmText    = rhythm ? rhythmInstruction(rhythm)              : "";
-  const kidsText      = kidsVal ? kidsInstruction(kidsVal)              : "";
+  const c = travelerContext(a);
 
   const allItems = formatActivityItems(trip.categories);
 
@@ -320,20 +355,13 @@ CHANGE INSTRUCTION: ${instruction || "Refresh with new activity ideas — keep t
 CURRENT DAY (replace this entirely):
 ${dayContent}
 
-TRAVELER
-- Destination: ${a.destination}
-- Party: ${arr(a.party)}${kidsVal ? ` · Kids: ${kidsVal}` : ""}
-- Budget: ${budgetLabel}
-- Staying: ${stayLine || "not specified"}
-- Transport: ${transportLine || "not specified"}${pace ? `\n- Pace: ${pace}` : ""}${focus ? `\n- Focus: ${focus}` : ""}${rhythm ? `\n- Rhythm: ${rhythm}` : ""}
-- Interests: ${arr(a.interests)}${arr(a.interests?.priorityChips) ? ` · priority: ${arr(a.interests.priorityChips)}` : ""}
-- Avoid: ${avoidText}
+${travelerBlock(a, c)}
 
 APPLY THESE RULES:
-PARTY: ${partyInstruction(a)}
-ROUTING: ${stayInstruction(stayLine || "not specified")} ${transportInstruction(transportLine || "not specified")}
-BUDGET: ${budgetInstruction(a.budget)}${paceText ? `\nPACE: ${paceText}` : ""}${focusText ? `\nFOCUS: ${focusText}` : ""}${rhythmText ? `\nRHYTHM: ${rhythmText}` : ""}${kidsText ? `\nKIDS: ${kidsText}` : ""}
-AVOID: Never suggest anything related to: ${avoidText}.
+PARTY: ${c.partyText}
+ROUTING: ${c.stayText} ${c.transportText}
+BUDGET: ${c.budgetText}${c.paceText ? `\nPACE: ${c.paceText}` : ""}${c.focusText ? `\nFOCUS: ${c.focusText}` : ""}${c.rhythmText ? `\nRHYTHM: ${c.rhythmText}` : ""}${c.kidsText ? `\nKIDS: ${c.kidsText}` : ""}
+AVOID: Never suggest anything related to: ${c.avoidLine}.
 PRIORITY: Activities are tagged ESSENTIAL, RECOMMENDED, or OPTIONAL (listed essentials-first). Favour ESSENTIAL items for this day; use OPTIONAL only if there is spare time. Never drop an essential in favour of an optional.
 
 ACTIVITIES TO USE (tagged by priority, essentials first):
@@ -362,9 +390,7 @@ TIPS: [practical tip] | [logistics tip]
  */
 export function buildTweakActivityPrompt(trip, dayLabel, activity, instruction) {
   const a = trip.answers;
-  const budgetLabel = a.budget === 0 ? "staying with family/friends" : `~${a.budget} USD/day`;
-  const avoidText   = resolveAvoid(a);
-  const kidsVal     = a.party?.kids || "";
+  const c = travelerContext(a);
 
   return `You are a travel planner editing ONE activity in a ${trip.destination} itinerary (${dayLabel}).
 
@@ -374,10 +400,10 @@ CURRENT ACTIVITY:
 CHANGE REQUEST: ${instruction}
 
 TRAVELER CONTEXT (respect these):
-- Party: ${arr(a.party)}${kidsVal ? ` · Kids: ${kidsVal}` : ""}
-- Budget: ${budgetLabel}
-- Interests: ${arr(a.interests)}${arr(a.interests?.priorityChips) ? ` · priority: ${arr(a.interests.priorityChips)}` : ""}
-- Avoid: ${avoidText}
+- Party: ${c.partyLine}${c.kidsSuffix}
+- Budget: ${c.budgetLabel}
+- Interests: ${c.interestsLine}${c.prioritySuffix}
+- Avoid: ${c.avoidLine}
 
 Apply the change request. Keep the same time slot unless the request implies otherwise.
 Write for someone who wants facts, not atmosphere — what it is, where, how long, how much.
@@ -399,20 +425,9 @@ ENDTABLE`;
 export function buildPlanPrompt(mode, trip, editInstruction = null, editType = null) {
   const a = trip.answers;
 
-  const allItems = formatActivityItems(trip.categories);
+  const c = travelerContext(a);
 
-  const stayLine      = a.logistics?.stay || "";
-  const transportLine = a.logistics?.transport ? arr(a.logistics.transport) : "";
-  const budgetLabel   = a.budget === 0 ? "staying with family/friends" : `~${a.budget} USD/day`;
-  const avoidText     = resolveAvoid(a);
-  const pace          = a.logistics?.pace     || "";
-  const focus         = a.logistics?.focus    || "";
-  const rhythm        = a.logistics?.rhythm   || "";
-  const kidsVal       = a.party?.kids         || "";
-  const paceText      = pace  ? paceInstruction(pace)                   : "";
-  const focusText     = focus ? focusInstruction(a.destination, focus)  : "";
-  const rhythmText    = rhythm ? rhythmInstruction(rhythm)              : "";
-  const kidsText      = kidsVal ? kidsInstruction(kidsVal)              : "";
+  const allItems = formatActivityItems(trip.categories);
 
   const today       = new Date().toISOString().slice(0, 10);
   const startDate   = parseISODate(a.dates?.start);
@@ -439,26 +454,19 @@ Use local currency for all price references. Avoid US-centric assumptions.
 
 ${modeInstructions[mode]}
 
-TRAVELER
-- Destination: ${a.destination}
-- Party: ${arr(a.party)}${kidsVal ? ` · Kids: ${kidsVal}` : ""}
-- Budget: ${budgetLabel}
-- Staying: ${stayLine || "not specified"}
-- Transport: ${transportLine || "not specified"}${pace ? `\n- Pace: ${pace}` : ""}${focus ? `\n- Focus: ${focus}` : ""}${rhythm ? `\n- Rhythm: ${rhythm}` : ""}
-- Interests: ${arr(a.interests)}${arr(a.interests?.priorityChips) ? ` · priority: ${arr(a.interests.priorityChips)}` : ""}
-- Avoid: ${avoidText}
+${travelerBlock(a, c)}
 - Notes: ${a.notes || "none"}
 - Season: ${trip.season || ""}
 
 APPLY THESE RULES TO THE ITINERARY:
 
-PARTY: ${partyInstruction(a)}
+PARTY: ${c.partyText}
 
-ROUTING: ${stayInstruction(stayLine || "not specified")} ${transportInstruction(transportLine || "not specified")}
-${paceText ? `\nPACE: ${paceText}` : ""}
-${focusText ? `FOCUS: ${focusText}` : ""}
-${rhythmText ? `RHYTHM: ${rhythmText}` : ""}
-${kidsText ? `KIDS: ${kidsText}` : ""}
+ROUTING: ${c.stayText} ${c.transportText}
+${c.paceText ? `\nPACE: ${c.paceText}` : ""}
+${c.focusText ? `FOCUS: ${c.focusText}` : ""}
+${c.rhythmText ? `RHYTHM: ${c.rhythmText}` : ""}
+${c.kidsText ? `KIDS: ${c.kidsText}` : ""}
 TEMPORAL GROUNDING: Today is ${today}. Trip dates: ${safeStart} → ${safeEnd}.${mode === "full" && dayHeaderBlock ? `\n${dayHeaderBlock}` : ""} Always use these exact day labels — never guess or infer day-of-week independently.
 
 ACCURACY RULES:
@@ -466,9 +474,9 @@ ACCURACY RULES:
 - LIVE EVENTS: Never assert that a specific sports game, concert, or ticketed event is scheduled on a particular date — team schedules, touring dates, and event lineups change. Instead write: "Check schedule: [venue or team name]" as an optional add-on.
 - CLOSED VENUES: Do not recommend any bike-share program or transit app you cannot confidently confirm is currently operating. Omit uncertain venues entirely rather than risk sending the traveler somewhere that no longer exists.
 
-BUDGET: ${budgetInstruction(a.budget)}
+BUDGET: ${c.budgetText}
 
-AVOID: Never suggest anything related to: ${avoidText}.
+AVOID: Never suggest anything related to: ${c.avoidLine}.
 
 PRIORITY: Activities are tagged ESSENTIAL, RECOMMENDED, or OPTIONAL (listed essentials-first). Schedule ESSENTIAL items before RECOMMENDED, and use OPTIONAL only when there is genuine spare capacity (a relaxed pace or extra days). In a multi-day itinerary, every ESSENTIAL should appear at least once before any OPTIONAL is added. Never drop an essential in favour of an optional.
 
