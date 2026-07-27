@@ -1,4 +1,5 @@
 import { arr, calcNights, parseISODate } from "./utils.js";
+import { paceBand } from "./constants.js";
 
 // ── Activity priority helpers ───────────────────────────────────────────────
 // Each built activity carries a "priority" tier (essential | recommended |
@@ -88,11 +89,12 @@ function budgetInstruction(budget) {
 }
 
 function paceInstruction(pace) {
+  const [lo, hi] = paceBand(pace);
   if (pace === "Slow")
-    return "Set a relaxed pace — max 2–3 activities per day with breathing room. Long lunches, spontaneous wandering, and quiet time are part of the plan.";
+    return `Set a relaxed pace — ${lo}\u2013${hi} activities per day with breathing room. Long lunches, spontaneous wandering, and quiet time are part of the plan.`;
   if (pace === "Fast")
-    return "High-energy itinerary — 4–6 activities per day, efficient routing, minimal downtime. The traveler would rather be tired than bored.";
-  return "Balanced pace — 3–4 activities per day, mix of planned and unstructured time.";
+    return `High-energy itinerary — ${lo}\u2013${hi} activities per day, efficient routing, minimal downtime. The traveler would rather be tired than bored.`;
+  return `Balanced pace — ${lo}\u2013${hi} activities per day, mix of planned and unstructured time.`;
 }
 
 // Daily rhythm — when the day starts/ends, distinct from pace (how much per day).
@@ -343,6 +345,7 @@ export function buildTripMetaPrompt(answers, uploadedFiles) {
 export function buildEditDayPrompt(dayLabel, dayContent, instruction, trip) {
   const a = trip.answers;
   const c = travelerContext(a);
+  const [lo, hi] = paceBand(c.pace);
 
   const allItems = formatActivityItems(trip.categories);
 
@@ -378,7 +381,8 @@ ${TABLE_BLOCK}
 
 TIPS: [practical tip] | [logistics tip]
 
-- 3 to 5 activities max. No filler phrases. Facts only.
+- ${lo} to ${hi} activities. No filler phrases. Facts only.
+- Do not schedule a venue that already appears on another day of this trip.
 - Bold place names inside table cells using **Name**
 - ACCURACY: Only recommend venues you are confident are currently operating.`;
 }
@@ -426,6 +430,7 @@ export function buildPlanPrompt(mode, trip, editInstruction = null, editType = n
   const a = trip.answers;
 
   const c = travelerContext(a);
+  const [lo, hi] = paceBand(c.pace);
 
   const allItems = formatActivityItems(trip.categories);
 
@@ -442,7 +447,7 @@ export function buildPlanPrompt(mode, trip, editInstruction = null, editType = n
   const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [time] | **Place** | facts only, duration |\nENDTABLE`;
 
   const modeInstructions = {
-    full:   `Create a ${trip.nights}-night itinerary. Use the DAY HEADERS list for exact day labels. For each day:\n\n## Day N — [exact label from DAY HEADERS]\n\n${TABLE_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]\n\nRules: 3–5 activities max per day. Times realistic for ${a.destination}.`,
+    full:   `Create a ${trip.nights}-night itinerary. Use the DAY HEADERS list for exact day labels. For each day:\n\n## Day N — [exact label from DAY HEADERS]\n\n${TABLE_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]\n\nRules: ${lo}\u2013${hi} activities per day. Times realistic for ${a.destination}.`,
     day:    `Design the single best day possible in ${a.destination}. Output EXACTLY ONE day — no other days, no multi-day structure.\n\n## The Ideal Day — [Weekday, Month Date]\n\n${TABLE_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]`,
     combo:  `Create 3 themed day combinations. For each:\n\n## [Theme name]\n[One sentence — what type of day this is]\n\n${TABLE_BLOCK}`,
     hidden: `List 5 local spots most visitors miss.\n\n${TABLE_BLOCK}`,
@@ -485,7 +490,8 @@ ${allItems || `Use your knowledge of ${a.destination}`}
 
 STRICT OUTPUT RULES:
 - Tables exactly as shown with TABLE/ENDTABLE markers
-- 3 to 5 activities per day max
+- ${lo} to ${hi} activities per day — match this to the stated pace, do not average it with any other number
+- Never schedule the same venue twice across the itinerary. Each activity must be a distinct place.
 - Bold place names inside table cells using **Name**
 - TIPS line format: TIPS: tip one | tip two${editInstruction ? `
 

@@ -5,6 +5,24 @@ export const FEATURES = {
   venueGrounding:    true, // verify venues via /api/places after build (no-op until the server key exists)
 };
 
+// ── Activities per day, by pace ──────────────────────────────────────────────
+// Single source of truth. These numbers used to be written in four places —
+// paceInstruction() said "max 2–3" for Slow while the mode rules, the strict
+// output rules, and the day-edit rules all said a flat "3 to 5". The model
+// averaged the contradiction and returned 4 activities on a Slow trip.
+// prompts.js interpolates these; planQuality.js scores against them.
+export const PACE_BANDS = {
+  Slow:     [2, 3],
+  Balanced: [3, 4],
+  Fast:     [4, 6],
+};
+export const DEFAULT_PACE = "Balanced";
+
+/** [min, max] activities per day for a pace label (unknown → Balanced). */
+export function paceBand(pace) {
+  return PACE_BANDS[pace] || PACE_BANDS[DEFAULT_PACE];
+}
+
 // ── Venue grounding (PHASE2_PLANNING §12, phase 1) ───────────────────────────
 export const GROUNDING = {
   // Which trip-DB categories get verified. Phase 1 grounds ONE POI-dense

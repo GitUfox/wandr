@@ -35,3 +35,6 @@ SESSION_HANDOFF.md
 
 # Phase planning — internal roadmap, intentionally local-only
 PHASE2_PLANNING.md
+
+# Quality harness output — real generated plans, regenerable
+.quality/
