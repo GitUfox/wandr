@@ -2,6 +2,7 @@
 import { useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { STEPS, T } from "./lib/constants.js";
+import { loadTripStore, persistTrip, getActiveTrip } from "./lib/tripStore.js";
 import { useBuildTrip } from "./hooks/useBuildTrip.js";
 import { useGenerate } from "./hooks/useGenerate.js";
 import { useFileUpload } from "./hooks/useFileUpload.js";
@@ -32,6 +33,15 @@ const PAGE_VARIANTS = {
 const PAGE_TRANSITION = { duration: 0.2, ease: [0.25, 0.1, 0.25, 1] };
 
 function Page({ children }) {
+  // Dev-only escape hatch. Automation harnesses throttle rAF, which freezes
+  // framer's frameloop — screens stay at opacity 0 and AnimatePresence
+  // mode="wait" never swaps, making any browser verification of a non-welcome
+  // screen impossible. `VITE_NO_MOTION=1 npm run dev` renders plain divs
+  // instead. Vite inlines the env var, so this branch is absent from the
+  // production bundle (verified: 0 occurrences in dist).
+  if (import.meta.env.VITE_NO_MOTION) {
+    return <div style={{ position: "absolute", inset: 0, minHeight: "100vh", width: "100%", overflowY: "auto" }}>{children}</div>;
+  }
   return (
     <motion.div
       variants={PAGE_VARIANTS}
@@ -46,9 +56,8 @@ function Page({ children }) {
   );
 }
 
-function loadSavedTrip() {
-  try { return JSON.parse(localStorage.getItem("wandr_trip") || "null"); } catch { return null; }
-}
+// Trip persistence lives in lib/tripStore.js — multi-trip shape (wandr_trips)
+// with per-trip plan keys, migrating the legacy single-trip keys on first load.
 
 // ── Profile (saved preferences) ───────────────────────────────────────────────
 // The profile is a plain snapshot of the profile-backed answer fields, in the
@@ -105,9 +114,13 @@ export default function Wandr() {
   const [logFocus, setLogFocus]           = useState("");
   const [logRhythm, setLogRhythm]         = useState("");
 
-  // Trip + dashboard
+  // Trip + dashboard. tripStore holds every saved trip; savedTrip is the active
+  // one, which is what the welcome screen offers to resume. Phase 1 keeps the
+  // single-trip UX identical — the extra trips are stored but not yet surfaced
+  // (the trip switcher is phase 2).
   const [trip, setTrip]               = useState(null);
-  const [savedTrip, setSavedTrip]     = useState(loadSavedTrip);
+  const [tripStore, setTripStore]     = useState(loadTripStore);
+  const savedTrip                     = getActiveTrip(tripStore);
 
   // Profile state
   const [savedProfile, setSavedProfile]   = useState(loadProfile);
@@ -218,19 +231,32 @@ export default function Wandr() {
   }
 
   // ── API actions ───────────────────────────────────────────────────────────
+  /**
+   * Build (or rebuild) a trip and persist it.
+   *   opts.fromInterview — came from the 6-step interview (may update the profile)
+   *   opts.replaceId     — rebuild THIS trip in place instead of adding a new one
+   *                        (Trip Details rebuild); its stale plan is dropped.
+   */
   async function handleBuildTrip(a, opts = {}) {
     setScreen("loading");
     const result = await doBuildTrip(a, uploadedFiles);
+    let saved = result;
     if (!result._error) {
-      try { localStorage.setItem("wandr_trip", JSON.stringify(result)); setSavedTrip(result); } catch {}
-      clearSavedPlan(); // a fresh/rebuilt trip — drop any saved plan from the previous one
+      // A rebuild invalidates that trip's existing plan; a brand-new trip has
+      // none. Either way the incoming trip starts with no plan attached.
+      clearSavedPlan(opts.replaceId || undefined);
+      const store = persistTrip(result, { replaceId: opts.replaceId || null });
+      setTripStore(store);
+      // Carry the assigned id back onto the in-memory trip, so a plan generated
+      // now is written under the right key.
+      saved = getActiveTrip(store) || result;
       // "Edit preferences" is the deliberate moment to update saved defaults.
       if (opts.fromInterview && interviewMode === "edit") {
         const p = saveProfile(a);
         if (p) setSavedProfile(p);
       }
     }
-    setTrip(result);
+    setTrip(saved);
     setScreen("dashboard");
   }
 
@@ -274,7 +300,8 @@ export default function Wandr() {
    */
   async function handleEditTripDetails(newAnswers) {
     setAnswers(newAnswers);
-    await handleBuildTrip(newAnswers);
+    // A rebuild updates THIS trip rather than creating a second copy of it.
+    await handleBuildTrip(newAnswers, { replaceId: trip?.id || null });
   }
 
   // ── Reset / resume ────────────────────────────────────────────────────────
@@ -284,12 +311,16 @@ export default function Wandr() {
     setBudget(120); setD1(""); setD2(""); setLogStay(""); setLogTransport(""); setLogPace(""); setLogFocus(""); setLogRhythm("");
     setInterviewMode("fresh");
     setTrip(null);
+    // Memory-only reset: no trip id, so no saved plan is deleted. "Start over"
+    // returns to the welcome screen; the saved trip and its itinerary stay
+    // resumable. (Previously this deleted the plan, which now would destroy one
+    // itinerary out of several.)
     resetFiles(); clearSavedPlan();
   }
 
   function handleResume() {
     setTrip(savedTrip);
-    restorePlan(); // bring back the saved itinerary + edits, if any
+    restorePlan(savedTrip?.id); // that trip's own itinerary + edits, if any
     setScreen("dashboard");
   }
 

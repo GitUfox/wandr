@@ -3,8 +3,7 @@ import { stream, consumeStream, complete } from "../lib/api.js";
 import { buildPlanPrompt, buildEditDayPrompt, buildTweakActivityPrompt } from "../lib/prompts.js";
 import { spliceDayInPlan, resequenceTimes, bucketOf, retimeIntoBucket, sortDayByTime } from "../lib/utils.js";
 import { parsePlan, serializePlan } from "../lib/planModel.js";
-
-const PLAN_KEY = "wandr_plan";
+import { planKeyFor, deletePlan, mirrorLegacyPlan } from "../lib/tripStore.js";
 
 export function useGenerate() {
   const [planText, setPlanText]       = useState("");
@@ -16,15 +15,24 @@ export function useGenerate() {
   const streamRef  = useRef("");
   const modelRef   = useRef(null); // mirrors planModel — avoids stale closures in edit handlers
   const abortRef   = useRef(null);
+  // Which trip the in-memory plan belongs to. A ref, not state, because the
+  // persistence effect below must read the CURRENT owner at write time — a
+  // value captured in a render closure could write trip A's plan under trip B's
+  // key after a switch. Set by generate/patchDay (from the trip they receive)
+  // and by restorePlan/clearSavedPlan (explicitly).
+  const planOwnerRef = useRef(null);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
   // Persist the completed/edited plan so a reload (or Resume) keeps it.
   // Guarded on planModel (null while streaming) so we never write mid-stream;
-  // fires once on completion and again on every edit.
+  // fires once on completion and again on every edit. Bails without an owner
+  // so an orphan plan can never be written under a wrong or missing id.
   useEffect(() => {
-    if (!planModel || !planText || planLoading) return;
-    try { localStorage.setItem(PLAN_KEY, JSON.stringify({ planText, planMode })); } catch { /* quota — ignore */ }
+    if (!planOwnerRef.current || !planModel || !planText || planLoading) return;
+    const payload = JSON.stringify({ planText, planMode });
+    try { localStorage.setItem(planKeyFor(planOwnerRef.current), payload); } catch { /* quota — ignore */ }
+    mirrorLegacyPlan(payload); // rollback path — see tripStore.js
   }, [planModel, planText, planMode, planLoading]);
 
   // Adopt a freshly-built plan string as the editable model (and keep planText
@@ -178,6 +186,7 @@ export function useGenerate() {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    planOwnerRef.current = trip?.id || null; // this plan belongs to this trip
     setPlanMode(mode);
     setPlanLoading(true);
     setPlanText("");
@@ -226,6 +235,7 @@ export function useGenerate() {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
+    planOwnerRef.current = trip?.id || planOwnerRef.current;
     setPlanLoading(true);
     setPatchError("");
 
@@ -281,9 +291,14 @@ export function useGenerate() {
    * Re-parses planText into the model so the editable view is consistent.
    * Returns true if a plan was restored.
    */
-  function restorePlan() {
+  function restorePlan(tripId) {
+    // Claim ownership first, then load — so a trip with no saved plan still
+    // resets cleanly instead of leaving the previous trip's plan on screen.
+    planOwnerRef.current = tripId || null;
+    resetPlan();
+    if (!tripId) return false;
     let saved;
-    try { saved = JSON.parse(localStorage.getItem(PLAN_KEY) || "null"); } catch { saved = null; }
+    try { saved = JSON.parse(localStorage.getItem(planKeyFor(tripId)) || "null"); } catch { saved = null; }
     if (!saved?.planText) return false;
     streamRef.current = saved.planText;
     setPlanText(saved.planText);
@@ -292,9 +307,13 @@ export function useGenerate() {
     return true;
   }
 
-  /** Clear the saved plan and reset in-memory state (new trip / reset). */
-  function clearSavedPlan() {
-    try { localStorage.removeItem(PLAN_KEY); } catch { /* ignore */ }
+  /**
+   * Clear a trip's saved plan and reset in-memory state (rebuild / reset).
+   * Pass the trip id to delete that trip's plan; omit it to only reset memory.
+   */
+  function clearSavedPlan(tripId) {
+    if (tripId) deletePlan(tripId);
+    planOwnerRef.current = null;
     resetPlan();
   }
 
