@@ -15,6 +15,8 @@ import EditTripSheet from "./EditTripSheet.jsx";
 
 export default function Dashboard({
   trip,
+  trips = [],
+  onSwitchTrip,
   tripGames,
   planText, planModel, planLoading, planMode,
   patchError,
@@ -37,6 +39,10 @@ export default function Dashboard({
   const [copied, setCopied]           = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [eventsDismissed, setEventsDismissed] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+
+  // Only render the switcher when there's somewhere to switch to.
+  const otherTrips = trips.filter(t => t.id !== trip?.id);
 
   function stripMarkdown(text) {
     return text.split("\n").map(line => {
@@ -201,7 +207,36 @@ export default function Dashboard({
                 </div>
               )}
             </div>
-            <div style={{ display:"flex", gap:7 }}>
+            <div style={{ display:"flex", gap:7, alignItems:"flex-start" }}>
+              {otherTrips.length > 0 && (
+                <div style={{ position:"relative" }}>
+                  <button onClick={() => setSwitcherOpen(v => !v)}
+                    style={{ fontSize:11, color:T.muted, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 10px", cursor:"pointer", fontFamily:T.font }}>
+                    Switch ▾
+                  </button>
+                  {switcherOpen && (
+                    <>
+                      {/* Click-away closes the menu — no dead-end open state. */}
+                      <div onClick={() => setSwitcherOpen(false)} style={{ position:"fixed", inset:0, zIndex:30 }} />
+                      <div className="fade-up"
+                        style={{ position:"absolute", top:"calc(100% + 4px)", right:0, zIndex:31, minWidth:190, background:T.bg1, border:`1px solid ${T.border}`, borderRadius:10, overflow:"hidden", boxShadow:"0 8px 24px rgba(0,0,0,.5)" }}>
+                        {otherTrips.map((t, i) => (
+                          <button key={t.id}
+                            onClick={() => { setSwitcherOpen(false); onSwitchTrip?.(t.id); }}
+                            style={{ display:"block", width:"100%", textAlign:"left", padding:"9px 12px", background:"transparent", border:"none", borderTop: i === 0 ? "none" : `1px solid ${T.border}`, cursor:"pointer", fontFamily:T.font }}>
+                            <div style={{ fontSize:12.5, fontWeight:700, color:T.ink }}>{t.destination}</div>
+                            <div style={{ fontSize:10.5, color:T.hint, marginTop:1 }}>
+                              {[t.answers?.dates?.start, t.answers?.dates?.end].every(Boolean)
+                                ? `${fmtDate(t.answers.dates.start)} → ${fmtDate(t.answers.dates.end)}`
+                                : `${t.nights || "?"} nights`}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
               <button
                 onClick={() => setEditSheetOpen(true)}
                 style={{ fontSize:11, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:6, padding:"5px 12px", cursor:"pointer", fontFamily:T.font, fontWeight:600 }}

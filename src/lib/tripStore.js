@@ -100,6 +100,13 @@ export function listTrips(store) {
   return [...(store?.trips || [])].sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
 }
 
+/** Point activeId at an existing trip. Unknown ids are ignored, not stored. */
+export function setActiveTripId(store, id) {
+  const base = store?.trips ? store : emptyStore();
+  if (!base.trips.some(t => t.id === id)) return base;
+  return { ...base, activeId: id };
+}
+
 /**
  * Normalize any persisted value into a valid v2 store, migrating the legacy
  * single-trip shape. Pure so the migration itself is testable.
@@ -199,6 +206,29 @@ export function persistTrip(trip, { replaceId = null } = {}) {
   // here keeps the single invariant true: `wandr_plan` always describes the trip
   // in `wandr_trip`. Otherwise a rollback mid-flow would pair a new trip with
   // the previous trip's itinerary.
+  mirrorLegacyPlan(null);
+  return store;
+}
+
+/**
+ * Make an existing trip active and persist that choice, so a reload resumes
+ * the trip the user actually switched to. Mirrors it to the legacy key too.
+ * Does NOT touch the plan mirror — the caller restores that trip's own plan,
+ * and its persistence effect re-mirrors it.
+ */
+export function activateTripId(id) {
+  const store = setActiveTripId(loadTripStore(), id);
+  saveTripStore(store);
+  return store;
+}
+
+/** Delete a trip and its plan. Returns the updated store. */
+export function deleteTrip(id) {
+  const store = removeTrip(loadTripStore(), id);
+  deletePlan(id);
+  saveTripStore(store);
+  // The active trip changed, and the promoted trip's plan (if any) isn't loaded
+  // yet — clear the mirror so legacy trip/plan can't describe different trips.
   mirrorLegacyPlan(null);
   return store;
 }

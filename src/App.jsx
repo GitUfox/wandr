@@ -2,7 +2,7 @@
 import { useState, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { STEPS, T } from "./lib/constants.js";
-import { loadTripStore, persistTrip, getActiveTrip } from "./lib/tripStore.js";
+import { loadTripStore, persistTrip, getActiveTrip, listTrips, activateTripId, deleteTrip } from "./lib/tripStore.js";
 import { useBuildTrip } from "./hooks/useBuildTrip.js";
 import { useGenerate } from "./hooks/useGenerate.js";
 import { useFileUpload } from "./hooks/useFileUpload.js";
@@ -121,6 +121,7 @@ export default function Wandr() {
   const [trip, setTrip]               = useState(null);
   const [tripStore, setTripStore]     = useState(loadTripStore);
   const savedTrip                     = getActiveTrip(tripStore);
+  const allTrips                      = listTrips(tripStore);
 
   // Profile state
   const [savedProfile, setSavedProfile]   = useState(loadProfile);
@@ -318,10 +319,40 @@ export default function Wandr() {
     resetFiles(); clearSavedPlan();
   }
 
-  function handleResume() {
-    setTrip(savedTrip);
-    restorePlan(savedTrip?.id); // that trip's own itinerary + edits, if any
+  /**
+   * THE single way a trip becomes the one on screen. Resume, switch, and
+   * post-delete promotion all route through here.
+   *
+   * Atomicity matters: restorePlan() both claims plan ownership for this trip
+   * and aborts any in-flight generation from the previous one. Setting the trip
+   * without it would leave the old trip's owner id in place, so a stream that
+   * lands after the switch writes its itinerary under the wrong trip — the exact
+   * failure the per-trip plan keys exist to prevent.
+   */
+  function activateTrip(t) {
+    if (!t) return;
+    setTrip(t);
+    setAnswers(t.answers || {});   // keep App's answers coherent with the trip on screen
+    restorePlan(t.id);             // that trip's own itinerary + edits, if any
+    setTripStore(activateTripId(t.id)); // persist the choice so reload resumes it
     setScreen("dashboard");
+  }
+
+  function handleResume(tripId) {
+    activateTrip(tripId ? allTrips.find(t => t.id === tripId) : savedTrip);
+  }
+
+  /** Delete a saved trip (and its itinerary). */
+  function handleDeleteTrip(tripId) {
+    const next = deleteTrip(tripId);
+    setTripStore(next);
+    // If the open trip was the one deleted, leave the dashboard rather than
+    // rendering a trip that no longer exists.
+    if (trip?.id === tripId) {
+      setTrip(null);
+      clearSavedPlan();
+      setScreen("welcome");
+    }
   }
 
   /**
@@ -382,6 +413,8 @@ export default function Wandr() {
                 hasProfile={!!savedProfile}
                 savedTrip={savedTrip}
                 onResume={handleResume}
+                trips={allTrips}
+                onDeleteTrip={handleDeleteTrip}
               />
             </Page>
           )}
@@ -423,6 +456,8 @@ export default function Wandr() {
               <ErrorBoundary>
                 <Dashboard
                   trip={trip}
+                  trips={allTrips}
+                  onSwitchTrip={handleResume}
                   tripGames={tripGames}
                   planText={planText} planModel={planModel} planLoading={planLoading} planMode={planMode}
                   patchError={patchError}

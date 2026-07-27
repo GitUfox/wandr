@@ -11,6 +11,9 @@ import {
   saveTripStore,
   persistTrip,
   MAX_TRIPS,
+  setActiveTripId,
+  activateTripId,
+  deleteTrip,
 } from "./tripStore.js";
 
 // Minimal localStorage stand-in — the suite runs in the `node` environment.
@@ -216,5 +219,90 @@ describe("newTripId", () => {
   it("produces unique ids", () => {
     const ids = new Set(Array.from({ length: 500 }, () => newTripId()));
     expect(ids.size).toBe(500);
+  });
+});
+
+// ── Phase 2: switching and deleting ──────────────────────────────────────────
+
+describe("setActiveTripId", () => {
+  it("points activeId at an existing trip", () => {
+    let { store } = upsertTrip(null, tripFor("A"));
+    const aId = store.activeId;
+    ({ store } = upsertTrip(store, tripFor("B")));
+    expect(store.activeId).not.toBe(aId);
+
+    const switched = setActiveTripId(store, aId);
+    expect(switched.activeId).toBe(aId);
+    expect(getActiveTrip(switched).destination).toBe("A");
+  });
+
+  it("ignores an unknown id rather than storing a dangling pointer", () => {
+    const { store } = upsertTrip(null, tripFor("A"));
+    const same = setActiveTripId(store, "nope");
+    expect(same.activeId).toBe(store.activeId);
+    expect(getActiveTrip(same)).toBeTruthy();
+  });
+
+  it("tolerates an empty store", () => {
+    expect(setActiveTripId(null, "x").trips).toEqual([]);
+  });
+});
+
+describe("activateTripId / deleteTrip (persisted)", () => {
+  it("activateTripId persists the choice so a reload resumes the switched-to trip", () => {
+    persistTrip(tripFor("France"));
+    const store = persistTrip(tripFor("Norway"));
+    const franceId = store.trips.find(t => t.destination === "France").id;
+
+    activateTripId(franceId);
+    // Re-read from storage — this is what a reload would do.
+    expect(getActiveTrip(loadTripStore()).destination).toBe("France");
+    // ...and the legacy mirror follows the active trip, for rollback.
+    expect(JSON.parse(localStorage.getItem("wandr_trip")).destination).toBe("France");
+  });
+
+  it("deleteTrip removes the trip and its plan, promoting another", () => {
+    persistTrip(tripFor("France"));
+    const store = persistTrip(tripFor("Norway"));
+    const norwayId = store.activeId;
+    localStorage.setItem(planKeyFor(norwayId), JSON.stringify({ planText: "norway plan" }));
+
+    const next = deleteTrip(norwayId);
+    expect(next.trips.map(t => t.destination)).toEqual(["France"]);
+    expect(localStorage.getItem(planKeyFor(norwayId))).toBeNull(); // no orphan
+    expect(getActiveTrip(next).destination).toBe("France");
+  });
+
+  it("deleting the last trip leaves an empty store, not a dangling activeId", () => {
+    const store = persistTrip(tripFor("Only"));
+    const next = deleteTrip(store.activeId);
+    expect(next.trips).toEqual([]);
+    expect(next.activeId).toBeNull();
+    expect(getActiveTrip(next)).toBeNull();
+  });
+
+  it("deleting a non-active trip leaves the active one alone", () => {
+    persistTrip(tripFor("Keep"));
+    const store = persistTrip(tripFor("Active"));
+    const keepId = store.trips.find(t => t.destination === "Keep").id;
+    const next = deleteTrip(keepId);
+    expect(next.activeId).toBe(store.activeId);
+    expect(getActiveTrip(next).destination).toBe("Active");
+  });
+
+  it("switching does not clobber either trip's plan", () => {
+    const s1 = persistTrip(tripFor("France"));
+    const franceId = s1.activeId;
+    localStorage.setItem(planKeyFor(franceId), JSON.stringify({ planText: "FRANCE PLAN" }));
+    const s2 = persistTrip(tripFor("Norway"));
+    const norwayId = s2.activeId;
+    localStorage.setItem(planKeyFor(norwayId), JSON.stringify({ planText: "NORWAY PLAN" }));
+
+    activateTripId(franceId);
+    activateTripId(norwayId);
+    activateTripId(franceId);
+
+    expect(JSON.parse(localStorage.getItem(planKeyFor(franceId))).planText).toBe("FRANCE PLAN");
+    expect(JSON.parse(localStorage.getItem(planKeyFor(norwayId))).planText).toBe("NORWAY PLAN");
   });
 });

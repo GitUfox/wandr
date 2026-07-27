@@ -292,6 +292,12 @@ export function useGenerate() {
    * Returns true if a plan was restored.
    */
   function restorePlan(tripId) {
+    // Abort explicitly, not via resetPlan's side effect: switching trips while
+    // a generation is streaming MUST cancel it. Otherwise that response lands
+    // after the owner has changed and writes the previous trip's itinerary under
+    // this trip. Stated here so a future refactor of resetPlan can't silently
+    // remove the guarantee.
+    abortRef.current?.abort();
     // Claim ownership first, then load — so a trip with no saved plan still
     // resets cleanly instead of leaving the previous trip's plan on screen.
     planOwnerRef.current = tripId || null;

@@ -1,13 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import { T, DEST_PLACEHOLDERS } from "../lib/constants.js";
+import { formatShortDate } from "../lib/utils.js";
 import WandrLogo from "./WandrLogo.jsx";
 
-export default function WelcomeScreen({ onStart, hasProfile, savedTrip, onResume }) {
+export default function WelcomeScreen({ onStart, hasProfile, savedTrip, onResume, trips = [], onDeleteTrip }) {
   const [dest, setDest]                     = useState("");
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [placeholderFade, setPlaceholderFade] = useState(true);
   const [showAbout, setShowAbout]           = useState(false);
+  const [showAllTrips, setShowAllTrips]     = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const intervalRef = useRef(null);
+
+  // With one saved trip the UI stays exactly as it was — a single Resume
+  // button. The list only appears once there's an actual choice to make.
+  const hasMultiple = trips.length > 1;
 
   const destValid = dest.trim().length > 1;
 
@@ -123,12 +130,69 @@ export default function WelcomeScreen({ onStart, hasProfile, savedTrip, onResume
         )}
         {!destValid && <div style={{ height: 16 }} />}
 
-        {/* Resume last trip */}
+        {/* Resume the active trip. With more than one saved, a disclosure opens
+            the full list so the others are reachable instead of stored-but-lost. */}
         {savedTrip?.destination && (
-          <button onClick={onResume}
-            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "10px 0", borderRadius: 10, fontSize: 13, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, cursor: "pointer", fontFamily: T.font, marginBottom: "1.5rem" }}>
+          <button onClick={() => onResume()}
+            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "10px 0", borderRadius: 10, fontSize: 13, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, cursor: "pointer", fontFamily: T.font, marginBottom: hasMultiple ? 8 : "1.5rem" }}>
             <span style={{ fontSize: 12 }}>↩</span> Resume: <strong style={{ color: T.ink }}>{savedTrip.destination}</strong>
           </button>
+        )}
+
+        {savedTrip?.destination && hasMultiple && (
+          <div style={{ marginBottom: "1.5rem" }}>
+            <button onClick={() => { setShowAllTrips(v => !v); setConfirmDeleteId(null); }}
+              style={{ width: "100%", padding: "7px 0", background: "transparent", border: "none", color: T.hint, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: T.font }}>
+              {showAllTrips ? "Hide" : `All trips (${trips.length})`} {showAllTrips ? "▴" : "▾"}
+            </button>
+
+            {showAllTrips && (
+              <div className="fade-up" style={{ marginTop: 4, border: `1px solid ${T.border}`, borderRadius: 10, overflow: "hidden" }}>
+                {trips.map((t, i) => {
+                  const isActive    = t.id === savedTrip.id;
+                  const confirming  = confirmDeleteId === t.id;
+                  const dates = [t.answers?.dates?.start, t.answers?.dates?.end].every(Boolean)
+                    ? `${formatShortDate(t.answers.dates.start)} → ${formatShortDate(t.answers.dates.end)}`
+                    : `${t.nights || "?"} nights`;
+                  return (
+                    <div key={t.id}
+                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: isActive ? T.bg2 : T.bg1, borderTop: i === 0 ? "none" : `1px solid ${T.border}` }}>
+                      {confirming ? (
+                        <>
+                          <div style={{ flex: 1, fontSize: 12, color: T.muted }}>
+                            Delete <strong style={{ color: T.ink }}>{t.destination}</strong> and its itinerary?
+                          </div>
+                          <button onClick={() => { onDeleteTrip?.(t.id); setConfirmDeleteId(null); }}
+                            style={{ fontSize: 11, fontWeight: 700, color: T.white, background: T.accent, border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontFamily: T.font }}>
+                            Delete
+                          </button>
+                          <button onClick={() => setConfirmDeleteId(null)}
+                            style={{ fontSize: 11, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontFamily: T.font }}>
+                            Keep
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => onResume(t.id)}
+                            style={{ flex: 1, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, display: "flex", alignItems: "center", gap: 6 }}>
+                              {t.destination}
+                              {isActive && <span style={{ fontSize: 9, fontWeight: 700, color: T.accent, border: `1px solid ${T.accent}`, borderRadius: 100, padding: "1px 6px", letterSpacing: ".06em" }}>CURRENT</span>}
+                            </div>
+                            <div style={{ fontSize: 11, color: T.hint, marginTop: 2 }}>{dates}</div>
+                          </button>
+                          <button onClick={() => setConfirmDeleteId(t.id)} aria-label={`Delete ${t.destination}`}
+                            style={{ fontSize: 14, lineHeight: 1, color: T.hint, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "4px 2px" }}>
+                            ×
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
         {!savedTrip?.destination && destValid && <div style={{ height: "1.5rem" }} />}
         {!savedTrip?.destination && !destValid && <div style={{ height: 0 }} />}
