@@ -17,6 +17,7 @@ const BASEBALL_TAGS = ["Baseball", "Spring-training"];
 const TEAM_OPTIONS = [...MLB_TEAMS].sort((a, b) => a.name.localeCompare(b.name));
 import DictationButton from "./DictationButton.jsx";
 import BudgetTiers from "./BudgetTiers.jsx";
+import InterestsPicker from "./InterestsPicker.jsx";
 
 // Mic position for single-line inputs (anchored to the input's top, so the
 // wrapper's bottom margin doesn't throw off vertical centering).
@@ -38,6 +39,8 @@ const STEP_TRANSITION = { duration: 0.18, ease: [0.25, 0.1, 0.25, 1] };
 
 export default function InterviewFlow({
   step,
+  stepNumber,
+  stepTotal,
   direction,
   onWelcome, onAdvance, onBack,
   cur, setCur,
@@ -56,7 +59,11 @@ export default function InterviewFlow({
   isValid,
 }) {
   const S   = STEPS[step];
-  const pct = Math.round((step / STEPS.length) * 100);
+  // Progress is measured over the steps this run will actually show, not all
+  // six — continue mode skips four of them.
+  const total = stepTotal || STEPS.length;
+  const num   = stepNumber || step + 1;
+  const pct   = Math.round(((num - 1) / total) * 100);
   const [expanded, setExpanded] = useState(new Set());
 
   function toggleChip(o) {
@@ -84,7 +91,7 @@ export default function InterviewFlow({
           <div style={{ flex:1, height:2, background:T.bg3, borderRadius:1 }}>
             <div style={{ width:`${pct}%`, height:"100%", background:T.accent, borderRadius:1, transition:"width .4s ease" }} />
           </div>
-          <span style={{ fontSize:11, color:T.hint, minWidth:36, textAlign:"right" }}>{step+1} / {STEPS.length}</span>
+          <span style={{ fontSize:11, color:T.hint, minWidth:36, textAlign:"right" }}>{num} / {total}</span>
         </div>
 
         <AnimatePresence mode="wait" custom={direction}>
@@ -240,53 +247,19 @@ export default function InterviewFlow({
                 tags; "Show N more" reveals the rest, so ~60 tags across 9
                 groups doesn't render as one overwhelming wall of chips. */}
             {S.groups ? (
-              <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:10 }}>
-                {S.groups.map(group => {
-                  const isOpen  = expanded.has(group.label);
-                  const count   = group.defaultCount ?? group.opts.length;
-                  const visible = isOpen ? group.opts : group.opts.slice(0, count);
-                  const hidden  = group.opts.length - count;
-                  return (
-                    <div key={group.label}>
-                      <div style={{ fontSize:10, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:6 }}>{group.label}</div>
-                      <div style={{ display:"flex", flexWrap:"wrap", gap:6, alignItems:"center" }}>
-                        {visible.map(o => {
-                          const sel  = chips.includes(o);
-                          const prio = priorityChips.includes(o);
-                          return (
-                            <button key={o} className="wandr-chip" data-label={o}
-                              onClick={() => {
-                                const isSel = chips.includes(o);
-                                setChips(p => isSel ? p.filter(x => x !== o) : [...p, o]);
-                                if (isSel) setPriorityChips(pc => pc.filter(x => x !== o)); // deselect drops priority
-                              }}
-                              style={{ padding:"6px 13px", fontSize:12, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
-                              {o}
-                              {sel && (
-                                <span onClick={e => { e.stopPropagation(); setPriorityChips(pc => pc.includes(o) ? pc.filter(x => x !== o) : [...pc, o]); }}
-                                  title={prio ? "Priority — wins scheduling conflicts" : "Mark as a priority"}
-                                  style={{ marginLeft:5, fontSize:13, lineHeight:1, color:prio?T.accent:T.hint, cursor:"pointer" }}>
-                                  {prio ? "★" : "☆"}
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                        {hidden > 0 && (
-                          <button onClick={() => setExpanded(p => {
-                              const next = new Set(p);
-                              next.has(group.label) ? next.delete(group.label) : next.add(group.label);
-                              return next;
-                            })}
-                            style={{ padding:"6px 4px", fontSize:11.5, fontWeight:600, color:T.accent, background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>
-                            {isOpen ? "Show less" : `Show ${hidden} more →`}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <InterestsPicker
+                groups={S.groups}
+                chips={chips} setChips={setChips}
+                priorityChips={priorityChips} setPriorityChips={setPriorityChips}
+                teams={teams} setTeams={setTeams}
+              >
+                <div style={{ position:"relative" }}>
+                  <input type="text" value={cur} onChange={e => setCur(e.target.value)}
+                    placeholder={S.ph}
+                    style={{...inputSt, marginBottom:0, fontSize:12.5, paddingRight:40}} />
+                  <DictationButton value={cur} onChange={setCur} style={INPUT_MIC} />
+                </div>
+              </InterestsPicker>
             ) : (
               /* Flat chips (party step) */
               <>
@@ -320,30 +293,15 @@ export default function InterviewFlow({
                 )}
               </>
             )}
-            <div style={{ position:"relative" }}>
-              <input type="text" value={cur} onChange={e => setCur(e.target.value)}
-                placeholder={S.ph}
-                style={{...inputSt, marginBottom:0, fontSize:12.5, paddingRight:40}} />
-              <DictationButton value={cur} onChange={setCur} style={INPUT_MIC} />
-            </div>
-            {S.id === "interests" && chips.length > 0 && (
-              <div style={{ marginTop:8 }}>
-                <span style={{ fontSize:11, color:T.accent }}>{chips.length} interest{chips.length !== 1 ? "s" : ""} selected</span>
-                <span style={{ fontSize:11, color:T.hint, marginLeft:8 }}>
-                  · tap ☆ to prioritize{priorityChips.length > 0 ? ` (★ ${priorityChips.length})` : ""}
-                </span>
-              </div>
-            )}
-            {/* Favorite-team picker — appears only when baseball is an interest (§7).
-                We flag your team's games at any destination, home or away. */}
-            {S.id === "interests" && chips.some(c => BASEBALL_TAGS.includes(c)) && (
-              <div style={{ marginTop:12, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-                <span style={{ fontSize:12, color:T.ink }}>⚾ Favorite team?</span>
-                <select value={teams[0] || ""} onChange={e => setTeams(e.target.value ? [e.target.value] : [])}
-                  style={{ flex:"1 1 180px", minWidth:0, padding:"7px 10px", border:`1px solid ${T.border}`, borderRadius:8, background:T.bg3, color:teams[0] ? T.ink : T.hint, outline:"none", fontSize:12.5, fontFamily:T.font, colorScheme:"dark" }}>
-                  <option value="">No favorite (just love the game)</option>
-                  {TEAM_OPTIONS.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
-                </select>
+            {/* Party step keeps its own free-text field — the interests step
+                slots its copy inside InterestsPicker so the summary line still
+                renders beneath it. */}
+            {!S.groups && (
+              <div style={{ position:"relative" }}>
+                <input type="text" value={cur} onChange={e => setCur(e.target.value)}
+                  placeholder={S.ph}
+                  style={{...inputSt, marginBottom:0, fontSize:12.5, paddingRight:40}} />
+                <DictationButton value={cur} onChange={setCur} style={INPUT_MIC} />
               </div>
             )}
           </div>

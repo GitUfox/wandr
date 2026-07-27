@@ -12,10 +12,11 @@
  * exit animation + unmounting. Dashboard renders this component always mounted.
  */
 import { useState } from "react";
-import { T, nearestBudgetTier } from "../lib/constants.js";
+import { T, nearestBudgetTier, INTERESTS_GROUPS } from "../lib/constants.js";
 import { extractDayHeaders } from "../lib/utils.js";
 import DateRangePicker from "./DateRangePicker.jsx";
 import BudgetTiers from "./BudgetTiers.jsx";
+import InterestsPicker from "./InterestsPicker.jsx";
 
 const VIBE_CHIPS = [
   "More relaxed",
@@ -170,6 +171,12 @@ export default function EditTripSheet({
     Array.isArray(a.party?.chips) ? a.party.chips[0] :
     typeof a.party === "string"   ? a.party : ""
   );
+  // Interests were previously un-editable per trip — the only way to change them
+  // was a full re-interview. Same shapes as answers.interests so doRebuild can
+  // hand them straight back with no translation.
+  const [localChips, setLocalChips]       = useState(() => a.interests?.chips || []);
+  const [localPriority, setLocalPriority] = useState(() => a.interests?.priorityChips || []);
+  const [localTeams, setLocalTeams]       = useState(() => a.interests?.teams || []);
   const [confirmRebuild, setConfirmRebuild] = useState(false);
 
   const dayHeaders = extractDayHeaders(planText || "");
@@ -235,6 +242,13 @@ export default function EditTripSheet({
       party: typeof a.party === "object" && a.party !== null
         ? { ...a.party, chips: [localParty] }
         : localParty,
+      // Preserve the free-text overflow ("also: craft beer") the picker doesn't edit.
+      interests: {
+        ...(a.interests || {}),
+        chips: localChips,
+        priorityChips: localPriority,
+        teams: localTeams,
+      },
     };
     setConfirmRebuild(false);
     onEditTripDetails(newAnswers);
@@ -530,7 +544,7 @@ export default function EditTripSheet({
                 <BudgetTiers value={localBudget} onChange={setLocalBudget} />
               </Field>
 
-              <Field label="Who's on this trip?">
+              <Field label="Who's going?">
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {PARTY_OPTS.map(opt => {
                     const active = localParty === opt;
@@ -555,6 +569,20 @@ export default function EditTripSheet({
                       </button>
                     );
                   })}
+                </div>
+              </Field>
+
+              <Field label="Interests">
+                <InterestsPicker
+                  groups={INTERESTS_GROUPS}
+                  chips={localChips} setChips={setLocalChips}
+                  priorityChips={localPriority} setPriorityChips={setLocalPriority}
+                  teams={localTeams} setTeams={setLocalTeams}
+                  compact
+                />
+                <div style={{ fontSize: 11, color: T.hint, marginTop: 10, lineHeight: 1.5 }}>
+                  Starred interests win scheduling conflicts. Ranking happens when the
+                  trip is built, so changes here take effect on the rebuild below.
                 </div>
               </Field>
 
@@ -592,7 +620,7 @@ export default function EditTripSheet({
               Rebuild this trip?
             </div>
             <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.55, marginBottom: 18 }}>
-              This replaces your current trip and clears any generated plans. Your current trip stays until the new one's ready.
+              This rebuilds the trip from your new answers. Any itinerary you've generated — including edits you've made by hand — is cleared. Your current trip stays until the new one's ready.
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button

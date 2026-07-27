@@ -1,5 +1,5 @@
 import { arr, calcNights, parseISODate } from "./utils.js";
-import { paceBand } from "./constants.js";
+import { paceBand, INTERESTS_GROUPS } from "./constants.js";
 
 // ── Activity priority helpers ───────────────────────────────────────────────
 // Each built activity carries a "priority" tier (essential | recommended |
@@ -220,21 +220,38 @@ function buildDayLabels(startISO, nights) {
 // META_SCHEMA is the lighter half (~23s). useBuildTrip runs both concurrently
 // and merges. FULL_SCHEMA is kept for buildTripPrompt (tests / single-call use).
 
-const CATEGORIES_BODY =
+// Nightlife is INTEREST-GATED (§8). The generic "omit categories with no match"
+// instruction was too soft to rely on: a Scottsdale traveler who picked
+// Golf/Hiking/ATV/Museums still got a wine bar scheduled — twice. Asking for the
+// category at all is enough to get it filled, so the strict gate is to leave the
+// key out of the requested schema entirely.
+const NIGHTLIFE_TAGS =
+  INTERESTS_GROUPS.find(g => g.label === "Nightlife")?.opts || [];
+
+export function wantsNightlife(a) {
+  const chips = a?.interests?.chips;
+  if (!Array.isArray(chips)) return false;
+  return chips.some(c => NIGHTLIFE_TAGS.includes(c));
+}
+
+const NIGHTLIFE_LINE =
+`"nightlife":[{"name":"","description":"","vibe":"","proTip":"","priority":"essential|recommended|optional"}],
+`;
+
+const categoriesBody = (nightlife) =>
 `"categories":{
 "nature":[{"name":"","description":"","duration":"","difficulty":"","proTip":"","priority":"essential|recommended|optional"}],
 "culture":[{"name":"","description":"","duration":"","admission":"","proTip":"","priority":"essential|recommended|optional"}],
-"nightlife":[{"name":"","description":"","vibe":"","proTip":"","priority":"essential|recommended|optional"}],
-"exploration":[{"name":"","description":"","bestTime":"","proTip":"","priority":"essential|recommended|optional"}],
+${nightlife ? NIGHTLIFE_LINE : ""}"exploration":[{"name":"","description":"","bestTime":"","proTip":"","priority":"essential|recommended|optional"}],
 "experiences":[{"name":"","description":"","duration":"","price":"","bookAhead":true,"proTip":"","priority":"essential|recommended|optional"}]
 }`;
 
 const META_BODY = (n) =>
 `"destination":"City, Country","tagline":"8-word trip description","nights":${n},"season":"one sentence","highlights":["h1","h2","h3"]`;
 
-const CATEGORIES_SCHEMA      = `{${CATEGORIES_BODY}}`;
+const CATEGORIES_SCHEMA      = (nl) => `{${categoriesBody(nl)}}`;
 const META_SCHEMA            = (n) => `{${META_BODY(n)}}`;
-const FULL_SCHEMA            = (n) => `{${META_BODY(n)},\n${CATEGORIES_BODY}}`;
+const FULL_SCHEMA            = (n, nl) => `{${META_BODY(n)},\n${categoriesBody(nl)}}`;
 
 /**
  * Build the shared instruction context (everything except the JSON schema)
@@ -315,7 +332,7 @@ function assembleTripMessage(contextText, schema, imageBlocks) {
  */
 export function buildTripPrompt(answers, uploadedFiles) {
   const { contextText, imageBlocks, n, safeStart, safeEnd } = tripContext(answers, uploadedFiles);
-  return { messageContent: assembleTripMessage(contextText, FULL_SCHEMA(n), imageBlocks), n, safeStart, safeEnd };
+  return { messageContent: assembleTripMessage(contextText, FULL_SCHEMA(n, wantsNightlife(answers)), imageBlocks), n, safeStart, safeEnd };
 }
 
 /**
@@ -324,7 +341,7 @@ export function buildTripPrompt(answers, uploadedFiles) {
  */
 export function buildTripCategoriesPrompt(answers, uploadedFiles) {
   const { contextText, imageBlocks, n } = tripContext(answers, uploadedFiles);
-  return { messageContent: assembleTripMessage(contextText, CATEGORIES_SCHEMA, imageBlocks), n };
+  return { messageContent: assembleTripMessage(contextText, CATEGORIES_SCHEMA(wantsNightlife(answers)), imageBlocks), n };
 }
 
 /**

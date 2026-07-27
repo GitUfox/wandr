@@ -3,6 +3,14 @@
 Every user-facing word in the app, grouped by surface, with where it lives.
 Use this to review tone and wording. Edit freely — this is a working doc.
 
+> ⚠️ **Partly stale as of 2026-07-21.** Verified against the app during the
+> phase-6 polish pass: the entries below for `Dining for every meal` and
+> `A complete day-by-day itinerary…` describe copy that no longer exists — food
+> was removed in `f9ddd76` and the value line in `775cf3a`. **The app is
+> correct; this doc lagged.** Surfaces added since (trip switcher, offline
+> notices, PWA install, Trip Details interests) are not captured here yet.
+> Treat it as a partial snapshot, not a source of truth.
+
 Legend for "Source": file where the string is defined.
 
 ---

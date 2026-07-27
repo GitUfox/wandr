@@ -198,6 +198,16 @@ export default function Wandr() {
 
   // In "continue" mode, profile-backed steps are pre-answered — skip over them.
   // Guards keep the result within [0, last] (never skips dates or notes).
+  // Which steps the user will actually see this run. In continue mode the
+  // profile-backed steps are pre-answered and skipped, so counting all six
+  // made the progress bar jump 1/6 → 6/6 — honest but jarring.
+  const visibleStepIdxs = STEPS
+    .map((st, i) => i)
+    .filter(i => interviewMode !== "continue"
+      || i === 0
+      || i === STEPS.length - 1
+      || !PROFILE_BACKED_STEP_IDS.includes(STEPS[i].id));
+
   function nextVisibleStep(from, dir) {
     let i = from + dir;
     if (interviewMode === "continue") {
@@ -423,6 +433,8 @@ export default function Wandr() {
             <Page key="interview">
               <InterviewFlow
                 step={step}
+                stepNumber={Math.max(1, visibleStepIdxs.indexOf(step) + 1)}
+                stepTotal={visibleStepIdxs.length}
                 direction={direction}
                 onWelcome={() => setScreen("welcome")}
                 onAdvance={advance}

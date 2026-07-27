@@ -45,6 +45,22 @@ export const T = {
   white:"#ffffff", font:"'Manrope',sans-serif",
 };
 
+// ── Interest taxonomy ────────────────────────────────────────────────────────
+// One home for the 9-group tag list. Both the interview step and the Trip
+// Details edit sheet render it through InterestsPicker, so a taxonomy change
+// reaches every surface at once.
+export const INTERESTS_GROUPS = [
+  { label:"Active",    defaultCount:5, opts:["Golf","Pickleball","Tennis","Rock climbing","Cycling","Volleyball","Batting cages","Bowling","Kayaking"] },
+  { label:"Spectate",  defaultCount:4, opts:["Baseball","Basketball","Football","Spring training","Hockey","Soccer","College sports"] },
+  { label:"Outdoors",  defaultCount:4, opts:["Hiking","Desert","Trails","Lake","Beach","Camping","Stargazing","Water park","Tubing"] },
+  { label:"Tours",     defaultCount:4, opts:["ATV","Horseback","Ghost tour","Jeep tour","Segway","Helicopter","Boat tour","Historic tour"] },
+  { label:"Arts",      defaultCount:4, opts:["Museums","Theater","Live music","Galleries","Architecture","Public art","Festivals"] },
+  { label:"Nightlife", defaultCount:4, opts:["Bars","Breweries","Clubs","Cocktails","Wineries","Casino","Pool club"] },
+  { label:"Wellness",  defaultCount:4, opts:["Spa","Yoga","Hot springs","Meditation"] },
+  { label:"Games",     defaultCount:2, opts:["Escape room","Mini golf","Axe throwing","Comedy","Arcade"] },
+  { label:"Local",     defaultCount:3, opts:["Shopping","Markets","Scenic views","Neighborhoods","Zoo"] },
+];
+
 // ── Interview steps ───────────────────────────────────────────────────────────
 export const STEPS = [
   {
@@ -80,17 +96,7 @@ export const STEPS = [
     // string (see App.jsx `chips`), same as before this taxonomy expanded.
     // `defaultCount` = how many of `opts` (ordered default-first) render
     // before the "Show N more" toggle in InterviewFlow.jsx.
-    groups:[
-      { label:"Active",    defaultCount:5, opts:["Golf","Pickleball","Tennis","Rock climbing","Cycling","Volleyball","Batting cages","Bowling","Kayaking"] },
-      { label:"Spectate",  defaultCount:4, opts:["Baseball","Basketball","Football","Spring training","Hockey","Soccer","College sports"] },
-      { label:"Outdoors",  defaultCount:4, opts:["Hiking","Desert","Trails","Lake","Beach","Camping","Stargazing","Water park","Tubing"] },
-      { label:"Tours",     defaultCount:4, opts:["ATV","Horseback","Ghost tour","Jeep tour","Segway","Helicopter","Boat tour","Historic tour"] },
-      { label:"Arts",      defaultCount:4, opts:["Museums","Theater","Live music","Galleries","Architecture","Public art","Festivals"] },
-      { label:"Nightlife", defaultCount:4, opts:["Bars","Breweries","Clubs","Cocktails","Wineries","Casino","Pool club"] },
-      { label:"Wellness",  defaultCount:4, opts:["Spa","Yoga","Hot springs","Meditation"] },
-      { label:"Games",     defaultCount:2, opts:["Escape room","Mini golf","Axe throwing","Comedy","Arcade"] },
-      { label:"Local",     defaultCount:3, opts:["Shopping","Markets","Scenic views","Neighborhoods","Zoo"] },
-    ],
+    groups: INTERESTS_GROUPS,
   },
   {
     id:"notes",

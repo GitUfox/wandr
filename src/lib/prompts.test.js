@@ -555,3 +555,51 @@ describe("traveler context is consistent across every prompt builder", () => {
     expect(planText).toContain("staying with family/friends");
   });
 });
+
+// ── Nightlife is interest-gated (§8) ─────────────────────────────────────────
+//
+// The generic "omit categories with no match" instruction was too soft: a
+// Scottsdale traveler who picked Golf/Hiking/ATV/Museums still got a wine bar
+// scheduled twice. Asking for the category at all is enough to get it filled,
+// so the gate has to keep the key out of the requested schema.
+
+describe("nightlife category gating", () => {
+  const base = {
+    destination: "Scottsdale, Arizona",
+    dates: { start: "2026-10-12", end: "2026-10-15" },
+    budget: 150,
+    party: { chips: ["Couple"] },
+    logistics: { pace: "Balanced" },
+  };
+
+  it("omits the nightlife category when no nightlife tag is selected", () => {
+    const a = { ...base, interests: { chips: ["Golf", "Hiking", "Museums"], text: "" } };
+    const out = buildTripCategoriesPrompt(a).messageContent;
+    expect(out).not.toContain('"nightlife"');
+    // The other categories are untouched.
+    expect(out).toContain('"culture"');
+    expect(out).toContain('"nature"');
+    expect(out).toContain('"exploration"');
+    expect(out).toContain('"experiences"');
+  });
+
+  it("includes it as soon as any nightlife tag is selected", () => {
+    for (const tag of ["Bars", "Breweries", "Wineries", "Cocktails", "Clubs"]) {
+      const a = { ...base, interests: { chips: ["Golf", tag], text: "" } };
+      expect(buildTripCategoriesPrompt(a).messageContent, tag).toContain('"nightlife"');
+    }
+  });
+
+  it("degrades safely for a trip with no interests object at all", () => {
+    expect(() => buildTripCategoriesPrompt({ ...base })).not.toThrow();
+    expect(buildTripCategoriesPrompt({ ...base }).messageContent).not.toContain('"nightlife"');
+  });
+
+  it("keeps the JSON schema well-formed in both states", () => {
+    for (const chips of [["Golf"], ["Golf", "Bars"]]) {
+      const out = buildTripCategoriesPrompt({ ...base, interests: { chips, text: "" } }).messageContent;
+      const schema = out.slice(out.indexOf('{"categories"'));
+      expect(() => JSON.parse(schema.replace(/\|/g, ""))).not.toThrow();
+    }
+  });
+});
