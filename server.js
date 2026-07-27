@@ -78,7 +78,14 @@ if (process.env.NODE_ENV === "production") {
   const root = join(dirname(fileURLToPath(import.meta.url)), "dist");
 
   app.use(express.static(root));
-  app.get("*", (_req, res) => res.sendFile("index.html", { root }));
+  // SPA fallback. A final middleware, not app.get("*") — Express 5's
+  // path-to-regexp rejects a bare "*" and threw on boot, so `npm start` could
+  // not serve at all. This form needs no path parsing and works on 4 and 5.
+  // Runs after express.static, so real files (sw.js, manifest, icons) win.
+  app.use((req, res, next) => {
+    if (req.method !== "GET" || req.path.startsWith("/api/")) return next();
+    res.sendFile("index.html", { root });
+  });
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────

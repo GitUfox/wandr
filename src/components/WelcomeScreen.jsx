@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { T, DEST_PLACEHOLDERS } from "../lib/constants.js";
 import { formatShortDate } from "../lib/utils.js";
+import { useOnline } from "../hooks/useOnline.js";
 import WandrLogo from "./WandrLogo.jsx";
 
 export default function WelcomeScreen({ onStart, hasProfile, savedTrip, onResume, trips = [], onDeleteTrip }) {
@@ -11,6 +12,7 @@ export default function WelcomeScreen({ onStart, hasProfile, savedTrip, onResume
   const [showAllTrips, setShowAllTrips]     = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const intervalRef = useRef(null);
+  const online = useOnline();
 
   // With one saved trip the UI stays exactly as it was — a single Resume
   // button. The list only appears once there's an actual choice to make.
@@ -28,7 +30,7 @@ export default function WelcomeScreen({ onStart, hasProfile, savedTrip, onResume
   }, [dest]);
 
   function handleStart(mode = "fresh") {
-    if (!destValid) return;
+    if (!destValid || !online) return;   // building a trip requires the AI
     onStart(dest.trim(), mode);
   }
 
@@ -102,15 +104,26 @@ export default function WelcomeScreen({ onStart, hasProfile, savedTrip, onResume
           </div>
         </div>
 
+        {/* Offline notice — building a trip needs the AI, so say so plainly
+            instead of letting the CTA fail on tap. A saved trip still opens. */}
+        {!online && (
+          <div style={{ marginBottom: 16, padding: "10px 12px", background: T.bg1, border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 12, color: T.muted, lineHeight: 1.5 }}>
+            <strong style={{ color: T.ink }}>You're offline.</strong>{" "}
+            {savedTrip?.destination
+              ? "Your saved trip opens below — new trips need a connection."
+              : "New trips need a connection. Anything you've already saved will open here."}
+          </div>
+        )}
+
         {/* CTA — single "Let's go" for first-timers; three-way entry once a
             profile exists (Continue / Edit / Start fresh). */}
-        {destValid && !hasProfile && (
+        {destValid && online && !hasProfile && (
           <button onClick={() => handleStart("fresh")} className="fade-up"
             style={{ width: "100%", background: T.accent, color: T.white, padding: "14px 0", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", border: "none", fontFamily: T.font, marginBottom: "1rem" }}>
             Let's go →
           </button>
         )}
-        {destValid && hasProfile && (
+        {destValid && online && hasProfile && (
           <div className="fade-up" style={{ marginBottom: "1rem" }}>
             <button onClick={() => handleStart("continue")}
               style={{ width: "100%", background: T.accent, color: T.white, padding: "14px 0", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", border: "none", fontFamily: T.font, marginBottom: 8 }}>

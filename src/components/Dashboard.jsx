@@ -6,6 +6,7 @@
  */
 import { useState } from "react";
 import { MODES, T, FEATURES } from "../lib/constants.js";
+import { useOnline } from "../hooks/useOnline.js";
 import { arr, formatShortDate } from "../lib/utils.js";
 import { TEAM_SHORT } from "../lib/mlbTeams.js";
 import Md from "./Md.jsx";
@@ -40,6 +41,7 @@ export default function Dashboard({
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [eventsDismissed, setEventsDismissed] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const online = useOnline();
 
   // Only render the switcher when there's somewhere to switch to.
   const otherTrips = trips.filter(t => t.id !== trip?.id);
@@ -208,6 +210,12 @@ export default function Dashboard({
               )}
             </div>
             <div style={{ display:"flex", gap:7, alignItems:"flex-start" }}>
+              {!online && (
+                <span title="Your saved trip is readable offline. Building or editing needs a connection."
+                  style={{ fontSize:10, fontWeight:700, color:T.muted, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:100, padding:"4px 9px", whiteSpace:"nowrap" }}>
+                  ● Offline
+                </span>
+              )}
               {otherTrips.length > 0 && (
                 <div style={{ position:"relative" }}>
                   <button onClick={() => setSwitcherOpen(v => !v)}
@@ -238,8 +246,10 @@ export default function Dashboard({
                 </div>
               )}
               <button
-                onClick={() => setEditSheetOpen(true)}
-                style={{ fontSize:11, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:6, padding:"5px 12px", cursor:"pointer", fontFamily:T.font, fontWeight:600 }}
+                onClick={() => online && setEditSheetOpen(true)}
+                disabled={!online}
+                title={online ? undefined : "Editing needs a connection"}
+                style={{ fontSize:11, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:6, padding:"5px 12px", cursor:online?"pointer":"not-allowed", opacity:online?1:.45, fontFamily:T.font, fontWeight:600 }}
               >
                 Edit trip
               </button>
@@ -329,11 +339,11 @@ export default function Dashboard({
                 const hero = MODES[0];
                 const isActive = planMode === hero.id;
                 return (
-                  <button onClick={() => onGenerate(hero.id)}
-                    style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"14px 16px", borderRadius:12, background:isActive?"#2a1a12":T.bg1, border:isActive?`2px solid ${T.accent}`:`1px solid ${T.border2}`, cursor:"pointer", fontFamily:T.font, marginBottom:8, textAlign:"left", transition:"all .15s" }}>
+                  <button onClick={() => online && onGenerate(hero.id)} disabled={!online}
+                    style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"14px 16px", borderRadius:12, background:isActive?"#2a1a12":T.bg1, border:isActive?`2px solid ${T.accent}`:`1px solid ${T.border2}`, cursor:online?"pointer":"not-allowed", opacity:online?1:.5, fontFamily:T.font, marginBottom:8, textAlign:"left", transition:"all .15s" }}>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:14, fontWeight:800, color:isActive?T.accent:T.ink, marginBottom:2 }}>{hero.label}</div>
-                      <div style={{ fontSize:12, color:isActive?"#a06040":T.muted }}>{hero.desc}</div>
+                      <div style={{ fontSize:12, color:isActive?"#a06040":T.muted }}>{online ? hero.desc : "Needs a connection"}</div>
                     </div>
                     <div style={{ fontSize:11, fontWeight:700, color:isActive?T.accent:T.hint, background:isActive?"#3a2a1a":T.bg3, padding:"4px 10px", borderRadius:100, flexShrink:0 }}>
                       {isActive && planLoading ? "…" : isActive ? "Active" : "Generate →"}

@@ -12,6 +12,7 @@
 import { useState } from "react";
 import { Reorder, useDragControls } from "framer-motion";
 import { T } from "../lib/constants.js";
+import { useOnline } from "../hooks/useOnline.js";
 import { BUCKETS, bucketOf, timeSortKey } from "../lib/utils.js";
 
 const clean = s => (s || "").replace(/\*\*/g, "").trim();
@@ -22,6 +23,9 @@ const iconBtn = {
 };
 
 function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteActivity, onMoveActivity, onTweakActivity }) {
+  // The ✦ tweak is the only per-activity action that calls the AI; inline edit,
+  // move and delete are all local, so they stay available offline.
+  const online = useOnline();
   const controls = useDragControls();
   const [editing, setEditing]       = useState(false);
   const [time, setTime]             = useState(a.time);
@@ -131,7 +135,9 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
                 </div>
               ) : (
                 <>
-                  <button onClick={() => setTweakOpen(o => !o)} title="Ask AI to tweak this" style={{ ...iconBtn, color: tweakOpen ? T.accent : T.muted }}>✦</button>
+                  <button onClick={() => online && setTweakOpen(o => !o)} disabled={!online}
+                    title={online ? "Ask AI to tweak this" : "Tweaking needs a connection"}
+                    style={{ ...iconBtn, color: tweakOpen ? T.accent : T.muted, opacity: online ? 1 : .35, cursor: online ? "pointer" : "not-allowed" }}>✦</button>
                   {otherDays.length > 0 && (
                     <button onClick={() => setMoving(m => !m)} title="Move to another day" style={{ ...iconBtn, color: moving ? T.accent : T.muted }}>⤴</button>
                   )}
