@@ -140,6 +140,31 @@ export function formatShortDate(iso) {
 }
 
 /**
+ * Format an ISO date as a boarding-pass stub label ("JUN 30").
+ * Returns "" if it isn't a valid date — callers hide the row.
+ */
+export function ticketDate(iso) {
+  const d = parseISODate(iso);
+  if (!d) return "";
+  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  return `${months[d.getMonth()]} ${d.getDate()}`;
+}
+
+/**
+ * Short season label derived from the trip's start date ("Late June").
+ * Day 1–10 = Early, 11–20 = Mid, 21+ = Late. "" when the date is invalid,
+ * so the ticket stub simply drops the Season column.
+ */
+export function seasonShort(iso) {
+  const d = parseISODate(iso);
+  if (!d) return "";
+  const months = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"];
+  const part = d.getDate() <= 10 ? "Early" : d.getDate() <= 20 ? "Mid" : "Late";
+  return `${part} ${months[d.getMonth()]}`;
+}
+
+/**
  * Time-of-day buckets for the alternate itinerary view. Morning < 12pm,
  * Afternoon 12–5pm, Evening ≥ 5pm. Anchors are the default clock time an
  * activity gets when it's moved into an otherwise-empty bucket.

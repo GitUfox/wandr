@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate } from "./utils.js";
+import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort } from "./utils.js";
 
 // ── arr ───────────────────────────────────────────────────────────────────────
 
@@ -331,5 +331,34 @@ describe("formatShortDate", () => {
     expect(formatShortDate("not-a-date")).toBe("not-a-date");
     expect(formatShortDate("")).toBe("");
     expect(formatShortDate(null)).toBe("");
+  });
+});
+
+// ── ticketDate / seasonShort (boarding-pass hero) ─────────────────────────────
+
+describe("ticketDate", () => {
+  it("formats an ISO date as a boarding-pass stub", () => {
+    expect(ticketDate("2026-06-30")).toBe("JUN 30");
+    expect(ticketDate("2026-07-01")).toBe("JUL 1");
+    expect(ticketDate("2026-12-25")).toBe("DEC 25");
+  });
+
+  it("returns '' for invalid input so the ticket hides the row", () => {
+    expect(ticketDate("nope")).toBe("");
+    expect(ticketDate(null)).toBe("");
+  });
+});
+
+describe("seasonShort", () => {
+  it("labels early / mid / late month from the start date", () => {
+    expect(seasonShort("2026-06-05")).toBe("Early June");
+    expect(seasonShort("2026-06-15")).toBe("Mid June");
+    expect(seasonShort("2026-06-30")).toBe("Late June");
+    expect(seasonShort("2026-01-21")).toBe("Late January");
+  });
+
+  it("returns '' for invalid input so the Season column drops out", () => {
+    expect(seasonShort("")).toBe("");
+    expect(seasonShort(undefined)).toBe("");
   });
 });

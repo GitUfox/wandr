@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Wandr w-dot mark: Manrope ExtraBold "w" outline + the wordmark's orange period-globe.
+       Glyph is baked as a path, so no font dependency. Adapts to browser theme. -->
+  <style>
+    .g { fill: #efefef; }
+    @media (prefers-color-scheme: light) { .g { fill: #1a1a1a; } }
+  </style>
+  <path class="g" transform="translate(0.61 17.5) scale(0.0097 -0.0097)"
+    d="M370 0 40 1082 306 1080 502 436 701 1080H927L1126 436L1322 1080H1588L1258 0H1050L814 704L578 0Z"/>
+  <circle cx="20.2" cy="14.3" r="3.3" fill="#c96442"/>
+</svg>

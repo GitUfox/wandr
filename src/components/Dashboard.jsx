@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { MODES, T, FEATURES } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
-import { arr, formatShortDate } from "../lib/utils.js";
+import { arr, formatShortDate, ticketDate, seasonShort } from "../lib/utils.js";
 import { TEAM_SHORT } from "../lib/mlbTeams.js";
 import Md from "./Md.jsx";
 import ItineraryEditor from "./ItineraryEditor.jsx";
@@ -80,6 +80,11 @@ export default function Dashboard({
 
   const a        = trip.answers;
   const modeName = MODES.find(m => m.id === planMode)?.label || "Plan";
+
+  // "Watertown & Thousand Islands, NY, USA" → hero "Watertown & Thousand
+  // Islands" + quiet region line "NY, USA". No comma = no region line.
+  const [destMain, ...destRest] = String(trip.destination || "").split(",");
+  const destRegion = destRest.join(",").trim();
 
   /** Convert ISO date "2026-06-08" → "6/8/2026" */
   function fmtDate(iso) {
@@ -189,24 +194,17 @@ export default function Dashboard({
       <div style={{ maxWidth:760, margin:"0 auto" }} className="no-print">
 
         {/* Header */}
-        <div style={{ background:T.bg1, borderBottom:`1px solid ${T.border}`, padding:"1.75rem 1.75rem 1.375rem" }}>
+        <div style={{ background:`radial-gradient(120% 90% at 18% 0%, rgba(201,100,66,.13), transparent 55%), ${T.bg1}`, borderBottom:`1px solid ${T.border}`, padding:"1.75rem 1.75rem 1.5rem" }}>
           {/* Brand bar */}
           <div style={{ marginBottom:"1.25rem" }}>
             <WandrLogo size="sm" showTrail={false} globe="animated" />
           </div>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, flexWrap:"wrap", marginBottom:10 }}>
             <div>
-              <div style={{ fontSize:9, letterSpacing:".2em", textTransform:"uppercase", color:T.hint, marginBottom:3 }}>My trip</div>
-              <div style={{ fontSize:28, fontWeight:800, color:T.ink, lineHeight:1.1, marginBottom:5 }}>{trip.destination}</div>
-              <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.6, maxWidth:440, fontStyle:"italic" }}>{trip.tagline}</div>
-              {Array.isArray(trip.highlights) && trip.highlights.length > 0 && (
-                <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginTop:8 }}>
-                  {trip.highlights.map((h, i) => (
-                    <span key={i} style={{ fontSize:11, padding:"2px 9px", background:T.bg2, border:`1px solid ${T.border}`, borderRadius:100, color:T.muted }}>
-                      {h}
-                    </span>
-                  ))}
-                </div>
+              <div style={{ fontSize:9, letterSpacing:".2em", textTransform:"uppercase", color:T.accent, fontWeight:700, marginBottom:5 }}>My trip</div>
+              <div style={{ fontSize:28, fontWeight:800, color:T.ink, lineHeight:1.08, letterSpacing:"-.015em" }}>{destMain}</div>
+              {destRegion && (
+                <div style={{ fontSize:11.5, color:T.hint, fontWeight:700, letterSpacing:".08em", textTransform:"uppercase", marginTop:4 }}>{destRegion}</div>
               )}
             </div>
             <div style={{ display:"flex", gap:7, alignItems:"flex-start" }}>
@@ -256,20 +254,68 @@ export default function Dashboard({
               <button onClick={onReset} style={{ fontSize:11, color:T.muted, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px", cursor:"pointer", fontFamily:T.font }}>New trip</button>
             </div>
           </div>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:20, paddingTop:10, borderTop:`1px solid ${T.border}` }}>
-            {[
-              ["Dates",  [a.dates?.start, a.dates?.end].every(Boolean) ? `${fmtDate(a.dates.start)} → ${fmtDate(a.dates.end)}` : ""],
-              ["Nights", `${trip.nights}`],
-              ["Budget", a.budget === 0 ? "With family/friends" : `~${a.budget} USD/day`],
+          {/* Boarding-pass ticket — dates + vitals as one object (design pick 1B).
+              trip.season (the full sentence) now lives only in the PDF export;
+              the stub shows a short derived label instead. */}
+          {(() => {
+            const dep = ticketDate(a.dates?.start);
+            const ret = ticketDate(a.dates?.end);
+            const stubLabel = { fontSize:8.5, letterSpacing:".18em", textTransform:"uppercase", color:T.hint, fontWeight:700 };
+            const notch = { position:"absolute", width:22, height:22, borderRadius:"50%", background:T.bg1, border:`1px solid ${T.border2}`, top:-11 };
+            const stubs = [
+              ["Nights", trip.nights ? `${trip.nights}` : ""],
+              ["Budget", a.budget === 0 ? "With friends" : a.budget ? `$${a.budget}/day` : ""],
               ["Party",  arr(a.party).split(",")[0]],
-              ["Season", trip.season || ""],
-            ].filter(([, v]) => v).map(([l, v]) => (
-              <div key={l}>
-                <div style={{ fontSize:8.5, textTransform:"uppercase", letterSpacing:".15em", color:T.hint }}>{l}</div>
-                <div style={{ fontSize:11.5, color:T.ink, fontWeight:600, marginTop:1 }}>{v}</div>
+              ["Season", seasonShort(a.dates?.start) ? `☀ ${seasonShort(a.dates.start)}` : ""],
+            ].filter(([, v]) => v);
+            return (
+              <div style={{ position:"relative", marginTop:4, background:T.bg2, border:`1px solid ${T.border2}`, borderRadius:16, overflow:"hidden" }}>
+                <div style={{ position:"absolute", right:12, top:14, bottom:14, width:13, background:`repeating-linear-gradient(180deg, ${T.border2} 0 2px, transparent 2px 5px)`, opacity:.5, borderRadius:2 }} />
+                {dep && ret && (
+                  <>
+                    <div style={{ display:"flex", alignItems:"center", gap:14, padding:"15px 38px 13px 18px" }}>
+                      <div>
+                        <div style={stubLabel}>Depart</div>
+                        <div style={{ fontSize:19, fontWeight:800, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{dep}</div>
+                      </div>
+                      <svg viewBox="0 0 46 16" style={{ flex:1, height:16, minWidth:36 }} aria-hidden="true">
+                        <line x1="0" y1="8" x2="18" y2="8" stroke={T.border2} strokeDasharray="2 3" />
+                        <path d="M22 14L40 8 22 2l3 6z" fill={T.accent} />
+                      </svg>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={stubLabel}>Return</div>
+                        <div style={{ fontSize:19, fontWeight:800, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{ret}</div>
+                      </div>
+                    </div>
+                    <div style={{ position:"relative", borderTop:`1.5px dashed ${T.border2}`, margin:"0 26px" }}>
+                      <div style={{ ...notch, left:-37 }} />
+                      <div style={{ ...notch, right:-37 }} />
+                    </div>
+                  </>
+                )}
+                <div style={{ display:"flex", flexWrap:"wrap", gap:18, padding:"12px 38px 15px 18px" }}>
+                  {stubs.map(([l, v]) => (
+                    <div key={l}>
+                      <div style={stubLabel}>{l}</div>
+                      <div style={{ fontSize:12.5, fontWeight:700, color:T.ink, marginTop:1 }}>{v}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            );
+          })()}
+          {trip.tagline && (
+            <div style={{ fontSize:12, color:T.muted, fontStyle:"italic", margin:"12px 2px 0" }}>{trip.tagline}</div>
+          )}
+          {Array.isArray(trip.highlights) && trip.highlights.length > 0 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:7, marginTop:12 }}>
+              {trip.highlights.map((h, i) => (
+                <div key={i} style={{ display:"flex", gap:9, fontSize:11.5, color:T.muted, lineHeight:1.5 }}>
+                  <span style={{ color:T.accent, fontWeight:800, flexShrink:0 }}>✓</span>{h}
+                </div>
+              ))}
+            </div>
+          )}
           {debugMsg && (
             <div style={{ marginTop:10, padding:"6px 10px", background:"rgba(200,80,60,.12)", border:"1px solid rgba(200,80,60,.3)", borderRadius:6, fontSize:11, color:"#f08070" }}>
               {"Couldn't load full trip data — some sections may be missing. Tap a plan mode below to generate your itinerary anyway."}

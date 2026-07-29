@@ -32,7 +32,7 @@
  * Bump CACHE_VERSION to evict every old cache on activate.
  */
 
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2"; // v2: new w-dot favicons
 const SHELL_CACHE   = `wandr-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `wandr-assets-${CACHE_VERSION}`;
 const FONT_CACHE    = `wandr-fonts-${CACHE_VERSION}`;
@@ -46,6 +46,7 @@ const SHELL_URLS = [
   "/icon-192.png",
   "/icon-512.png",
   "/favicon-32.png",
+  "/favicon.svg",
 ];
 
 const FONT_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];

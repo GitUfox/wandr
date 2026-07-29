@@ -13,9 +13,53 @@ import { useState } from "react";
 import { Reorder, useDragControls } from "framer-motion";
 import { T } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
-import { BUCKETS, bucketOf, timeSortKey } from "../lib/utils.js";
+import { BUCKETS, bucketOf, timeSortKey, formatTime } from "../lib/utils.js";
 
 const clean = s => (s || "").replace(/\*\*/g, "").trim();
+
+/* ── Slot-chip time picker (design pick 3A) ──────────────────────────────────
+   Tap a slot instead of typing. 30-minute grain grouped by daypart — the
+   grain an itinerary actually uses. An off-grid value ("9:15 AM", a range)
+   keeps showing on the trigger and survives Save untouched unless a chip is
+   picked, so AI-written times are never mangled. */
+const DAYPARTS = [
+  { label: "Morning",   from: 6 * 60,  to: 11 * 60 + 30 },
+  { label: "Afternoon", from: 12 * 60, to: 17 * 60 + 30 },
+  { label: "Evening",   from: 18 * 60, to: 23 * 60 + 30 },
+];
+
+function TimeSlotPicker({ value, onPick }) {
+  return (
+    <div style={{ background: T.bg1, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 12px 4px", marginBottom: 8 }}>
+      {DAYPARTS.map(p => {
+        const slots = [];
+        for (let m = p.from; m <= p.to; m += 30) slots.push(formatTime(m));
+        return (
+          <div key={p.label} style={{ marginBottom: 9 }}>
+            <div style={{ fontSize: 9, letterSpacing: ".18em", textTransform: "uppercase", color: T.hint, fontWeight: 700, marginBottom: 6 }}>{p.label}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {slots.map(t => {
+                const on = t === value;
+                return (
+                  <button key={t} onClick={() => onPick(t)}
+                    style={{
+                      fontFamily: T.font, fontSize: 11.5, fontWeight: 700, fontVariantNumeric: "tabular-nums",
+                      width: 62, padding: "6px 0", textAlign: "center", borderRadius: 8, cursor: "pointer",
+                      color: on ? T.white : T.muted,
+                      background: on ? T.accent : T.bg2,
+                      border: `1px solid ${on ? T.accent : T.border}`,
+                    }}>
+                    {t.replace(/ (AM|PM)$/, "")}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 const iconBtn = {
   background: "transparent", border: "none", cursor: "pointer",
@@ -29,6 +73,7 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
   const controls = useDragControls();
   const [editing, setEditing]       = useState(false);
   const [time, setTime]             = useState(a.time);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [title, setTitle]           = useState(clean(a.title));
   const [details, setDetails]       = useState(a.details);
   const [confirmDel, setConfirmDel] = useState(false);
@@ -51,10 +96,12 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
       details: details.trim(),
     });
     setEditing(false);
+    setPickerOpen(false);
   }
   function cancel() {
     setTime(a.time); setTitle(clean(a.title)); setDetails(a.details);
     setEditing(false);
+    setPickerOpen(false);
   }
 
   const inputSt = {
@@ -72,11 +119,18 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
       {editing ? (
         <>
           <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-            <input value={time} onChange={e => setTime(e.target.value)} placeholder="Time"
-              style={{ ...inputSt, width: 110, flexShrink: 0, color: T.accent, fontWeight: 700 }} />
+            <button onClick={() => setPickerOpen(v => !v)}
+              title="Pick a time"
+              style={{ ...inputSt, width: 110, flexShrink: 0, color: T.accent, fontWeight: 700, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{clean(time) || "Set time"}</span>
+              <span style={{ color: T.hint, fontSize: 10, flexShrink: 0 }}>{pickerOpen ? "▴" : "▾"}</span>
+            </button>
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Place / activity" autoFocus
               style={{ ...inputSt, fontWeight: 700 }} />
           </div>
+          {pickerOpen && (
+            <TimeSlotPicker value={clean(time)} onPick={t => { setTime(t); setPickerOpen(false); }} />
+          )}
           <textarea value={details} onChange={e => setDetails(e.target.value)} placeholder="Details — what it is, how long, how much" rows={3}
             style={{ ...inputSt, lineHeight: 1.5, resize: "vertical", marginBottom: 8 }} />
           <div style={{ display: "flex", gap: 7, justifyContent: "flex-end" }}>
