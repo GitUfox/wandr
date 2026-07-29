@@ -50,7 +50,7 @@ export default function WelcomeScreen({ onStart, hasProfile, savedTrip, onResume
           <div onClick={e => e.stopPropagation()} className="fade-up"
             style={{ width: "100%", maxWidth: 380, background: T.bg1, border: `1px solid ${T.border}`, borderRadius: 14, padding: "1.5rem 1.5rem 1.75rem" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>What Wandr does</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>Wandr into your next trip</div>
               <button onClick={() => setShowAbout(false)} aria-label="Close"
                 style={{ width: 26, height: 26, borderRadius: "50%", background: "transparent", border: "none", color: T.hint, fontSize: 18, cursor: "pointer", fontFamily: T.font, lineHeight: 1 }}>×</button>
             </div>
