@@ -90,13 +90,23 @@ export default function Dashboard({
     });
   }
 
-  const a        = trip.answers;
-  const modeName = MODES.find(m => m.id === planMode)?.label || "Plan";
+  const a = trip.answers;
 
   // "Watertown & Thousand Islands, NY, USA" → hero "Watertown & Thousand
   // Islands" + quiet region line "NY, USA". No comma = no region line.
   const [destMain, ...destRest] = String(trip.destination || "").split(",");
   const destRegion = destRest.join(",").trim();
+
+  // Boarding-pass data — shared by the on-screen hero and the PDF export (9B)
+  // so the two tickets can never drift.
+  const dep = ticketDate(a.dates?.start);
+  const ret = ticketDate(a.dates?.end);
+  const tripStubs = [
+    ["Nights", trip.nights ? `${trip.nights}` : ""],
+    ["Budget", a.budget === 0 ? "With friends" : a.budget ? `$${a.budget}/day` : ""],
+    ["Party",  arr(a.party).split(",")[0]],
+    ["Season", seasonShort(a.dates?.start) ? `☀ ${seasonShort(a.dates.start)}` : ""],
+  ].filter(([, v]) => v);
 
   /** Convert ISO date "2026-06-08" → "6/8/2026" */
   function fmtDate(iso) {
@@ -114,19 +124,28 @@ export default function Dashboard({
   }
 
   function exportToPdf() {
-    const meta = [
-      ["Dates",  [a.dates?.start, a.dates?.end].every(Boolean) ? `${fmtDate(a.dates.start)} → ${fmtDate(a.dates.end)}` : ""],
-      ["Nights", trip.nights],
-      ["Budget", a.budget === 0 ? "With family/friends" : `~${a.budget} USD/day`],
-      ["Party",  arr(a.party).split(",")[0]],
-      ["Season", trip.season],
-    ].filter(([, v]) => v);
-
-    const metaHtml = meta.map(([l, v]) => `
-      <div style="margin-right:24px">
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#999;margin-bottom:2px">${l}</div>
-        <div style="font-size:12px;color:#1a1a1a;font-weight:600">${v}</div>
+    // Boarding-pass ticket (design pick 9B) — the same object as the hero,
+    // translated to paper: light-grey stock, perforation, barcode.
+    const stubsHtml = tripStubs.map(([l, v]) => `
+      <div>
+        <div class="p-label">${htmlEscape(l)}</div>
+        <div style="font-size:11px;font-weight:700">${htmlEscape(v)}</div>
       </div>`).join("");
+    const ticketHtml = `
+      <div class="ticket">
+        <div class="barcode"></div>
+        ${dep && ret ? `
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 34px 11px 16px">
+          <div><div class="p-label">Depart</div><div class="p-date">${htmlEscape(dep)}</div></div>
+          <svg viewBox="0 0 46 16" style="flex:1;height:14px;min-width:36px" aria-hidden="true">
+            <line x1="0" y1="8" x2="18" y2="8" stroke="#d8d2cb" stroke-dasharray="2 3"/>
+            <path d="M22 14L40 8 22 2l3 6z" fill="#c96442"/>
+          </svg>
+          <div style="text-align:right"><div class="p-label">Return</div><div class="p-date">${htmlEscape(ret)}</div></div>
+        </div>
+        <div class="perf"><div class="notch" style="left:-31px"></div><div class="notch" style="right:-31px"></div></div>` : ""}
+        <div style="display:flex;gap:20px;padding:10px 34px 13px 16px">${stubsHtml}</div>
+      </div>`;
 
     // Build body HTML — properly open/close <table> only around actual table rows
     const lines = planText.split("\n");
@@ -153,7 +172,15 @@ export default function Dashboard({
 
       if (["TABLE:","ENDTABLE","FOOD:","ENDFOOD"].includes(t)) continue;
       if (t.match(/^\|[-| :]+\|$/)) continue;
-      if (line.startsWith("## "))  { bodyHtml += `<h2 style="font-size:16px;font-weight:800;color:#0d0d0d;margin:24px 0 8px;padding-bottom:5px;border-bottom:1px solid #e8e8e8">${line.slice(3)}</h2>`; continue; }
+      if (line.startsWith("## ")) {
+        const label = line.slice(3);
+        const dm = label.match(/^Day (\d+) — (.+)$/);
+        // Day headers get the 9B number chip; any other h2 stays typographic.
+        bodyHtml += dm
+          ? `<div class="dayhead"><span class="daychip">${String(dm[1]).padStart(2, "0")}</span><span>${htmlEscape(dm[2])}</span></div>`
+          : `<h2 style="font-size:16px;font-weight:800;color:#0d0d0d;margin:24px 0 8px;padding-bottom:5px;border-bottom:1px solid #e8e8e8">${htmlEscape(label)}</h2>`;
+        continue;
+      }
       if (line.startsWith("### ")) { bodyHtml += `<h3 style="font-size:11px;font-weight:700;color:#c96442;text-transform:uppercase;letter-spacing:.08em;margin:14px 0 6px">${line.slice(4)}</h3>`; continue; }
       if (t.startsWith("TIPS:")) {
         const tips = t.replace("TIPS:","").split("|").map(s => s.trim()).filter(Boolean);
@@ -174,22 +201,48 @@ export default function Dashboard({
     w.document.write(`<!DOCTYPE html><html><head>
       <meta charset="utf-8">
       <title>${htmlEscape(trip.destination)} — Wandr Itinerary</title>
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&display=swap" rel="stylesheet">
       <style>
-        body { font-family: 'Helvetica Neue', Helvetica, sans-serif; margin: 0; padding: 40px; background: #fff; color: #000; }
-        @media print { body { padding: 20px; } }
+        body { font-family: 'Manrope', system-ui, sans-serif; margin: 0; padding: 40px 40px 70px; background: #fff; color: #1a1a1a; }
+        @media print { body { padding: 20px 20px 58px; } }
+        .wm { font-weight: 800; font-size: 16px; color: #111; letter-spacing: -.02em; }
+        .wm .dot { color: #c96442; }
+        .p-label { font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: #9a938c; font-weight: 700; }
+        .p-date { font-size: 17px; font-weight: 800; font-variant-numeric: tabular-nums; }
+        .ticket { position: relative; background: #faf8f6; border: 1px solid #e5e0da; border-radius: 12px; overflow: hidden; margin: 12px 0 6px; }
+        .barcode { position: absolute; right: 10px; top: 12px; bottom: 12px; width: 11px; border-radius: 2px;
+                   background: repeating-linear-gradient(180deg, #d8d2cb 0 2px, transparent 2px 5px); }
+        .perf { position: relative; border-top: 1.5px dashed #d8d2cb; margin: 0 22px; }
+        .notch { position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 1px solid #e5e0da; top: -9px; }
+        .dayhead { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 800; margin: 26px 0 6px; break-after: avoid; }
+        .daychip { background: #c96442; color: #fff; font-size: 10.5px; font-weight: 800; border-radius: 6px; padding: 3px 7px; font-variant-numeric: tabular-nums; }
+        tr { break-inside: avoid; }
+        .foot { position: fixed; bottom: 0; left: 0; right: 0; display: flex; align-items: center; gap: 10px;
+                background: #fff; border-top: 1px solid #e8e4e0; padding: 8px 20px 10px; font-size: 8.5px; color: #9a938c; }
+        .foot .wm { font-size: 10px; }
+        .foot .spacer { flex: 1; }
       </style>
     </head><body>
-      <div style="border-bottom:2px solid #c96442;padding-bottom:16px;margin-bottom:24px">
-        <div style="font-size:28px;font-weight:800;color:#0d0d0d;margin-bottom:4px">${htmlEscape(trip.destination)}</div>
-        <div style="font-size:13px;color:#666;font-style:italic;margin-bottom:12px">${htmlEscape(trip.tagline || "")}</div>
-        <div style="display:flex;flex-wrap:wrap">${metaHtml}</div>
+      <div style="text-align:center;margin-bottom:14px"><span class="wm">wandr<span class="dot">.</span></span></div>
+      <div class="p-label" style="color:#c96442;margin-bottom:4px">My trip</div>
+      <div style="font-size:26px;font-weight:800;letter-spacing:-.015em;line-height:1.1">${htmlEscape(destMain)}${destRegion ? ` <span style="font-size:12px;color:#9a938c;font-weight:700">${htmlEscape(destRegion)}</span>` : ""}</div>
+      ${ticketHtml}
+      ${trip.tagline ? `<div style="font-size:11.5px;color:#8a847e;font-style:italic;margin:10px 2px 0">${htmlEscape(trip.tagline)}</div>` : ""}
+      <div style="margin-top:6px">${bodyHtml}</div>
+      <div class="foot">
+        <span class="wm">wandr<span class="dot">.</span></span>
+        <span>wandr-mauve.vercel.app</span>
+        <span class="spacer"></span>
+        <span>AI-planned — always verify opening hours, prices, and details with venues</span>
       </div>
-      <div style="display:inline-block;background:#c96442;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:20px">${modeName}</div>
-      ${bodyHtml}
     </body></html>`);
     w.document.close();
-    w.focus();
-    setTimeout(() => { w.print(); }, 300);
+    // Print once Manrope is actually loaded — otherwise the dialog snapshots
+    // the fallback font. fonts.ready + a beat covers slow first-time loads.
+    const doPrint = () => { w.focus(); w.print(); };
+    if (w.document.fonts?.ready) w.document.fonts.ready.then(() => setTimeout(doPrint, 150));
+    else setTimeout(doPrint, 800);
   }
 
   return (
@@ -271,16 +324,9 @@ export default function Dashboard({
               trip.season (the full sentence) now lives only in the PDF export;
               the stub shows a short derived label instead. */}
           {(() => {
-            const dep = ticketDate(a.dates?.start);
-            const ret = ticketDate(a.dates?.end);
             const stubLabel = { fontSize:8.5, letterSpacing:".18em", textTransform:"uppercase", color:T.hint, fontWeight:700 };
             const notch = { position:"absolute", width:22, height:22, borderRadius:"50%", background:T.bg1, border:`1px solid ${T.border2}`, top:-11 };
-            const stubs = [
-              ["Nights", trip.nights ? `${trip.nights}` : ""],
-              ["Budget", a.budget === 0 ? "With friends" : a.budget ? `$${a.budget}/day` : ""],
-              ["Party",  arr(a.party).split(",")[0]],
-              ["Season", seasonShort(a.dates?.start) ? `☀ ${seasonShort(a.dates.start)}` : ""],
-            ].filter(([, v]) => v);
+            const stubs = tripStubs;
             return (
               <div style={{ position:"relative", marginTop:4, background:T.bg2, border:`1px solid ${T.border2}`, borderRadius:16, overflow:"hidden" }}>
                 <div style={{ position:"absolute", right:12, top:14, bottom:14, width:13, background:`repeating-linear-gradient(180deg, ${T.border2} 0 2px, transparent 2px 5px)`, opacity:.5, borderRadius:2 }} />
