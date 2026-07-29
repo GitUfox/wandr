@@ -204,8 +204,10 @@ export default function Dashboard({
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&display=swap" rel="stylesheet">
       <style>
-        body { font-family: 'Manrope', system-ui, sans-serif; margin: 0; padding: 40px 40px 70px; background: #fff; color: #1a1a1a; }
-        @media print { body { padding: 20px 20px 58px; } }
+        /* Letter-width column: the on-screen preview matches what prints
+           instead of stretching the ticket across a desktop monitor. */
+        body { font-family: 'Manrope', system-ui, sans-serif; margin: 0 auto; max-width: 720px; padding: 40px 40px 70px; background: #fff; color: #1a1a1a; box-sizing: border-box; }
+        @media print { body { padding: 20px 20px 58px; max-width: none; } }
         .wm { font-weight: 800; font-size: 16px; color: #111; letter-spacing: -.02em; }
         .wm .dot { color: #c96442; }
         .p-label { font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: #9a938c; font-weight: 700; }
@@ -218,8 +220,10 @@ export default function Dashboard({
         .dayhead { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 800; margin: 26px 0 6px; break-after: avoid; }
         .daychip { background: #c96442; color: #fff; font-size: 10.5px; font-weight: 800; border-radius: 6px; padding: 3px 7px; font-variant-numeric: tabular-nums; }
         tr { break-inside: avoid; }
-        .foot { position: fixed; bottom: 0; left: 0; right: 0; display: flex; align-items: center; gap: 10px;
+        .foot { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 720px;
+                box-sizing: border-box; display: flex; align-items: center; gap: 10px;
                 background: #fff; border-top: 1px solid #e8e4e0; padding: 8px 20px 10px; font-size: 8.5px; color: #9a938c; }
+        @media print { .foot { max-width: none; } }
         .foot .wm { font-size: 10px; }
         .foot .spacer { flex: 1; }
       </style>
