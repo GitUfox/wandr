@@ -5,8 +5,14 @@
     },
     "api/places.js": {
       "maxDuration": 30
+    },
+    "api/keepalive.js": {
+      "maxDuration": 10
     }
   },
+  "crons": [
+    { "path": "/api/keepalive", "schedule": "0 12 * * *" }
+  ],
   "headers": [
     {
       "source": "/sw.js",
