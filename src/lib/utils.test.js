@@ -171,18 +171,24 @@ describe("parseTime", () => {
 // ── formatTime ────────────────────────────────────────────────────────────────
 
 describe("formatTime", () => {
-  it("formats minutes to a 12-hour clock string", () => {
-    expect(formatTime(540)).toBe("9:00 AM");
-    expect(formatTime(810)).toBe("1:30 PM");
-    expect(formatTime(1080)).toBe("6:00 PM");
-    expect(formatTime(720)).toBe("12:00 PM");  // noon
-    expect(formatTime(0)).toBe("12:00 AM");    // midnight
+  it("formats minutes to a 24-hour clock string (app-wide format)", () => {
+    expect(formatTime(540)).toBe("09:00");
+    expect(formatTime(810)).toBe("13:30");
+    expect(formatTime(1080)).toBe("18:00");
+    expect(formatTime(720)).toBe("12:00");  // noon
+    expect(formatTime(0)).toBe("00:00");    // midnight
   });
 
   it("round-trips with parseTime", () => {
-    for (const t of ["9:00 AM", "1:30 PM", "6:00 PM", "12:00 PM", "12:00 AM"]) {
+    for (const t of ["09:00", "13:30", "18:00", "12:00", "00:00"]) {
       expect(formatTime(parseTime(t))).toBe(t);
     }
+  });
+
+  it("normalizes legacy 12-hour strings from saved plans to 24-hour", () => {
+    expect(formatTime(parseTime("9:00 AM"))).toBe("09:00");
+    expect(formatTime(parseTime("5:30 PM"))).toBe("17:30");
+    expect(formatTime(parseTime("12:00 AM"))).toBe("00:00");
   });
 });
 
@@ -197,7 +203,7 @@ describe("resequenceTimes", () => {
       { id: "a", time: "9:00 AM",  title: "A", details: "" },
     ];
     const out = resequenceTimes(dragged);
-    expect(out.map(x => x.time)).toEqual(["9:00 AM", "12:00 PM", "3:00 PM"]);
+    expect(out.map(x => x.time)).toEqual(["09:00", "12:00", "15:00"]);
     // positions/identities preserved — only the time field changes
     expect(out.map(x => x.id)).toEqual(["b", "c", "a"]);
     expect(out[2].title).toBe("A");
@@ -212,7 +218,7 @@ describe("resequenceTimes", () => {
       { id: "m", time: "9:00 AM",  title: "Moved", details: "" },
     ];
     const out = resequenceTimes(target);
-    expect(out.map(x => x.time)).toEqual(["9:00 AM", "10:00 AM", "1:00 PM", "6:00 PM"]);
+    expect(out.map(x => x.time)).toEqual(["09:00", "10:00", "13:00", "18:00"]);
     expect(out[3].id).toBe("m");     // moved item stays last, gets the 6 PM slot
   });
 
@@ -224,7 +230,7 @@ describe("resequenceTimes", () => {
     ];
     const out = resequenceTimes(acts);
     // clock slots [9,15] fill positions 0 and 2; "Morning" holds position 1
-    expect(out.map(x => x.time)).toEqual(["9:00 AM", "Morning", "3:00 PM"]);
+    expect(out.map(x => x.time)).toEqual(["09:00", "Morning", "15:00"]);
   });
 
   it("returns input unchanged when not an array", () => {
@@ -232,12 +238,12 @@ describe("resequenceTimes", () => {
     expect(resequenceTimes(undefined)).toBeUndefined();
   });
 
-  it("is a no-op for an already-ascending day", () => {
+  it("keeps order for an already-ascending day (times normalize to 24h)", () => {
     const acts = [
       { id: "a", time: "9:00 AM",  title: "A", details: "" },
       { id: "b", time: "12:00 PM", title: "B", details: "" },
     ];
-    expect(resequenceTimes(acts).map(x => x.time)).toEqual(["9:00 AM", "12:00 PM"]);
+    expect(resequenceTimes(acts).map(x => x.time)).toEqual(["09:00", "12:00"]);
   });
 });
 
@@ -297,24 +303,24 @@ describe("sortDayByTime", () => {
 
 describe("retimeIntoBucket", () => {
   it("uses the bucket anchor when the bucket is empty", () => {
-    expect(retimeIntoBucket("Morning", [])).toBe("9:00 AM");
-    expect(retimeIntoBucket("Afternoon", [])).toBe("1:00 PM");
-    expect(retimeIntoBucket("Evening", [])).toBe("6:00 PM");
+    expect(retimeIntoBucket("Morning", [])).toBe("09:00");
+    expect(retimeIntoBucket("Afternoon", [])).toBe("13:00");
+    expect(retimeIntoBucket("Evening", [])).toBe("18:00");
   });
 
   it("lands 60min after the bucket's latest activity when occupied", () => {
-    expect(retimeIntoBucket("Evening", [{ time: "6:00 PM" }, { time: "7:30 PM" }])).toBe("8:30 PM");
+    expect(retimeIntoBucket("Evening", [{ time: "18:00" }, { time: "19:30" }])).toBe("20:30");
   });
 
   it("keeps the anchor when existing times are earlier than it", () => {
     // anchor 1pm beats a stray 12:15pm + 60 = 1:15pm? no — max(780, 795)=795 → 1:15 PM
-    expect(retimeIntoBucket("Afternoon", [{ time: "12:15 PM" }])).toBe("1:15 PM");
+    expect(retimeIntoBucket("Afternoon", [{ time: "12:15 PM" }])).toBe("13:15");
     // existing well before anchor → anchor wins
-    expect(retimeIntoBucket("Evening", [{ time: "1:00 PM" }])).toBe("6:00 PM");
+    expect(retimeIntoBucket("Evening", [{ time: "1:00 PM" }])).toBe("18:00");
   });
 
-  it("caps at 11:59 PM", () => {
-    expect(retimeIntoBucket("Evening", [{ time: "11:30 PM" }])).toBe("11:59 PM");
+  it("caps at 23:59", () => {
+    expect(retimeIntoBucket("Evening", [{ time: "23:30" }])).toBe("23:59");
   });
 });
 

@@ -19,9 +19,10 @@ const clean = s => (s || "").replace(/\*\*/g, "").trim();
 
 /* ── Slot-chip time picker (design pick 3A) ──────────────────────────────────
    Tap a slot instead of typing. 30-minute grain grouped by daypart — the
-   grain an itinerary actually uses. An off-grid value ("9:15 AM", a range)
-   keeps showing on the trigger and survives Save untouched unless a chip is
-   picked, so AI-written times are never mangled. */
+   grain an itinerary actually uses. Chips are 24-hour (the app-wide format).
+   An off-grid value ("09:15", a legacy "9:15 AM", a range) keeps showing on
+   the trigger and survives Save untouched unless a chip is picked, so
+   AI-written times are never mangled. */
 const DAYPARTS = [
   { label: "Morning",   from: 6 * 60,  to: 11 * 60 + 30 },
   { label: "Afternoon", from: 12 * 60, to: 17 * 60 + 30 },
@@ -49,7 +50,7 @@ function TimeSlotPicker({ value, onPick }) {
                       background: on ? T.accent : T.bg2,
                       border: `1px solid ${on ? T.accent : T.border}`,
                     }}>
-                    {t.replace(/ (AM|PM)$/, "")}
+                    {t}
                   </button>
                 );
               })}

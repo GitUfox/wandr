@@ -99,13 +99,17 @@ export function parseTime(str) {
   return hour * 60 + min;
 }
 
-/** Format minutes-since-midnight back to a "9:00 AM" style clock string. */
+/**
+ * Format minutes-since-midnight as a 24-hour "HH:MM" clock string ("09:00",
+ * "17:30"). Military time is the app-wide display format (prompts request it
+ * too); parseTime still accepts legacy "9:00 AM" strings from saved plans.
+ * v2 (backlog): a user setting to choose 12h/24h — this is the single place
+ * the display format would branch.
+ */
 export function formatTime(mins) {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  const mer = h < 12 ? "AM" : "PM";
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${String(m).padStart(2, "0")} ${mer}`;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 /**

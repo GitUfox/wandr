@@ -366,7 +366,7 @@ export function buildEditDayPrompt(dayLabel, dayContent, instruction, trip) {
 
   const allItems = formatActivityItems(trip.categories);
 
-  const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [time] | **Place** | facts only, duration |\nENDTABLE`;
+  const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [HH:MM] | **Place** | facts only, duration |\nENDTABLE`;
 
   return `You are a travel planner. Regenerate ONE day of an itinerary for ${trip.destination}.
 
@@ -428,13 +428,13 @@ TRAVELER CONTEXT (respect these):
 
 Apply the change request. Keep the same time slot unless the request implies otherwise.
 Write for someone who wants facts, not atmosphere — what it is, where, how long, how much.
-Use local currency. Only suggest venues you are confident are currently operating.
+Use local currency. Times in 24-hour HH:MM format (e.g. 09:00, 17:30). Only suggest venues you are confident are currently operating.
 
 STRICT OUTPUT — return ONLY this block, nothing before or after:
 TABLE:
 | Time | Activity | Details |
 |------|----------|----------|
-| [time] | **Place** | facts only, duration, price |
+| [HH:MM] | **Place** | facts only, duration, price |
 ENDTABLE`;
 }
 
@@ -461,10 +461,10 @@ export function buildPlanPrompt(mode, trip, editInstruction = null, editType = n
     ? `DAY HEADERS — use these exact labels in order:\n${dayLabels.map((l, i) => `  Day ${i + 1}: ${l}`).join("\n")}`
     : "";
 
-  const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [time] | **Place** | facts only, duration |\nENDTABLE`;
+  const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [HH:MM] | **Place** | facts only, duration |\nENDTABLE`;
 
   const modeInstructions = {
-    full:   `Create a ${trip.nights}-night itinerary. Use the DAY HEADERS list for exact day labels. For each day:\n\n## Day N — [exact label from DAY HEADERS]\n\n${TABLE_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]\n\nRules: ${lo}\u2013${hi} activities per day. Times realistic for ${a.destination}.`,
+    full:   `Create a ${trip.nights}-night itinerary. Use the DAY HEADERS list for exact day labels. For each day:\n\n## Day N — [exact label from DAY HEADERS]\n\n${TABLE_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]\n\nRules: ${lo}\u2013${hi} activities per day. Times realistic for ${a.destination}, in 24-hour HH:MM format (e.g. 09:00, 17:30).`,
     day:    `Design the single best day possible in ${a.destination}. Output EXACTLY ONE day — no other days, no multi-day structure.\n\n## The Ideal Day — [Weekday, Month Date]\n\n${TABLE_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]`,
     combo:  `Create 3 themed day combinations. For each:\n\n## [Theme name]\n[One sentence — what type of day this is]\n\n${TABLE_BLOCK}`,
     hidden: `List 5 local spots most visitors miss.\n\n${TABLE_BLOCK}`,
@@ -473,6 +473,7 @@ export function buildPlanPrompt(mode, trip, editInstruction = null, editType = n
   return `You are a travel planner. Write for someone who wants facts, not atmosphere. No filler phrases like "soak in the views" or "immerse yourself". Just: what it is, where, how long, how much.
 
 Use local currency for all price references. Avoid US-centric assumptions.
+All times in 24-hour HH:MM format (e.g. 09:00, 17:30) — never AM/PM.
 
 ${modeInstructions[mode]}
 
