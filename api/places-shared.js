@@ -17,6 +17,7 @@
 import { checkPlacesRateLimit, getClientIp } from "./shared.js";
 
 const GOOGLE_URL = "https://places.googleapis.com/v1/places:searchText";
+const GOOGLE_AUTOCOMPLETE_URL = "https://places.googleapis.com/v1/places:autocomplete";
 
 // ⚠️ BILLING CONTRACT — Google prices Places (New) by which fields you request,
 // not by volume. This exact mask keeps every call in the Text Search **Pro**
@@ -105,6 +106,17 @@ export function validatePlacesRequest(body) {
   return null;
 }
 
+/**
+ * Validate a destination-autocomplete body ({ autocomplete: "bangk" }).
+ * Returns null when valid, or a generic error string.
+ */
+export function validateAutocompleteRequest(body) {
+  const input = body?.autocomplete;
+  if (typeof input !== "string" || input.trim().length < 2 || input.length > 80)
+    return "Invalid request.";
+  return null;
+}
+
 // ── Google adapter (the one vendor-specific function) ─────────────────────────
 
 /**
@@ -144,6 +156,46 @@ async function googleTextSearch(query, key) {
   }
 }
 
+/**
+ * Destination autocomplete via Google Places (New) Autocomplete. Suggestions
+ * carry everything the client shows (main + secondary text + placeId), so no
+ * follow-up Place Details call — and therefore no session tokens — is needed.
+ * Billing: plain Autocomplete Requests SKU only. Type filter keeps results to
+ * destination-shaped places (cities/regions/countries); anything it can't
+ * match falls back to the client's "use as typed" row. Empty array on any
+ * failure — autocomplete is a convenience, never a gate.
+ */
+async function googleAutocomplete(input, key) {
+  try {
+    const res = await fetch(GOOGLE_AUTOCOMPLETE_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        input,
+        includedPrimaryTypes: ["locality", "administrative_area_level_1", "country"],
+      }),
+    });
+    if (!res.ok) {
+      console.error("[wandr places] autocomplete responded", res.status);
+      return [];
+    }
+    const data = await res.json();
+    return (data.suggestions || [])
+      .map(s => s.placePrediction)
+      .filter(Boolean)
+      .slice(0, 5)
+      .map(p => ({
+        placeId:   p.placeId || "",
+        main:      p.structuredFormat?.mainText?.text || p.text?.text || "",
+        secondary: p.structuredFormat?.secondaryText?.text || "",
+      }))
+      .filter(s => s.main);
+  } catch (err) {
+    console.error("[wandr places] autocomplete failed:", err.message);
+    return [];
+  }
+}
+
 /** Shape one venue's verification result from its best candidate (or lack of one). */
 export function shapeResult(venue, match) {
   if (!match) return { name: venue.name, category: venue.category, verified: false, reason: "no-match" };
@@ -176,6 +228,30 @@ export function shapeResult(venue, match) {
  *   isDev — if true, rate limiting is skipped (matches the Anthropic proxy)
  */
 export async function handlePlacesRequest(req, res, { key, isDev }) {
+  // Destination autocomplete branch (design pick 5A) — same endpoint, same
+  // stub/limit posture as grounding, distinguished by body shape.
+  if (typeof req.body?.autocomplete === "string") {
+    const badInput = validateAutocompleteRequest(req.body);
+    if (badInput) {
+      res.status(400).json({ error: badInput });
+      return;
+    }
+    if (!key) {
+      res.status(200).json({ available: false, suggestions: [] });
+      return;
+    }
+    if (!isDev) {
+      const limitErr = await checkPlacesRateLimit(getClientIp(req));
+      if (limitErr) {
+        res.status(429).json({ error: limitErr });
+        return;
+      }
+    }
+    const suggestions = await googleAutocomplete(req.body.autocomplete.trim(), key);
+    res.status(200).json({ available: true, suggestions });
+    return;
+  }
+
   const invalid = validatePlacesRequest(req.body);
   if (invalid) {
     res.status(400).json({ error: invalid });

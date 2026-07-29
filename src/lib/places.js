@@ -108,6 +108,39 @@ export function collectVenues(categories) {
   return out;
 }
 
+// ── Destination autocomplete (design pick 5A) ────────────────────────────────
+
+let autocompleteUnavailable = false;
+
+/**
+ * Suggestions for the welcome screen's "Where to?" field.
+ * Returns [{ placeId, main, secondary }] — or [] when the proxy has no key
+ * (remembered for the session so we stop probing), on abort, or on any error.
+ * Autocomplete is a convenience: it must never block typing a destination.
+ */
+export async function fetchDestinationSuggestions(input, signal) {
+  if (autocompleteUnavailable) return [];
+  const q = (input || "").trim();
+  if (q.length < 2) return [];
+  try {
+    const res = await fetch(API_URL, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ autocomplete: q }),
+      signal,
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data?.available) {
+      autocompleteUnavailable = true; // key not configured — quiet no-op from here on
+      return [];
+    }
+    return data.suggestions || [];
+  } catch {
+    return []; // aborted or offline — typing continues either way
+  }
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 /**

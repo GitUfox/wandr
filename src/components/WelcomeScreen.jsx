@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { T, DEST_PLACEHOLDERS } from "../lib/constants.js";
 import { parseISODate } from "../lib/utils.js";
 import { useOnline } from "../hooks/useOnline.js";
+import { fetchDestinationSuggestions } from "../lib/places.js";
 import WandrLogo from "./WandrLogo.jsx";
 import ProfileSheet from "./ProfileSheet.jsx";
 
@@ -32,10 +33,30 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
   const [showAbout, setShowAbout]           = useState(false);
   const [showProfile, setShowProfile]       = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [suggestions, setSuggestions]       = useState([]);
+  const [destPicked, setDestPicked]         = useState(false); // a suggestion was chosen (or "use as typed")
   const intervalRef = useRef(null);
   const online = useOnline();
 
   const destValid = dest.trim().length > 1;
+
+  // Destination autocomplete (design pick 5A) — debounced, aborts in-flight
+  // lookups, silent no-op while the Places key is unconfigured.
+  useEffect(() => {
+    if (destPicked || !online || dest.trim().length < 2) { setSuggestions([]); return; }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      const s = await fetchDestinationSuggestions(dest, controller.signal);
+      if (!controller.signal.aborted) setSuggestions(s);
+    }, 250);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [dest, destPicked, online]);
+
+  function pickSuggestion(s) {
+    setDest(s.secondary ? `${s.main}, ${s.secondary}` : s.main);
+    setDestPicked(true);
+    setSuggestions([]);
+  }
 
   useEffect(() => {
     if (dest.length > 0) { clearInterval(intervalRef.current); return; }
@@ -109,7 +130,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
               autoFocus
               type="text"
               value={dest}
-              onChange={e => setDest(e.target.value)}
+              onChange={e => { setDest(e.target.value); setDestPicked(false); }}
               onKeyDown={e => e.key === "Enter" && handleStart(hasProfile ? "continue" : "fresh")}
               style={{ width: "100%", padding: "14px 16px", fontSize: 16, fontWeight: 600, background: T.bg1, border: `1.5px solid ${T.accent}`, borderRadius: 10, color: T.ink, outline: "none", fontFamily: T.font, colorScheme: "dark", transition: "border-color .2s", boxSizing: "border-box" }}
             />
@@ -118,7 +139,31 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
                 {DEST_PLACEHOLDERS[placeholderIdx]}
               </div>
             )}
+            {destPicked && (
+              <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: T.accent, fontWeight: 800, fontSize: 14, pointerEvents: "none" }}>✓</span>
+            )}
           </div>
+          {suggestions.length > 0 && (
+            <div className="fade-up" style={{ marginTop: 6, background: T.bg1, border: `1px solid ${T.border2}`, borderRadius: 12, overflow: "hidden" }}>
+              {suggestions.map((s, i) => (
+                <button key={s.placeId || i} onClick={() => pickSuggestion(s)}
+                  style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", padding: "11px 14px", background: "transparent", border: "none", borderTop: i === 0 ? "none" : `1px solid ${T.border}`, cursor: "pointer", fontFamily: T.font }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                    <path d="M12 21s7-6.1 7-11.5A7 7 0 105 9.5C5 14.9 12 21 12 21z" stroke={i === 0 ? T.accent : T.hint} strokeWidth="2" />
+                    {i === 0 && <circle cx="12" cy="9.5" r="2.4" fill={T.accent} />}
+                  </svg>
+                  <span style={{ fontSize: 13.5, color: T.ink, fontWeight: 600 }}>
+                    {s.main}
+                    {s.secondary && <span style={{ color: T.hint, fontWeight: 400 }}> — {s.secondary}</span>}
+                  </span>
+                </button>
+              ))}
+              <button onClick={() => { setDestPicked(true); setSuggestions([]); }}
+                style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", borderTop: `1px solid ${T.border}`, cursor: "pointer", fontFamily: T.font, fontSize: 12, color: T.accent, fontWeight: 700 }}>
+                Use “{dest.trim()}” as typed →
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Offline notice — building a trip needs the AI, so say so plainly

@@ -4,6 +4,7 @@ import {
   venueMatchScore,
   pickBestMatch,
   validatePlacesRequest,
+  validateAutocompleteRequest,
   shapeResult,
   MATCH_THRESHOLD,
   MAX_VENUES_PER_REQUEST,
@@ -143,5 +144,23 @@ describe("shapeResult", () => {
     expect(r.location).toEqual({ lat: 33.47, lng: -112.07 });
     // Original name is preserved — phase 1 never renames (see places.js header).
     expect(r.name).toBe("Heard Museum");
+  });
+});
+
+// ── validateAutocompleteRequest (destination autocomplete, 5A) ────────────────
+
+describe("validateAutocompleteRequest", () => {
+  it("accepts a plain 2..80-char input", () => {
+    expect(validateAutocompleteRequest({ autocomplete: "ba" })).toBeNull();
+    expect(validateAutocompleteRequest({ autocomplete: "Bangkok" })).toBeNull();
+  });
+
+  it("rejects missing, short, long, or non-string input", () => {
+    expect(validateAutocompleteRequest({})).toBe("Invalid request.");
+    expect(validateAutocompleteRequest({ autocomplete: "b" })).toBe("Invalid request.");
+    expect(validateAutocompleteRequest({ autocomplete: " " })).toBe("Invalid request.");
+    expect(validateAutocompleteRequest({ autocomplete: "x".repeat(81) })).toBe("Invalid request.");
+    expect(validateAutocompleteRequest({ autocomplete: 42 })).toBe("Invalid request.");
+    expect(validateAutocompleteRequest(null)).toBe("Invalid request.");
   });
 });
