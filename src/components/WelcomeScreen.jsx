@@ -72,8 +72,36 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
     onStart(dest.trim(), mode);
   }
 
+  // Motion is idle-only (design picks 8A + 8D): the comet orbits and the
+  // placeholder shimmers only while the field is empty. The first keystroke
+  // calms both to the static accent look — movement never competes with the
+  // user's own text. (Not gated on focus: the field is autofocused on load,
+  // which is precisely the idle moment the motion exists for.)
+  const destIdle = dest.length === 0;
+
   return (
     <div style={{ minHeight: "100vh", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2.5rem 1.5rem", background: T.bg0, fontFamily: T.font, position: "relative" }}>
+      <style>{`
+        @property --wbeam { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+        @keyframes wbeam { to { --wbeam: 360deg; } }
+        .wbeam-idle {
+          background: conic-gradient(from var(--wbeam),
+            rgba(201,100,66,.18) 0turn, rgba(201,100,66,.18) .8turn,
+            ${T.accent} .92turn, #ffc79b .965turn, rgba(201,100,66,.18) 1turn);
+          animation: wbeam 3.8s linear infinite;
+        }
+        @keyframes wshim { to { background-position: -220% 0; } }
+        .wshim {
+          background: linear-gradient(100deg, ${T.hint} 42%, #f4e9e2 50%, ${T.hint} 58%);
+          background-size: 220% 100%;
+          -webkit-background-clip: text; background-clip: text; color: transparent;
+          animation: wshim 2.7s linear infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .wbeam-idle { animation: none; background: ${T.accent}; }
+          .wshim { animation: none; background: none; color: ${T.hint}; }
+        }
+      `}</style>
 
       {/* Help affordance — unambiguous "?" that opens an About panel */}
       <button onClick={() => setShowAbout(true)} aria-label="About Wandr"
@@ -125,17 +153,21 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
         {/* Destination input */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", marginBottom: 8 }}>Where to?</div>
-          <div style={{ position: "relative" }}>
+          {/* Comet ring (8A): the wrapper IS the border — a 1.5px ring the
+              gradient orbits while idle, solid accent otherwise. */}
+          <div className={destIdle ? "wbeam-idle" : undefined}
+            style={{ position: "relative", borderRadius: 12, padding: 1.5, ...(destIdle ? {} : { background: T.accent }) }}>
             <input
               autoFocus
               type="text"
               value={dest}
               onChange={e => { setDest(e.target.value); setDestPicked(false); }}
               onKeyDown={e => e.key === "Enter" && handleStart(hasProfile ? "continue" : "fresh")}
-              style={{ width: "100%", padding: "14px 16px", fontSize: 16, fontWeight: 600, background: T.bg1, border: `1.5px solid ${T.accent}`, borderRadius: 10, color: T.ink, outline: "none", fontFamily: T.font, colorScheme: "dark", transition: "border-color .2s", boxSizing: "border-box" }}
+              style={{ width: "100%", padding: "14px 16px", fontSize: 16, fontWeight: 600, background: T.bg1, border: "none", borderRadius: 10.5, color: T.ink, outline: "none", fontFamily: T.font, colorScheme: "dark", boxSizing: "border-box", display: "block" }}
             />
             {dest.length === 0 && (
-              <div style={{ position: "absolute", left: 24, top: "50%", transform: "translateY(-50%)", fontSize: 16, fontWeight: 600, color: T.hint, pointerEvents: "none", opacity: placeholderFade ? 1 : 0, transition: "opacity .18s ease" }}>
+              <div className={destIdle ? "wshim" : undefined}
+                style={{ position: "absolute", left: 24, top: "50%", transform: "translateY(-50%)", fontSize: 16, fontWeight: 600, color: destIdle ? undefined : T.hint, pointerEvents: "none", opacity: placeholderFade ? 1 : 0, transition: "opacity .18s ease" }}>
                 {DEST_PLACEHOLDERS[placeholderIdx]}
               </div>
             )}
