@@ -196,7 +196,7 @@ export default function Dashboard({
           </div>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, flexWrap:"wrap", marginBottom:10 }}>
             <div>
-              <div style={{ fontSize:9, letterSpacing:".2em", textTransform:"uppercase", color:T.hint, marginBottom:3 }}>Your trip</div>
+              <div style={{ fontSize:9, letterSpacing:".2em", textTransform:"uppercase", color:T.hint, marginBottom:3 }}>My trip</div>
               <div style={{ fontSize:28, fontWeight:800, color:T.ink, lineHeight:1.1, marginBottom:5 }}>{trip.destination}</div>
               <div style={{ fontSize:12.5, color:T.muted, lineHeight:1.6, maxWidth:440, fontStyle:"italic" }}>{trip.tagline}</div>
               {Array.isArray(trip.highlights) && trip.highlights.length > 0 && (

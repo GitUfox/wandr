@@ -58,9 +58,9 @@ export default function WelcomeScreen({ onStart, hasProfile, savedTrip, onResume
               Answer a few quick questions and Wandr builds you a personal trip — tailored to your pace, budget, and what you actually care about.
             </div>
             {[
-              ["A day-by-day itinerary", "Every day planned, morning to night"],
-              ["Activities picked for you", "Matched to your pace, interests, and budget"],
-              ["Tips built into each day", "Timing, getting around, and what to skip"],
+              ["Top-tier itineraries", "Every day planned, morning to night"],
+              ["Next-level activities", "Matched to your pace, interests, and budget"],
+              ["Localized tips that make grandma proud", "Timing, getting around, and what to skip"],
             ].map(([title, desc]) => (
               <div key={title} style={{ display: "flex", gap: 9, marginBottom: 11 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.accent, flexShrink: 0, marginTop: 6 }} />
