@@ -4,7 +4,7 @@
  * Manages its own print-modal state (only relevant here).
  * Everything else — trip data, plan state — comes from App.jsx via props.
  */
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MODES, T, FEATURES } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { arr, formatShortDate, ticketDate, seasonShort, timeAgo } from "../lib/utils.js";
@@ -13,6 +13,7 @@ import Md from "./Md.jsx";
 import ItineraryEditor from "./ItineraryEditor.jsx";
 import WandrLogo from "./WandrLogo.jsx";
 import EditTripSheet from "./EditTripSheet.jsx";
+import StardustBurst from "./StardustBurst.jsx";
 
 export default function Dashboard({
   trip,
@@ -43,6 +44,16 @@ export default function Dashboard({
   const [eventsDismissed, setEventsDismissed] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const online = useOnline();
+
+  // 8C stardust on "itinerary ready": fire once when a generation finishes
+  // successfully (loading→done with a parsed model — error text never sets
+  // planModel, so failures don't sparkle).
+  const [readyBurst, setReadyBurst] = useState(0);
+  const wasLoadingRef = useRef(false);
+  useEffect(() => {
+    if (wasLoadingRef.current && !planLoading && planModel) setReadyBurst(b => b + 1);
+    wasLoadingRef.current = planLoading;
+  }, [planLoading, planModel]);
 
   // Only render the switcher when there's somewhere to switch to.
   const otherTrips = trips.filter(t => t.id !== trip?.id);
@@ -401,7 +412,8 @@ export default function Dashboard({
                   </button>
                 );
               })() : (
-                <div style={{ display:"flex", alignItems:"center", gap:10, padding:"4px 2px 12px", borderBottom:`1px solid ${T.border}`, marginBottom:12 }}>
+                <div style={{ position:"relative", display:"flex", alignItems:"center", gap:10, padding:"4px 2px 12px", borderBottom:`1px solid ${T.border}`, marginBottom:12 }}>
+                  <StardustBurst burstKey={readyBurst} origin={{ left: 4, top: "40%" }} />
                   <span style={{ width:7, height:7, borderRadius:"50%", background:T.accent, boxShadow:"0 0 0 3px rgba(201,100,66,.14)", flexShrink:0, animation:planLoading?"pulse 1.2s ease-in-out infinite":"pulse 2.4s ease-in-out infinite" }} />
                   <span style={{ fontSize:13, fontWeight:800, color:T.ink }}>Full itinerary</span>
                   <span style={{ fontSize:11, color:T.hint }}>

@@ -5,6 +5,7 @@ import { useOnline } from "../hooks/useOnline.js";
 import { fetchDestinationSuggestions } from "../lib/places.js";
 import WandrLogo from "./WandrLogo.jsx";
 import ProfileSheet from "./ProfileSheet.jsx";
+import StardustBurst from "./StardustBurst.jsx";
 
 /** Compact profile summary for the ✦ strip: starred interests first. */
 function profileSummary(p) {
@@ -35,6 +36,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [suggestions, setSuggestions]       = useState([]);
   const [destPicked, setDestPicked]         = useState(false); // a suggestion was chosen (or "use as typed")
+  const [pickBurst, setPickBurst]           = useState(0);     // 8C stardust — increments each time the ✓ lands
   const intervalRef = useRef(null);
   const online = useOnline();
 
@@ -56,6 +58,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
     setDest(s.secondary ? `${s.main}, ${s.secondary}` : s.main);
     setDestPicked(true);
     setSuggestions([]);
+    setPickBurst(b => b + 1);
   }
 
   useEffect(() => {
@@ -174,6 +177,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
             {destPicked && (
               <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: T.accent, fontWeight: 800, fontSize: 14, pointerEvents: "none" }}>✓</span>
             )}
+            <StardustBurst burstKey={pickBurst} origin={{ right: 12, top: "50%" }} />
           </div>
           {suggestions.length > 0 && (
             <div className="fade-up" style={{ marginTop: 6, background: T.bg1, border: `1px solid ${T.border2}`, borderRadius: 12, overflow: "hidden" }}>
@@ -190,7 +194,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
                   </span>
                 </button>
               ))}
-              <button onClick={() => { setDestPicked(true); setSuggestions([]); }}
+              <button onClick={() => { setDestPicked(true); setSuggestions([]); setPickBurst(b => b + 1); }}
                 style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", borderTop: `1px solid ${T.border}`, cursor: "pointer", fontFamily: T.font, fontSize: 12, color: T.accent, fontWeight: 700 }}>
                 Use “{dest.trim()}” as typed →
               </button>
