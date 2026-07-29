@@ -1,22 +1,39 @@
 import { useState, useEffect, useRef } from "react";
 import { T, DEST_PLACEHOLDERS } from "../lib/constants.js";
-import { formatShortDate } from "../lib/utils.js";
+import { parseISODate } from "../lib/utils.js";
 import { useOnline } from "../hooks/useOnline.js";
 import WandrLogo from "./WandrLogo.jsx";
+import ProfileSheet from "./ProfileSheet.jsx";
 
-export default function WelcomeScreen({ onStart, hasProfile, savedTrip, onResume, trips = [], onDeleteTrip }) {
+/** Compact profile summary for the ✦ strip: starred interests first. */
+function profileSummary(p) {
+  if (!p) return "";
+  const starred = p.interests?.priorityChips || [];
+  const rest    = (p.interests?.chips || []).filter(c => !starred.includes(c));
+  const bits    = [...starred, ...rest].slice(0, 4);
+  const crew    = Array.isArray(p.party?.chips) ? p.party.chips[0] : typeof p.party === "string" ? p.party : "";
+  if (crew) bits.push(crew);
+  if (p.logistics?.pace) bits.push(`${p.logistics.pace} pace`);
+  return bits.join(" · ");
+}
+
+/** ISO date → { mon: "JUN", day: "30" } for the mini-ticket stub. */
+function stubDate(iso) {
+  const d = parseISODate(iso);
+  if (!d) return null;
+  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  return { mon: months[d.getMonth()], day: String(d.getDate()) };
+}
+
+export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdateProfile, savedTrip, onResume, trips = [], onDeleteTrip }) {
   const [dest, setDest]                     = useState("");
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [placeholderFade, setPlaceholderFade] = useState(true);
   const [showAbout, setShowAbout]           = useState(false);
-  const [showAllTrips, setShowAllTrips]     = useState(false);
+  const [showProfile, setShowProfile]       = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const intervalRef = useRef(null);
   const online = useOnline();
-
-  // With one saved trip the UI stays exactly as it was — a single Resume
-  // button. The list only appears once there's an actual choice to make.
-  const hasMultiple = trips.length > 1;
 
   const destValid = dest.trim().length > 1;
 
@@ -115,8 +132,10 @@ export default function WelcomeScreen({ onStart, hasProfile, savedTrip, onResume
           </div>
         )}
 
-        {/* CTA — single "Let's go" for first-timers; three-way entry once a
-            profile exists (Continue / Edit / Start fresh). */}
+        {/* CTA — "Let's go" for first-timers; once a profile exists the primary
+            action plans with it (design pick 6B), and "start fresh" demotes to
+            a text link. Editing preferences opens the ProfileSheet — never the
+            interview. */}
         {destValid && online && !hasProfile && (
           <button onClick={() => handleStart("fresh")} className="fade-up"
             style={{ width: "100%", background: T.accent, color: T.white, padding: "14px 0", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", border: "none", fontFamily: T.font, marginBottom: "1rem" }}>
@@ -124,93 +143,106 @@ export default function WelcomeScreen({ onStart, hasProfile, savedTrip, onResume
           </button>
         )}
         {destValid && online && hasProfile && (
-          <div className="fade-up" style={{ marginBottom: "1rem" }}>
-            <button onClick={() => handleStart("continue")}
-              style={{ width: "100%", background: T.accent, color: T.white, padding: "14px 0", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", border: "none", fontFamily: T.font, marginBottom: 8 }}>
-              Continue with my preferences →
-            </button>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => handleStart("edit")}
-                style={{ flex: 1, padding: "10px 0", borderRadius: 10, fontSize: 13, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, cursor: "pointer", fontFamily: T.font }}>
-                Edit preferences
-              </button>
-              <button onClick={() => handleStart("fresh")}
-                style={{ flex: 1, padding: "10px 0", borderRadius: 10, fontSize: 13, fontWeight: 600, color: T.hint, background: "transparent", border: `1px solid ${T.border}`, cursor: "pointer", fontFamily: T.font }}>
-                Start fresh
-              </button>
-            </div>
-          </div>
-        )}
-        {!destValid && <div style={{ height: 16 }} />}
-
-        {/* Resume the active trip. With more than one saved, a disclosure opens
-            the full list so the others are reachable instead of stored-but-lost. */}
-        {savedTrip?.destination && (
-          <button onClick={() => onResume()}
-            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "10px 0", borderRadius: 10, fontSize: 13, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, cursor: "pointer", fontFamily: T.font, marginBottom: hasMultiple ? 8 : "1.5rem" }}>
-            <span style={{ fontSize: 12 }}>↩</span> Resume: <strong style={{ color: T.ink }}>{savedTrip.destination}</strong>
+          <button onClick={() => handleStart("continue")} className="fade-up"
+            style={{ width: "100%", background: T.accent, color: T.white, padding: "14px 0", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", border: "none", fontFamily: T.font, marginBottom: 10 }}>
+            Plan it my way →
           </button>
         )}
 
-        {savedTrip?.destination && hasMultiple && (
-          <div style={{ marginBottom: "1.5rem" }}>
-            <button onClick={() => { setShowAllTrips(v => !v); setConfirmDeleteId(null); }}
-              style={{ width: "100%", padding: "7px 0", background: "transparent", border: "none", color: T.hint, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: T.font }}>
-              {showAllTrips ? "Hide" : `All trips (${trips.length})`} {showAllTrips ? "▴" : "▾"}
+        {/* Traveler profile strip — always visible once a profile exists, so
+            "my way" is never a mystery. Edit opens the profile sheet. */}
+        {hasProfile && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1px solid ${T.border}`, borderRadius: 12, background: T.bg1, padding: "11px 14px", marginBottom: destValid ? 8 : 16 }}>
+            <span style={{ color: T.accent, fontSize: 13, flexShrink: 0 }}>✦</span>
+            <span style={{ fontSize: 11.5, color: T.muted, flex: 1, lineHeight: 1.45 }}>{profileSummary(profile) || "Your traveler profile"}</span>
+            <button onClick={() => setShowProfile(true)}
+              style={{ fontSize: 11, fontWeight: 700, color: T.accent, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "2px 2px", flexShrink: 0 }}>
+              Edit
             </button>
-
-            {showAllTrips && (
-              <div className="fade-up" style={{ marginTop: 4, border: `1px solid ${T.border}`, borderRadius: 10, overflow: "hidden" }}>
-                {trips.map((t, i) => {
-                  const isActive    = t.id === savedTrip.id;
-                  const confirming  = confirmDeleteId === t.id;
-                  const dates = [t.answers?.dates?.start, t.answers?.dates?.end].every(Boolean)
-                    ? `${formatShortDate(t.answers.dates.start)} → ${formatShortDate(t.answers.dates.end)}`
-                    : `${t.nights || "?"} nights`;
-                  return (
-                    <div key={t.id}
-                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: isActive ? T.bg2 : T.bg1, borderTop: i === 0 ? "none" : `1px solid ${T.border}` }}>
-                      {confirming ? (
-                        <>
-                          <div style={{ flex: 1, fontSize: 12, color: T.muted }}>
-                            Delete <strong style={{ color: T.ink }}>{t.destination}</strong> and its itinerary?
-                          </div>
-                          <button onClick={() => { onDeleteTrip?.(t.id); setConfirmDeleteId(null); }}
-                            style={{ fontSize: 11, fontWeight: 700, color: T.white, background: T.accent, border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontFamily: T.font }}>
-                            Delete
-                          </button>
-                          <button onClick={() => setConfirmDeleteId(null)}
-                            style={{ fontSize: 11, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontFamily: T.font }}>
-                            Keep
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button onClick={() => onResume(t.id)}
-                            style={{ flex: 1, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, display: "flex", alignItems: "center", gap: 6 }}>
-                              {t.destination}
-                              {isActive && <span style={{ fontSize: 9, fontWeight: 700, color: T.accent, border: `1px solid ${T.accent}`, borderRadius: 100, padding: "1px 6px", letterSpacing: ".06em" }}>CURRENT</span>}
-                            </div>
-                            <div style={{ fontSize: 11, color: T.hint, marginTop: 2 }}>{dates}</div>
-                          </button>
-                          <button onClick={() => setConfirmDeleteId(t.id)} aria-label={`Delete ${t.destination}`}
-                            style={{ fontSize: 14, lineHeight: 1, color: T.hint, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "4px 2px" }}>
-                            ×
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
         )}
-        {!savedTrip?.destination && destValid && <div style={{ height: "1.5rem" }} />}
-        {!savedTrip?.destination && !destValid && <div style={{ height: 0 }} />}
+        {destValid && online && hasProfile && (
+          <button onClick={() => handleStart("fresh")}
+            style={{ width: "100%", padding: "4px 0 0", background: "transparent", border: "none", color: T.hint, fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: T.font, marginBottom: 16 }}>
+            or start from a blank slate
+          </button>
+        )}
+        {!destValid && !hasProfile && <div style={{ height: 16 }} />}
+
+        {/* My trips — mini boarding-pass shelf (design pick 7A). Same ticket
+            metaphor as the dashboard hero; a failed build says so and offers a
+            rebuild instead of resuming into a broken trip. */}
+        {trips.length > 0 && (
+          <div style={{ marginBottom: "1.5rem" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".16em", margin: "4px 0 8px" }}>My trips</div>
+            {trips.map(t => {
+              const isActive   = t.id === savedTrip?.id;
+              const confirming = confirmDeleteId === t.id;
+              const stub  = stubDate(t.answers?.dates?.start);
+              const broken = !!t._error;
+              const sub = broken
+                ? "build didn't finish — tap to rebuild"
+                : t.nights ? `${t.nights} ${t.nights === 1 ? "night" : "nights"}` : "";
+              if (confirming) {
+                return (
+                  <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, border: `1px solid ${T.border2}`, borderRadius: 12, background: T.bg1, padding: "12px 14px", marginBottom: 8 }}>
+                    <div style={{ flex: 1, fontSize: 12, color: T.muted }}>
+                      Delete <strong style={{ color: T.ink }}>{t.destination}</strong> and its itinerary?
+                    </div>
+                    <button onClick={() => { onDeleteTrip?.(t.id); setConfirmDeleteId(null); }}
+                      style={{ fontSize: 11, fontWeight: 700, color: T.white, background: T.accent, border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontFamily: T.font }}>
+                      Delete
+                    </button>
+                    <button onClick={() => setConfirmDeleteId(null)}
+                      style={{ fontSize: 11, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontFamily: T.font }}>
+                      Keep
+                    </button>
+                  </div>
+                );
+              }
+              return (
+                <div key={t.id}
+                  style={{ display: "flex", alignItems: "stretch", border: `1px solid ${isActive ? T.border2 : T.border}`, borderRadius: 12, background: T.bg1, overflow: "hidden", marginBottom: 8, opacity: broken ? .9 : 1 }}>
+                  <div style={{ background: T.bg2, borderRight: `1px dashed ${T.border2}`, padding: "9px 12px", textAlign: "center", alignSelf: "stretch", display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 46 }}>
+                    {stub ? (
+                      <>
+                        <div style={{ fontSize: 9, fontWeight: 800, color: T.accent, letterSpacing: ".08em" }}>{stub.mon}</div>
+                        <div style={{ fontSize: 17, fontWeight: 800, color: T.ink, fontVariantNumeric: "tabular-nums" }}>{stub.day}</div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 15, color: T.hint }}>✈</div>
+                    )}
+                  </div>
+                  <button onClick={() => onResume(t.id)}
+                    style={{ flex: 1, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "9px 13px", minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: T.ink, display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.destination}</span>
+                      {isActive && <span style={{ fontSize: 8.5, fontWeight: 700, color: T.accent, border: `1px solid ${T.accent}`, borderRadius: 100, padding: "1px 6px", letterSpacing: ".06em", flexShrink: 0 }}>CURRENT</span>}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: broken ? "#f08070" : T.hint, marginTop: 2 }}>{sub}</div>
+                  </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 2, paddingRight: 10 }}>
+                    <span style={{ color: broken ? T.hint : T.accent, fontWeight: 800, fontSize: 13 }}>{broken ? "↻" : "↩"}</span>
+                    <button onClick={() => setConfirmDeleteId(t.id)} aria-label={`Delete ${t.destination}`}
+                      style={{ fontSize: 14, lineHeight: 1, color: T.hint, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "4px 4px" }}>
+                      ×
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
       </div>
+
+      {/* Traveler profile editor (design pick 6A) */}
+      <ProfileSheet
+        open={showProfile}
+        profile={profile}
+        onClose={() => setShowProfile(false)}
+        onSave={onUpdateProfile}
+      />
     </div>
   );
 }

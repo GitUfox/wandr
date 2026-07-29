@@ -277,6 +277,12 @@ export default function Wandr() {
     if (p) setSavedProfile(p);
   }
 
+  /** Persist a profile edited directly in the ProfileSheet (design pick 6A). */
+  function handleUpdateProfile(profile) {
+    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch { /* quota — keep in-memory copy anyway */ }
+    setSavedProfile(profile);
+  }
+
   // Decline it — persist so it doesn't nag on future trips.
   function handleDismissProfilePrompt() {
     try { localStorage.setItem(PROFILE_DECLINED_KEY, "1"); } catch { /* ignore */ }
@@ -421,6 +427,8 @@ export default function Wandr() {
               <WelcomeScreen
                 onStart={startInterview}
                 hasProfile={!!savedProfile}
+                profile={savedProfile}
+                onUpdateProfile={handleUpdateProfile}
                 savedTrip={savedTrip}
                 onResume={handleResume}
                 trips={allTrips}
