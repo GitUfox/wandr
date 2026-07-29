@@ -11,9 +11,9 @@
  * motion.div (backdrop + sheet) is a direct keyed child — required for reliable
  * exit animation + unmounting. Dashboard renders this component always mounted.
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { T, nearestBudgetTier, INTERESTS_GROUPS } from "../lib/constants.js";
-import { extractDayHeaders } from "../lib/utils.js";
+import { extractDayHeaders, extractActivityTitles } from "../lib/utils.js";
 import DateRangePicker from "./DateRangePicker.jsx";
 import BudgetTiers from "./BudgetTiers.jsx";
 import InterestsPicker from "./InterestsPicker.jsx";
@@ -155,11 +155,18 @@ export default function EditTripSheet({
   onClose,
   onEditPlan,
   onEditTripDetails,
+  initialStage = null, // e.g. "full-itinerary" — Remix opens straight into that pane
 }) {
   const [stage, setStage]           = useState("picker");
   const [selectedDay, setSelectedDay] = useState(null);
   const [prompt, setPrompt]         = useState("");
   const [selectedVibe, setSelectedVibe] = useState([]);
+  const [surprise, setSurprise]     = useState(false); // "Surprise me" — regen with an avoid-list
+
+  // Jump to the requested pane each time the sheet opens (Remix path).
+  useEffect(() => {
+    if (open && initialStage) setStage(initialStage);
+  }, [open, initialStage]);
 
   // Trip Details local state — seeded from current trip.answers
   const a = trip.answers || {};
@@ -187,6 +194,7 @@ export default function EditTripSheet({
     setSelectedDay(null);
     setPrompt("");
     setSelectedVibe([]);
+    setSurprise(false);
     setConfirmRebuild(false);
   }
 
@@ -200,7 +208,7 @@ export default function EditTripSheet({
     if (planLoading) return false;
     if (stage === "specific-activities") return prompt.trim().length > 2;
     if (stage === "specific-day")        return selectedDay !== null;
-    if (stage === "full-itinerary")      return selectedVibe.length > 0 || prompt.trim().length > 2;
+    if (stage === "full-itinerary")      return surprise || selectedVibe.length > 0 || prompt.trim().length > 2;
     if (stage === "trip-details")        return localDest.trim().length > 1;
     return false;
   }
@@ -226,6 +234,13 @@ export default function EditTripSheet({
     } else if (stage === "full-itinerary") {
       const parts = [...selectedVibe];
       if (prompt.trim()) parts.push(prompt.trim());
+      if (surprise) {
+        // The avoid-list is what makes "Surprise me" honest — without it the
+        // model regenerates a near-identical trip from the same database.
+        const avoid = extractActivityTitles(planText).join("; ");
+        parts.push("Take a completely different angle on this trip — different anchor activities, different neighborhoods or areas where possible");
+        if (avoid) parts.push(`Do NOT reuse these places from the previous itinerary: ${avoid}`);
+      }
       onEditPlan("full", parts.join(". "), null, null);
       onClose();
     }
@@ -267,6 +282,7 @@ export default function EditTripSheet({
   function handleClose() {
     onClose();
     setConfirmRebuild(false);
+    setSurprise(false);
     setTimeout(() => setStage("picker"), 420);
   }
 
@@ -509,6 +525,25 @@ export default function EditTripSheet({
                 rows={3}
                 style={textareaStyle}
               />
+              <button
+                onClick={() => setSurprise(v => !v)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 9, width: "100%", marginTop: 12,
+                  background: surprise ? "#2a1a12" : T.bg2,
+                  border: surprise ? `1.5px solid ${T.accent}` : `1px dashed ${T.border2}`,
+                  borderRadius: 10, padding: "10px 13px", cursor: "pointer", fontFamily: T.font,
+                  textAlign: "left", transition: "all .12s",
+                }}
+              >
+                <span style={{ fontSize: 15 }}>🎲</span>
+                <span style={{ flex: 1 }}>
+                  <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: surprise ? T.accent : T.ink }}>Surprise me</span>
+                  <span style={{ display: "block", fontSize: 11, color: T.muted, marginTop: 1 }}>A genuinely different take — none of the current stops repeat</span>
+                </span>
+              </button>
+              <div style={{ fontSize: 11, color: T.hint, lineHeight: 1.5, marginTop: 12 }}>
+                Heads up — this rebuilds the whole itinerary, including any edits you've made to it.
+              </div>
               <SubmitBar
                 label={getSubmitLabel()}
                 enabled={isSubmitEnabled()}

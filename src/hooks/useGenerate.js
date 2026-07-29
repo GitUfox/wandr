@@ -12,6 +12,7 @@ export function useGenerate() {
   const [planLoading, setPlanLoading] = useState(false);
   const [patchError, setPatchError]   = useState("");
   const [tweakingId, setTweakingId]   = useState(null); // id of the activity currently being AI-tweaked
+  const [generatedAt, setGeneratedAt] = useState(null); // epoch ms of the last AI (re)generation — manual edits don't bump it
   const streamRef  = useRef("");
   const modelRef   = useRef(null); // mirrors planModel — avoids stale closures in edit handlers
   const abortRef   = useRef(null);
@@ -30,10 +31,10 @@ export function useGenerate() {
   // so an orphan plan can never be written under a wrong or missing id.
   useEffect(() => {
     if (!planOwnerRef.current || !planModel || !planText || planLoading) return;
-    const payload = JSON.stringify({ planText, planMode });
+    const payload = JSON.stringify({ planText, planMode, generatedAt });
     try { localStorage.setItem(planKeyFor(planOwnerRef.current), payload); } catch { /* quota — ignore */ }
     mirrorLegacyPlan(payload); // rollback path — see tripStore.js
-  }, [planModel, planText, planMode, planLoading]);
+  }, [planModel, planText, planMode, planLoading, generatedAt]);
 
   // Adopt a freshly-built plan string as the editable model (and keep planText
   // in sync). Used after generation completes and after an AI day-patch.
@@ -204,7 +205,10 @@ export function useGenerate() {
         setPlanText(streamRef.current);
       }, controller.signal);
       // Parse the completed plan into the editable model (skip if aborted).
-      if (!controller.signal.aborted) adoptPlan(streamRef.current);
+      if (!controller.signal.aborted) {
+        adoptPlan(streamRef.current);
+        setGeneratedAt(Date.now());
+      }
     } catch (e) {
       if (e?.name === "AbortError") return;
       // Sanitise: never show raw browser network errors (e.g. "Failed to fetch") to the user
@@ -259,6 +263,7 @@ export function useGenerate() {
       setPlanText(newPlan);
       streamRef.current = newPlan;
       adoptPlan(newPlan); // keep the editable model in sync after an AI day-patch
+      setGeneratedAt(Date.now());
     } catch (e) {
       if (e?.name === "AbortError") return;
       const msg = e.message || "";
@@ -283,6 +288,7 @@ export function useGenerate() {
     setPlanMode(null);
     setPlanLoading(false);
     setPatchError("");
+    setGeneratedAt(null);
     streamRef.current = "";
   }
 
@@ -309,6 +315,7 @@ export function useGenerate() {
     streamRef.current = saved.planText;
     setPlanText(saved.planText);
     setPlanMode(saved.planMode || null);
+    setGeneratedAt(typeof saved.generatedAt === "number" ? saved.generatedAt : null); // legacy plans predate the field
     adoptPlan(saved.planText);
     return true;
   }
@@ -323,5 +330,5 @@ export function useGenerate() {
     resetPlan();
   }
 
-  return { planText, planModel, planMode, planLoading, patchError, tweakingId, generate, patchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity };
+  return { planText, planModel, planMode, planLoading, patchError, tweakingId, generatedAt, generate, patchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity };
 }

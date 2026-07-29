@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { MODES, T, FEATURES } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
-import { arr, formatShortDate, ticketDate, seasonShort } from "../lib/utils.js";
+import { arr, formatShortDate, ticketDate, seasonShort, timeAgo } from "../lib/utils.js";
 import { TEAM_SHORT } from "../lib/mlbTeams.js";
 import Md from "./Md.jsx";
 import ItineraryEditor from "./ItineraryEditor.jsx";
@@ -19,7 +19,7 @@ export default function Dashboard({
   trips = [],
   onSwitchTrip,
   tripGames,
-  planText, planModel, planLoading, planMode,
+  planText, planModel, planLoading, planMode, generatedAt,
   patchError,
   debugMsg,
   onGenerate,
@@ -39,6 +39,7 @@ export default function Dashboard({
 }) {
   const [copied, setCopied]           = useState(false);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [editSheetStage, setEditSheetStage] = useState(null); // "full-itinerary" when opened via Remix, else null (picker)
   const [eventsDismissed, setEventsDismissed] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const online = useOnline();
@@ -186,6 +187,7 @@ export default function Dashboard({
         html,body,#root{background:${T.bg0}!important;margin:0;padding:0;min-height:100vh;width:100%}
         @keyframes blink{50%{opacity:0}}
         @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulse{50%{box-shadow:0 0 0 6px rgba(201,100,66,.06)}}
         *{box-sizing:border-box}
       `}</style>
 
@@ -244,7 +246,7 @@ export default function Dashboard({
                 </div>
               )}
               <button
-                onClick={() => online && setEditSheetOpen(true)}
+                onClick={() => { if (online) { setEditSheetStage(null); setEditSheetOpen(true); } }}
                 disabled={!online}
                 title={online ? undefined : "Editing needs a connection"}
                 style={{ fontSize:11, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:6, padding:"5px 12px", cursor:online?"pointer":"not-allowed", opacity:online?1:.45, fontFamily:T.font, fontWeight:600 }}
@@ -380,23 +382,41 @@ export default function Dashboard({
 
           {/* Itinerary */}
           <div>
-              {/* Hero mode (full itinerary) */}
-              {(() => {
+              {/* Generate CTA (no plan yet) vs status row (design pick 2A) —
+                  once a plan exists the card stops selling and a slim toolbar
+                  confirms state; Remix opens the edit sheet's Full Itinerary
+                  pane. No blind regeneration path. */}
+              {!planText && !planLoading ? (() => {
                 const hero = MODES[0];
-                const isActive = planMode === hero.id;
                 return (
                   <button onClick={() => online && onGenerate(hero.id)} disabled={!online}
-                    style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"14px 16px", borderRadius:12, background:isActive?"#2a1a12":T.bg1, border:isActive?`2px solid ${T.accent}`:`1px solid ${T.border2}`, cursor:online?"pointer":"not-allowed", opacity:online?1:.5, fontFamily:T.font, marginBottom:8, textAlign:"left", transition:"all .15s" }}>
+                    style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"14px 16px", borderRadius:12, background:T.bg1, border:`1px solid ${T.border2}`, cursor:online?"pointer":"not-allowed", opacity:online?1:.5, fontFamily:T.font, marginBottom:8, textAlign:"left", transition:"all .15s" }}>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontSize:14, fontWeight:800, color:isActive?T.accent:T.ink, marginBottom:2 }}>{hero.label}</div>
-                      <div style={{ fontSize:12, color:isActive?"#a06040":T.muted }}>{online ? hero.desc : "Needs a connection"}</div>
+                      <div style={{ fontSize:14, fontWeight:800, color:T.ink, marginBottom:2 }}>{hero.label}</div>
+                      <div style={{ fontSize:12, color:T.muted }}>{online ? hero.desc : "Needs a connection"}</div>
                     </div>
-                    <div style={{ fontSize:11, fontWeight:700, color:isActive?T.accent:T.hint, background:isActive?"#3a2a1a":T.bg3, padding:"4px 10px", borderRadius:100, flexShrink:0 }}>
-                      {isActive && planLoading ? "…" : isActive ? "Active" : "Generate →"}
+                    <div style={{ fontSize:11, fontWeight:700, color:T.hint, background:T.bg3, padding:"4px 10px", borderRadius:100, flexShrink:0 }}>
+                      Generate →
                     </div>
                   </button>
                 );
-              })()}
+              })() : (
+                <div style={{ display:"flex", alignItems:"center", gap:10, padding:"4px 2px 12px", borderBottom:`1px solid ${T.border}`, marginBottom:12 }}>
+                  <span style={{ width:7, height:7, borderRadius:"50%", background:T.accent, boxShadow:"0 0 0 3px rgba(201,100,66,.14)", flexShrink:0, animation:planLoading?"pulse 1.2s ease-in-out infinite":"pulse 2.4s ease-in-out infinite" }} />
+                  <span style={{ fontSize:13, fontWeight:800, color:T.ink }}>Full itinerary</span>
+                  <span style={{ fontSize:11, color:T.hint }}>
+                    {planLoading ? "writing your days…" : generatedAt ? `generated ${timeAgo(generatedAt)}` : ""}
+                  </span>
+                  <span style={{ flex:1 }} />
+                  <button
+                    onClick={() => { if (online && !planLoading) { setEditSheetStage("full-itinerary"); setEditSheetOpen(true); } }}
+                    disabled={!online || planLoading}
+                    title={online ? "Rework this itinerary — with your direction" : "Needs a connection"}
+                    style={{ fontSize:11, fontWeight:600, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:6, padding:"5px 12px", cursor:online&&!planLoading?"pointer":"not-allowed", opacity:online&&!planLoading?1:.45, fontFamily:T.font }}>
+                    ↻ Remix
+                  </button>
+                </div>
+              )}
               {/* Secondary modes — only render when more than the hero mode exists */}
               {MODES.length > 1 && (
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:6, marginBottom:planMode?10:0 }}>
@@ -473,7 +493,8 @@ export default function Dashboard({
         planText={planText}
         planMode={planMode}
         planLoading={planLoading}
-        onClose={() => setEditSheetOpen(false)}
+        initialStage={editSheetStage}
+        onClose={() => { setEditSheetOpen(false); setEditSheetStage(null); }}
         onEditPlan={onEditPlan}
         onEditTripDetails={onEditTripDetails}
       />

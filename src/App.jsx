@@ -135,7 +135,7 @@ export default function Wandr() {
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const { buildTrip: doBuildTrip, loadMsg, error: buildError } = useBuildTrip();
-  const { planText, planModel, planMode, planLoading, patchError, tweakingId, generate: doGenerate, patchDay: doPatchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity } = useGenerate();
+  const { planText, planModel, planMode, planLoading, patchError, tweakingId, generatedAt, generate: doGenerate, patchDay: doPatchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity } = useGenerate();
   const { games: tripGames } = useLocalEvents(trip);
   const { uploadedFiles, uploadError, handleFiles, removeFile, resetFiles } = useFileUpload();
 
@@ -471,7 +471,7 @@ export default function Wandr() {
                   trips={allTrips}
                   onSwitchTrip={handleResume}
                   tripGames={tripGames}
-                  planText={planText} planModel={planModel} planLoading={planLoading} planMode={planMode}
+                  planText={planText} planModel={planModel} planLoading={planLoading} planMode={planMode} generatedAt={generatedAt}
                   patchError={patchError}
                   debugMsg={buildError}
                   onGenerate={handleGenerate}

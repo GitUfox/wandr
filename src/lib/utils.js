@@ -165,6 +165,39 @@ export function seasonShort(iso) {
 }
 
 /**
+ * Human relative timestamp for the itinerary status row ("just now",
+ * "12 min ago", "3 hr ago", then a date). `now` injectable for tests.
+ */
+export function timeAgo(ts, now = Date.now()) {
+  if (!ts || typeof ts !== "number") return "";
+  const s = Math.round((now - ts) / 1000);
+  if (s < 90) return "just now";
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} hr ago`;
+  const d = new Date(ts);
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${months[d.getMonth()]} ${d.getDate()}`;
+}
+
+/**
+ * Every activity title in a plan — the bold cell of each table row.
+ * Feeds the "Surprise me" avoid-list so a remix can't rebuild the same trip.
+ */
+export function extractActivityTitles(planText) {
+  const titles = [];
+  for (const line of (planText || "").split("\n")) {
+    const t = line.trim();
+    if (!t.startsWith("|") || t.match(/^\|[-| :]+\|$/)) continue;
+    const cells = t.replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+    const title = (cells[1] || "").replace(/\*\*/g, "").trim();
+    if (title && title.toLowerCase() !== "activity" && !titles.includes(title)) titles.push(title);
+  }
+  return titles;
+}
+
+/**
  * Time-of-day buckets for the alternate itinerary view. Morning < 12pm,
  * Afternoon 12–5pm, Evening ≥ 5pm. Anchors are the default clock time an
  * activity gets when it's moved into an otherwise-empty bucket.

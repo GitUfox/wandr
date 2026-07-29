@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort } from "./utils.js";
+import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles } from "./utils.js";
 
 // ── arr ───────────────────────────────────────────────────────────────────────
 
@@ -360,5 +360,47 @@ describe("seasonShort", () => {
   it("returns '' for invalid input so the Season column drops out", () => {
     expect(seasonShort("")).toBe("");
     expect(seasonShort(undefined)).toBe("");
+  });
+});
+
+// ── timeAgo / extractActivityTitles (Remix status row) ────────────────────────
+
+describe("timeAgo", () => {
+  const now = new Date("2026-07-28T12:00:00").getTime();
+
+  it("scales from 'just now' through minutes and hours to a date", () => {
+    expect(timeAgo(now - 30 * 1000, now)).toBe("just now");
+    expect(timeAgo(now - 12 * 60 * 1000, now)).toBe("12 min ago");
+    expect(timeAgo(now - 3 * 3600 * 1000, now)).toBe("3 hr ago");
+    expect(timeAgo(new Date("2026-07-20T09:00:00").getTime(), now)).toBe("Jul 20");
+  });
+
+  it("returns '' for missing or bad input so the row hides the timestamp", () => {
+    expect(timeAgo(null, now)).toBe("");
+    expect(timeAgo(undefined, now)).toBe("");
+    expect(timeAgo("yesterday", now)).toBe("");
+  });
+});
+
+describe("extractActivityTitles", () => {
+  const plan = [
+    "## Day 1 — Tuesday, June 30, 2026",
+    "TABLE:",
+    "| Time | Activity | Details |",
+    "|------|----------|---------|",
+    "| 9:00 AM | **Group Kayak Tour** | On the water. |",
+    "| 1:00 PM | **Slalom Creek Brewing** | Beer. |",
+    "ENDTABLE",
+    "## Day 2 — Wednesday, July 1, 2026",
+    "| 10:00 AM | **Group Kayak Tour** | Again. |",
+  ].join("\n");
+
+  it("collects unique bold titles, skipping headers and separators", () => {
+    expect(extractActivityTitles(plan)).toEqual(["Group Kayak Tour", "Slalom Creek Brewing"]);
+  });
+
+  it("returns [] for empty input", () => {
+    expect(extractActivityTitles("")).toEqual([]);
+    expect(extractActivityTitles(null)).toEqual([]);
   });
 });
