@@ -14,6 +14,7 @@ import ItineraryEditor from "./ItineraryEditor.jsx";
 import WandrLogo from "./WandrLogo.jsx";
 import EditTripSheet from "./EditTripSheet.jsx";
 import StardustBurst from "./StardustBurst.jsx";
+import Glyph from "./Glyphs.jsx";
 
 export default function Dashboard({
   trip,
@@ -410,7 +411,7 @@ export default function Dashboard({
           {Array.isArray(tripGames) && tripGames.length > 0 && !eventsDismissed && (
             <div style={{ padding:"13px 15px", background:T.bg1, border:`1px solid ${T.border2}`, borderRadius:12, marginBottom:12 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:9 }}>
-                <span style={{ fontSize:14 }}>⚾</span>
+                <Glyph name="ticket" size={15} color={T.accent} />
                 <span style={{ flex:1, fontSize:12.5, fontWeight:800, color:T.ink }}>Happening during your trip</span>
                 <button onClick={() => setEventsDismissed(true)} title="Dismiss"
                   style={{ padding:"2px 6px", fontSize:12, color:T.hint, background:"none", border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>✕</button>
@@ -498,7 +499,7 @@ export default function Dashboard({
               {/* Patch error banner (day-edit failure — plan text is preserved) */}
               {patchError && !planLoading && (
                 <div style={{ display:"flex", alignItems:"center", gap:9, padding:"10px 14px", background:"rgba(180,60,40,.12)", border:"1px solid rgba(180,60,40,.3)", borderRadius:9, marginBottom:10, fontSize:12.5, color:"#f08070" }}>
-                  <span style={{ flexShrink:0 }}>⚠</span>
+                  <Glyph name="warning" size={14} color="#f08070" />
                   <span>{patchError}</span>
                 </div>
               )}
@@ -511,7 +512,9 @@ export default function Dashboard({
               )}
               {/* Plan output */}
               {planText && (
-                <div style={{ background:T.bg1, border:`1px solid ${T.border}`, borderRadius:12, padding:"1.25rem 1.4rem", marginTop:4 }}>
+                // Flat itinerary (design pick 10B): blocks sit on the page —
+                // the old bg1 wrapper card earned nothing and cost width.
+                <div style={{ marginTop:4 }}>
                   {/* Editable blocks once a full itinerary has finished streaming;
                       Md stays the fallback (during streaming, other modes, or if parsing yielded nothing). */}
                   {FEATURES.editableItinerary && !planLoading && planMode === "full" && planModel?.days?.length ? (

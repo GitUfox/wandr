@@ -15,6 +15,7 @@
 import { useState } from "react";
 import { T } from "../lib/constants.js";
 import { MLB_TEAMS } from "../lib/mlbTeams.js";
+import Glyph from "./Glyphs.jsx";
 
 // Selecting either tag means "I care about baseball", which is what reveals
 // the team picker (§7 progressive disclosure — no extra interview step).
@@ -111,7 +112,9 @@ export default function InterestsPicker({
           We flag that team's games at any destination, home or away. */}
       {showTeams && (
         <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 12, color: T.ink }}>⚾ Favorite team?</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: T.ink }}>
+            <Glyph name="ticket" size={13} color={T.accent} /> Favorite team?
+          </span>
           <select value={teams?.[0] || ""} onChange={e => setTeams(e.target.value ? [e.target.value] : [])}
             style={{ flex: "1 1 180px", minWidth: 0, padding: "7px 10px", border: `1px solid ${T.border}`, borderRadius: 8, background: T.bg3, color: teams?.[0] ? T.ink : T.hint, outline: "none", fontSize: 12.5, fontFamily: T.font, colorScheme: "dark" }}>
             <option value="">No favorite (just love the game)</option>

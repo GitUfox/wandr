@@ -17,6 +17,7 @@ import { extractDayHeaders, extractActivityTitles } from "../lib/utils.js";
 import DateRangePicker from "./DateRangePicker.jsx";
 import BudgetTiers from "./BudgetTiers.jsx";
 import InterestsPicker from "./InterestsPicker.jsx";
+import Glyph from "./Glyphs.jsx";
 
 const VIBE_CHIPS = [
   "More relaxed",
@@ -37,25 +38,25 @@ const PARTY_OPTS = [
 const OPTIONS = [
   {
     id:   "specific-activities",
-    icon: "🔄",
+    icon: "swap",
     title: "Specific Activities",
     sub:   "Describe what to swap out",
   },
   {
     id:   "specific-day",
-    icon: "🗓️",
+    icon: "calendar",
     title: "Specific Day",
     sub:   "Redo one day from scratch",
   },
   {
     id:   "full-itinerary",
-    icon: "🎨",
+    icon: "mix",
     title: "Full Itinerary",
     sub:   "Adjust the overall feel",
   },
   {
     id:   "trip-details",
-    icon: "🧳",
+    icon: "trip",
     title: "Trip Details",
     sub:   "Destination, dates, budget, party",
   },
@@ -381,8 +382,8 @@ export default function EditTripSheet({
                       width: "100%", textAlign: "left",
                     }}
                   >
-                    <span style={{ fontSize: 18, width: 26, textAlign: "center", flexShrink: 0 }}>
-                      {opt.icon}
+                    <span style={{ width: 26, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+                      <Glyph name={opt.icon} size={18} color={T.accent} />
                     </span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 1 }}>
@@ -535,7 +536,7 @@ export default function EditTripSheet({
                   textAlign: "left", transition: "all .12s",
                 }}
               >
-                <span style={{ fontSize: 15 }}>🎲</span>
+                <Glyph name="dice" size={17} color={surprise ? T.accent : T.muted} />
                 <span style={{ flex: 1 }}>
                   <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: surprise ? T.accent : T.ink }}>Surprise me</span>
                   <span style={{ display: "block", fontSize: 11, color: T.muted, marginTop: 1 }}>A genuinely different take — none of the current stops repeat</span>

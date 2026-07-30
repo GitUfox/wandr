@@ -6,6 +6,7 @@ import { fetchDestinationSuggestions } from "../lib/places.js";
 import WandrLogo from "./WandrLogo.jsx";
 import ProfileSheet from "./ProfileSheet.jsx";
 import StardustBurst from "./StardustBurst.jsx";
+import Glyph from "./Glyphs.jsx";
 
 /** Compact profile summary for the ✦ strip: starred interests first. */
 function profileSummary(p) {
@@ -290,7 +291,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
                         <div style={{ fontSize: 17, fontWeight: 800, color: T.ink, fontVariantNumeric: "tabular-nums" }}>{stub.day}</div>
                       </>
                     ) : (
-                      <div style={{ fontSize: 15, color: T.hint }}>✈</div>
+                      <Glyph name="plane" size={14} color={T.hint} style={{ margin: "0 auto" }} />
                     )}
                   </div>
                   <button onClick={() => onResume(t.id)}

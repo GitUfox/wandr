@@ -31,7 +31,7 @@ const DAYPARTS = [
 
 function TimeSlotPicker({ value, onPick }) {
   return (
-    <div style={{ background: T.bg1, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 12px 4px", marginBottom: 8 }}>
+    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 12px 4px", marginBottom: 8 }}>
       {DAYPARTS.map(p => {
         const slots = [];
         for (let m = p.from; m <= p.to; m += 30) slots.push(formatTime(m));
@@ -115,7 +115,7 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
 
   return (
     <Reorder.Item value={a} as="div" dragListener={false} dragControls={controls}
-      style={{ position: "relative", background: T.bg2, border: `1px solid ${editing ? T.accent : T.border}`, borderRadius: 10, padding: editing ? "11px 12px" : "10px 10px 10px 4px", marginBottom: 8, listStyle: "none" }}>
+      style={{ position: "relative", background: T.bg1, border: `1px solid ${editing ? T.accent : T.border}`, borderRadius: 10, padding: editing ? "11px 12px" : "10px 10px 10px 4px", marginBottom: 8, listStyle: "none" }}>
 
       {editing ? (
         <>
@@ -224,7 +224,7 @@ function FoodRow({ f }) {
    re-time an activity into another bucket. Detailed edits live in Timeline. */
 function BucketCard({ a, dayIdx, bucket, onMoveToBucket }) {
   return (
-    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 9, padding: "8px 10px", marginBottom: 6 }}>
+    <div style={{ background: T.bg1, border: `1px solid ${T.border}`, borderRadius: 9, padding: "8px 10px", marginBottom: 6 }}>
       <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
         <span style={{ fontSize: 10.5, color: T.accent, fontWeight: 700, flexShrink: 0, width: 54 }}>{clean(a.time)}</span>
         <span style={{ fontSize: 12, color: T.ink, fontWeight: 700, lineHeight: 1.3 }}>{clean(a.title)}</span>
