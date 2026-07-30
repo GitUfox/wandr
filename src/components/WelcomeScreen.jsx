@@ -88,7 +88,64 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
 
   // One card renderer for BOTH the mobile shelf and the desktop departures
   // rail (12B binding constraint: arrangements may arrange, never rebuild).
-  const renderTripCard = (t) => {  };
+  // One card renderer for BOTH the mobile shelf and the desktop departures
+  // rail (12B binding constraint: arrangements may arrange, never rebuild).
+  const renderTripCard = (t) => {
+    const isActive   = t.id === savedTrip?.id;
+    const confirming = confirmDeleteId === t.id;
+    const stub  = stubDate(t.answers?.dates?.start);
+    const broken = !!t._error;
+    const sub = broken
+      ? "build didn't finish — tap to rebuild"
+      : t.nights ? `${t.nights} ${t.nights === 1 ? "night" : "nights"}` : "";
+    if (confirming) {
+      return (
+        <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, border: `1px solid ${T.border2}`, borderRadius: 12, background: T.bg1, padding: "12px 14px", marginBottom: 8 }}>
+          <div style={{ flex: 1, fontSize: 12, color: T.muted }}>
+            Delete <strong style={{ color: T.ink }}>{t.destination}</strong> and its itinerary?
+          </div>
+          <button onClick={() => { onDeleteTrip?.(t.id); setConfirmDeleteId(null); }}
+            style={{ fontSize: 11, fontWeight: 700, color: T.white, background: T.accent, border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontFamily: T.font }}>
+            Delete
+          </button>
+          <button onClick={() => setConfirmDeleteId(null)}
+            style={{ fontSize: 11, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontFamily: T.font }}>
+            Keep
+          </button>
+        </div>
+      );
+    }
+    return (
+      <div key={t.id}
+        style={{ display: "flex", alignItems: "stretch", border: `1px solid ${isActive ? T.border2 : T.border}`, borderRadius: 12, background: T.bg1, overflow: "hidden", marginBottom: 8, opacity: broken ? .9 : 1 }}>
+        <div style={{ background: T.bg2, borderRight: `1px dashed ${T.border2}`, padding: "9px 12px", textAlign: "center", alignSelf: "stretch", display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 46 }}>
+          {stub ? (
+            <>
+              <div style={{ fontSize: 9, fontWeight: 800, color: T.accent, letterSpacing: ".08em" }}>{stub.mon}</div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: T.ink, fontVariantNumeric: "tabular-nums" }}>{stub.day}</div>
+            </>
+          ) : (
+            <Glyph name="plane" size={14} color={T.hint} style={{ margin: "0 auto" }} />
+          )}
+        </div>
+        <button onClick={() => onResume(t.id)}
+          style={{ flex: 1, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "9px 13px", minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.ink, display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.destination}</span>
+            {isActive && <span style={{ fontSize: 8.5, fontWeight: 700, color: T.accent, border: `1px solid ${T.accent}`, borderRadius: 100, padding: "1px 6px", letterSpacing: ".06em", flexShrink: 0 }}>CURRENT</span>}
+          </div>
+          <div style={{ fontSize: 10.5, color: broken ? "#f08070" : T.hint, marginTop: 2 }}>{sub}</div>
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 2, paddingRight: 10 }}>
+          <span style={{ color: broken ? T.hint : T.accent, fontWeight: 800, fontSize: 13 }}>{broken ? "↻" : "↩"}</span>
+          <button onClick={() => setConfirmDeleteId(t.id)} aria-label={`Delete ${t.destination}`}
+            style={{ fontSize: 14, lineHeight: 1, color: T.hint, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "4px 4px" }}>
+            ×
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div style={ isWide
