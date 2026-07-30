@@ -139,6 +139,14 @@ describe("split trip build", () => {
     expect(messageContent).not.toContain('"practical"');
   });
 
+  it("meta half pins the output to its schema so the model can't volunteer an itinerary", () => {
+    const { messageContent } = buildTripMetaPrompt(BASE_ANSWERS, []);
+    expect(messageContent).toContain("Do NOT include categories, itinerary");
+    // the categories half must not carry the pin — categories are its whole job
+    expect(buildTripCategoriesPrompt(BASE_ANSWERS, []).messageContent)
+      .not.toContain("Do NOT include categories");
+  });
+
   it("both halves carry the same shared trip context", () => {
     const cats = buildTripCategoriesPrompt(BASE_ANSWERS, []).messageContent;
     const meta = buildTripMetaPrompt(BASE_ANSWERS, []).messageContent;

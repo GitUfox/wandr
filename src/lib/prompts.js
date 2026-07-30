@@ -350,7 +350,12 @@ export function buildTripCategoriesPrompt(answers, uploadedFiles) {
  */
 export function buildTripMetaPrompt(answers, uploadedFiles) {
   const { contextText, imageBlocks, n } = tripContext(answers, uploadedFiles);
-  return { messageContent: assembleTripMessage(contextText, META_SCHEMA(n), imageBlocks), n };
+  // The shared context is full of day-planning instructions, and without an
+  // explicit pin the model volunteers a day-by-day "itinerary" this schema
+  // never asked for — output that grows with trip length and pushed 6-night
+  // builds past Vercel's 60s ceiling (the 2026-07-28 Bangkok 500s).
+  const schema = `${META_SCHEMA(n)}\n\nReturn ONLY the fields in this schema. Do NOT include categories, itinerary, days, activities, or any other keys.`;
+  return { messageContent: assembleTripMessage(contextText, schema, imageBlocks), n };
 }
 
 // ── Plan generation prompt ─────────────────────────────────────────────────────

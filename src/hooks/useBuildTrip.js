@@ -47,7 +47,9 @@ export function useBuildTrip() {
     const tryBuild = async () => {
       const [cats, meta] = await Promise.all([
         oneCall(catsMsg, 6000),
-        oneCall(metaMsg, 4000),
+        // Meta output is ~100 tokens; the low cap also backstops runaway
+        // generation so this half can never crawl toward the 60s ceiling.
+        oneCall(metaMsg, 600),
       ]);
       // meta provides destination/tagline/season/highlights;
       // cats provides categories. Merge into the single trip object the app expects.
