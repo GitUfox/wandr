@@ -5,7 +5,7 @@
  * Everything else — trip data, plan state — comes from App.jsx via props.
  */
 import { useState, useEffect, useRef } from "react";
-import { MODES, T, FEATURES } from "../lib/constants.js";
+import { MODES, T, FEATURES, AI_DISCLAIMER } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { arr, formatShortDate, ticketDate, seasonShort, timeAgo } from "../lib/utils.js";
 import { TEAM_SHORT } from "../lib/mlbTeams.js";
@@ -238,7 +238,7 @@ export default function Dashboard({
         <span class="wm">wandr<span class="dot">.</span></span>
         <span>wandr-mauve.vercel.app</span>
         <span class="spacer"></span>
-        <span>AI-planned — always verify opening hours, prices, and details with venues</span>
+        <span>${htmlEscape(AI_DISCLAIMER)}</span>
       </div>
     </body></html>`);
     w.document.close();
@@ -381,7 +381,7 @@ export default function Dashboard({
           )}
           {debugMsg && (
             <div style={{ marginTop:10, padding:"6px 10px", background:"rgba(200,80,60,.12)", border:"1px solid rgba(200,80,60,.3)", borderRadius:6, fontSize:11, color:"#f08070" }}>
-              {"Couldn't load full trip data — some sections may be missing. Tap a plan mode below to generate your itinerary anyway."}
+              {"Couldn't load full trip data — some sections may be missing. You can still generate your itinerary below."}
               <div style={{ marginTop:4, opacity:0.7 }}>{debugMsg}</div>
             </div>
           )}
@@ -435,7 +435,7 @@ export default function Dashboard({
                   );
                 })}
                 {tripGames.length > 4 && (
-                  <div style={{ fontSize:11, color:T.hint, marginTop:1 }}>+{tripGames.length - 4} more during your dates</div>
+                  <div style={{ fontSize:11, color:T.hint, marginTop:1 }}>+{tripGames.length - 4} more</div>
                 )}
               </div>
             </div>
@@ -462,38 +462,37 @@ export default function Dashboard({
                   </button>
                 );
               })() : (
-                <div style={{ position:"relative", display:"flex", alignItems:"center", gap:10, padding:"4px 2px 12px", borderBottom:`1px solid ${T.border}`, marginBottom:12 }}>
+                <div style={{ position:"relative", display:"flex", flexWrap:"wrap", alignItems:"center", gap:10, rowGap:8, padding:"4px 2px 12px", borderBottom:`1px solid ${T.border}`, marginBottom:12 }}>
                   <StardustBurst burstKey={readyBurst} origin={{ left: 4, top: "40%" }} />
                   <span style={{ width:7, height:7, borderRadius:"50%", background:T.accent, boxShadow:"0 0 0 3px rgba(201,100,66,.14)", flexShrink:0, animation:planLoading?"pulse 1.2s ease-in-out infinite":"pulse 2.4s ease-in-out infinite" }} />
                   <span style={{ fontSize:13, fontWeight:800, color:T.ink }}>Full itinerary</span>
                   <span style={{ fontSize:11, color:T.hint }}>
                     {planLoading ? "writing your days…" : generatedAt ? `generated ${timeAgo(generatedAt)}` : ""}
                   </span>
-                  <span style={{ flex:1 }} />
-                  <button
-                    onClick={() => { if (online && !planLoading) { setEditSheetStage("full-itinerary"); setEditSheetOpen(true); } }}
-                    disabled={!online || planLoading}
-                    title={online ? "Rework this itinerary — with your direction" : "Needs a connection"}
-                    style={{ fontSize:11, fontWeight:600, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:6, padding:"5px 12px", cursor:online&&!planLoading?"pointer":"not-allowed", opacity:online&&!planLoading?1:.45, fontFamily:T.font }}>
-                    ↻ Remix
-                  </button>
-                </div>
-              )}
-              {/* Secondary modes — only render when more than the hero mode exists */}
-              {MODES.length > 1 && (
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:6, marginBottom:planMode?10:0 }}>
-                  {MODES.slice(1).map(m => {
-                    const isActive = planMode === m.id;
-                    return (
-                      <button key={m.id} onClick={() => onGenerate(m.id)}
-                        style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 12px", borderRadius:10, background:isActive?"#2a1a12":T.bg1, border:isActive?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, cursor:"pointer", fontFamily:T.font, textAlign:"left", transition:"all .15s" }}>
-                        <div>
-                          <div style={{ fontSize:12, fontWeight:700, color:isActive?T.accent:T.ink, lineHeight:1.3 }}>{m.label}</div>
-                          <div style={{ fontSize:10.5, color:isActive?"#a06040":T.hint, lineHeight:1.4 }}>{m.desc}</div>
-                        </div>
-                      </button>
-                    );
-                  })}
+                  {/* One toolbar for every itinerary action (audit R3) —
+                      Copy/Export used to float in their own row inside the
+                      plan card, leaving a dead band of empty space. */}
+                  <div style={{ display:"flex", gap:7, marginLeft:"auto" }}>
+                    {!planLoading && planText && (
+                      <>
+                        <button onClick={copyPlan}
+                          style={{ fontSize:11, fontWeight:600, color:copied==="error"?"#f08070":copied?T.ink:T.muted, background:copied?T.bg3:"transparent", border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px", cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                          {copied === "error" ? "Copy failed" : copied ? "✓ Copied" : "Copy"}
+                        </button>
+                        <button onClick={exportToPdf}
+                          style={{ fontSize:11, fontWeight:600, color:T.muted, background:"transparent", border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px", cursor:"pointer", fontFamily:T.font }}>
+                          Export PDF
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => { if (online && !planLoading) { setEditSheetStage("full-itinerary"); setEditSheetOpen(true); } }}
+                      disabled={!online || planLoading}
+                      title={online ? "Rework this itinerary — with your direction" : "Needs a connection"}
+                      style={{ fontSize:11, fontWeight:600, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:6, padding:"5px 12px", cursor:online&&!planLoading?"pointer":"not-allowed", opacity:online&&!planLoading?1:.45, fontFamily:T.font }}>
+                      ↻ Remix
+                    </button>
+                  </div>
                 </div>
               )}
               {/* Patch error banner (day-edit failure — plan text is preserved) */}
@@ -513,20 +512,6 @@ export default function Dashboard({
               {/* Plan output */}
               {planText && (
                 <div style={{ background:T.bg1, border:`1px solid ${T.border}`, borderRadius:12, padding:"1.25rem 1.4rem", marginTop:4 }}>
-                  <div style={{ display:"flex", justifyContent:"flex-end", gap:7, marginBottom:"1rem" }}>
-                    {!planLoading && (
-                      <>
-                        <button onClick={copyPlan}
-                          style={{ display:"flex", alignItems:"center", gap:5, padding:"7px 12px", fontSize:12, fontWeight:600, color:copied==="error"?"#f08070":copied?T.ink:T.muted, background:copied?T.bg3:"transparent", border:`1px solid ${T.border}`, borderRadius:7, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
-                          {copied === "error" ? "Copy failed" : copied ? "✓ Copied" : "Copy"}
-                        </button>
-                        <button onClick={exportToPdf}
-                          style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", fontSize:12, fontWeight:600, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:7, cursor:"pointer", fontFamily:T.font }}>
-                          Export PDF
-                        </button>
-                      </>
-                    )}
-                  </div>
                   {/* Editable blocks once a full itinerary has finished streaming;
                       Md stays the fallback (during streaming, other modes, or if parsing yielded nothing). */}
                   {FEATURES.editableItinerary && !planLoading && planMode === "full" && planModel?.days?.length ? (
@@ -539,7 +524,7 @@ export default function Dashboard({
                   )}
                   {!planLoading && (
                     <div style={{ marginTop:"1.25rem", paddingTop:"1rem", borderTop:`1px solid ${T.border}`, fontSize:11, color:T.hint, lineHeight:1.6 }}>
-                      AI-generated — always verify opening hours, prices, and details directly with venues before your trip.
+                      {AI_DISCLAIMER}
                     </div>
                   )}
                 </div>

@@ -142,6 +142,12 @@ export function nearestBudgetTier(budget) {
     BUDGET_TIERS[0].value);
 }
 
+// ── AI disclaimer ─────────────────────────────────────────────────────────────
+// ONE string for every surface (itinerary footer, PDF footer). Two hand-typed
+// copies of this sentence had already drifted apart once — never inline it.
+export const AI_DISCLAIMER =
+  "AI-planned — always verify opening hours, prices, and details with venues before your trip.";
+
 // ── Loading messages ──────────────────────────────────────────────────────────
 export const LOAD_MSGS = [
   "Researching your destination…",

@@ -248,7 +248,6 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
             or start from a blank slate
           </button>
         )}
-        {!destValid && !hasProfile && <div style={{ height: 16 }} />}
 
         {/* My trips — mini boarding-pass shelf (design pick 7A). Same ticket
             metaphor as the dashboard hero; a failed build says so and offers a
