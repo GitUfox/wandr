@@ -43,6 +43,20 @@ export const T = {
   accent:"#c96442", accentHover:"#e07050",
   ink:"#efefef", muted:"#a0a0a0", hint:"#555555",
   white:"#ffffff", font:"'Manrope',sans-serif",
+
+  // Type ramp (design-sweep S1). The app once had 25 distinct font sizes;
+  // new/edited styles must pick from this ramp — no ad-hoc sizes.
+  //   micro  — letterspaced uppercase kickers/stubs ONLY (never body text)
+  //   label  — section labels, chips
+  //   meta   — timestamps, hints, captions
+  //   body   — default reading size
+  //   ui     — buttons, card titles
+  //   title  — screen/section titles
+  //   hero   — the destination reveal
+  fs: { micro:9, label:10.5, meta:11.5, body:12.5, ui:14, title:17, hero:28 },
+
+  // Radius tokens (S2): control 6 · card/input 12 · sheet/ticket 16 · pill 100.
+  r: { sm:6, md:12, lg:16, pill:100 },
 };
 
 // ── Interest taxonomy ────────────────────────────────────────────────────────
