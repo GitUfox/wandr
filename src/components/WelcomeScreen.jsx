@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { T, DEST_PLACEHOLDERS } from "../lib/constants.js";
 import { parseISODate } from "../lib/utils.js";
 import { useOnline } from "../hooks/useOnline.js";
+import { useIsWide } from "../hooks/useIsWide.js";
 import { fetchDestinationSuggestions } from "../lib/places.js";
 import WandrLogo from "./WandrLogo.jsx";
 import ProfileSheet from "./ProfileSheet.jsx";
@@ -39,7 +40,9 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
   const [destPicked, setDestPicked]         = useState(false); // a suggestion was chosen (or "use as typed")
   const [pickBurst, setPickBurst]           = useState(0);     // 8C stardust — increments each time the ✓ lands
   const intervalRef = useRef(null);
+  const inputRef = useRef(null);
   const online = useOnline();
+  const isWide = useIsWide(); // 12B departures-board arrangement on desktop
 
   const destValid = dest.trim().length > 1;
 
@@ -83,8 +86,14 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
   // which is precisely the idle moment the motion exists for.)
   const destIdle = dest.length === 0;
 
+  // One card renderer for BOTH the mobile shelf and the desktop departures
+  // rail (12B binding constraint: arrangements may arrange, never rebuild).
+  const renderTripCard = (t) => {  };
+
   return (
-    <div style={{ minHeight: "100vh", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2.5rem 1.5rem", background: T.bg0, fontFamily: T.font, position: "relative" }}>
+    <div style={ isWide
+      ? { minHeight: "100vh", width: "100%", display: "flex", alignItems: "stretch", background: T.bg0, fontFamily: T.font, position: "relative" }
+      : { minHeight: "100vh", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2.5rem 1.5rem", background: T.bg0, fontFamily: T.font, position: "relative" } }>
       <style>{`
         @property --wbeam { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
         @keyframes wbeam { to { --wbeam: 360deg; } }
@@ -109,7 +118,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
 
       {/* Help affordance — unambiguous "?" that opens an About panel */}
       <button onClick={() => setShowAbout(true)} aria-label="About Wandr"
-        style={{ position: "fixed", top: 16, right: 16, width: 32, height: 32, borderRadius: "50%", background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: T.font, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
+        style={{ position: "fixed", top: 16, right: isWide ? 332 : 16, width: 32, height: 32, borderRadius: "50%", background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: T.font, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
         ?
       </button>
 
@@ -144,15 +153,33 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
         </div>
       )}
 
-      <div style={{ width: "100%", maxWidth: 440 }}>
+      <div style={ isWide
+        ? { flex: 1, minWidth: 0, position: "relative", display: "flex", flexDirection: "column", padding: "26px 48px 32px" }
+        : { width: "100%", maxWidth: 440 } }>
 
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: "2.75rem" }}>
-          <WandrLogo size="lg" globe="animated" showTrail={false} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: T.muted, letterSpacing: ".02em", marginTop: "1rem" }}>
+        {/* Dotted flight path — texture for the desktop void (12B) */}
+        {isWide && (
+          <svg viewBox="0 0 900 560" preserveAspectRatio="none" aria-hidden="true"
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
+            <path d="M-20 480 Q 300 190 640 290 T 960 100" fill="none" stroke={T.accent}
+              strokeWidth="1.2" strokeDasharray="1 8" opacity=".22" strokeLinecap="round" />
+          </svg>
+        )}
+
+        {/* Brand — splash-centered on mobile; a quiet top-left row on desktop
+            so the input, not the logo, owns the stage (12B). */}
+        <div style={ isWide
+          ? { display: "flex", alignItems: "baseline", gap: 12, marginBottom: 0 }
+          : { textAlign: "center", marginBottom: "2.75rem" } }>
+          <WandrLogo size={isWide ? "sm" : "lg"} globe="animated" showTrail={false} />
+          <div style={{ fontSize: isWide ? 12 : 14, fontWeight: 600, color: T.muted, letterSpacing: ".02em", marginTop: isWide ? 0 : "1rem" }}>
             Make it your trip.
           </div>
         </div>
+
+        {/* On desktop everything actionable lives in a 560px stage column that
+            starts at the upper-third line. */}
+        <div style={ isWide ? { maxWidth: 560, width: "100%", marginTop: "16vh", position: "relative" } : undefined }>
 
         {/* Destination input */}
         <div style={{ marginBottom: 16 }}>
@@ -162,6 +189,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           <div className={destIdle ? "wbeam-idle" : undefined}
             style={{ position: "relative", borderRadius: 12, padding: 1.5, ...(destIdle ? {} : { background: T.accent }) }}>
             <input
+              ref={inputRef}
               autoFocus
               type="text"
               value={dest}
@@ -250,72 +278,31 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           </button>
         )}
 
-        {/* My trips — mini boarding-pass shelf (design pick 7A). Same ticket
-            metaphor as the dashboard hero; a failed build says so and offers a
-            rebuild instead of resuming into a broken trip. */}
-        {trips.length > 0 && (
+        </div>
+
+        {/* My trips — mini boarding-pass shelf (design pick 7A), mobile only;
+            on desktop the departures rail (12B) is the trips surface. */}
+        {!isWide && trips.length > 0 && (
           <div style={{ marginBottom: "1.5rem" }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".16em", margin: "4px 0 8px" }}>My trips</div>
-            {trips.map(t => {
-              const isActive   = t.id === savedTrip?.id;
-              const confirming = confirmDeleteId === t.id;
-              const stub  = stubDate(t.answers?.dates?.start);
-              const broken = !!t._error;
-              const sub = broken
-                ? "build didn't finish — tap to rebuild"
-                : t.nights ? `${t.nights} ${t.nights === 1 ? "night" : "nights"}` : "";
-              if (confirming) {
-                return (
-                  <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, border: `1px solid ${T.border2}`, borderRadius: 12, background: T.bg1, padding: "12px 14px", marginBottom: 8 }}>
-                    <div style={{ flex: 1, fontSize: 12, color: T.muted }}>
-                      Delete <strong style={{ color: T.ink }}>{t.destination}</strong> and its itinerary?
-                    </div>
-                    <button onClick={() => { onDeleteTrip?.(t.id); setConfirmDeleteId(null); }}
-                      style={{ fontSize: 11, fontWeight: 700, color: T.white, background: T.accent, border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontFamily: T.font }}>
-                      Delete
-                    </button>
-                    <button onClick={() => setConfirmDeleteId(null)}
-                      style={{ fontSize: 11, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontFamily: T.font }}>
-                      Keep
-                    </button>
-                  </div>
-                );
-              }
-              return (
-                <div key={t.id}
-                  style={{ display: "flex", alignItems: "stretch", border: `1px solid ${isActive ? T.border2 : T.border}`, borderRadius: 12, background: T.bg1, overflow: "hidden", marginBottom: 8, opacity: broken ? .9 : 1 }}>
-                  <div style={{ background: T.bg2, borderRight: `1px dashed ${T.border2}`, padding: "9px 12px", textAlign: "center", alignSelf: "stretch", display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 46 }}>
-                    {stub ? (
-                      <>
-                        <div style={{ fontSize: 9, fontWeight: 800, color: T.accent, letterSpacing: ".08em" }}>{stub.mon}</div>
-                        <div style={{ fontSize: 17, fontWeight: 800, color: T.ink, fontVariantNumeric: "tabular-nums" }}>{stub.day}</div>
-                      </>
-                    ) : (
-                      <Glyph name="plane" size={14} color={T.hint} style={{ margin: "0 auto" }} />
-                    )}
-                  </div>
-                  <button onClick={() => onResume(t.id)}
-                    style={{ flex: 1, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "9px 13px", minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: T.ink, display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.destination}</span>
-                      {isActive && <span style={{ fontSize: 8.5, fontWeight: 700, color: T.accent, border: `1px solid ${T.accent}`, borderRadius: 100, padding: "1px 6px", letterSpacing: ".06em", flexShrink: 0 }}>CURRENT</span>}
-                    </div>
-                    <div style={{ fontSize: 10.5, color: broken ? "#f08070" : T.hint, marginTop: 2 }}>{sub}</div>
-                  </button>
-                  <div style={{ display: "flex", alignItems: "center", gap: 2, paddingRight: 10 }}>
-                    <span style={{ color: broken ? T.hint : T.accent, fontWeight: 800, fontSize: 13 }}>{broken ? "↻" : "↩"}</span>
-                    <button onClick={() => setConfirmDeleteId(t.id)} aria-label={`Delete ${t.destination}`}
-                      style={{ fontSize: 14, lineHeight: 1, color: T.hint, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "4px 4px" }}>
-                      ×
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {trips.map(renderTripCard)}
           </div>
         )}
 
       </div>
+
+      {/* Departures rail (design pick 12B) — desktop's permanent trips surface.
+          Same renderTripCard as the mobile shelf; only the arrangement differs. */}
+      {isWide && (
+        <div style={{ width: 316, flexShrink: 0, borderLeft: `1px solid ${T.border}`, background: T.bg1, padding: "22px 18px", overflowY: "auto" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".18em", margin: "2px 0 12px" }}>Departures</div>
+          {trips.map(renderTripCard)}
+          <button onClick={() => inputRef.current?.focus()}
+            style={{ width: "100%", border: `1px dashed ${T.border2}`, borderRadius: 12, background: "transparent", textAlign: "center", padding: "11px 0", fontSize: 12, color: T.muted, fontWeight: 700, cursor: "pointer", fontFamily: T.font }}>
+            + New trip
+          </button>
+        </div>
+      )}
 
       {/* Traveler profile editor (design pick 6A) */}
       <ProfileSheet
