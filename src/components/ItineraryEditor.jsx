@@ -31,21 +31,21 @@ const DAYPARTS = [
 
 function TimeSlotPicker({ value, onPick }) {
   return (
-    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 10, padding: "10px 12px 4px", marginBottom: 8 }}>
+    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.md, padding: "10px 12px 4px", marginBottom: 8 }}>
       {DAYPARTS.map(p => {
         const slots = [];
         for (let m = p.from; m <= p.to; m += 30) slots.push(formatTime(m));
         return (
           <div key={p.label} style={{ marginBottom: 9 }}>
-            <div style={{ fontSize: 9, letterSpacing: ".18em", textTransform: "uppercase", color: T.hint, fontWeight: 700, marginBottom: 6 }}>{p.label}</div>
+            <div style={{ fontSize: T.fs.micro, letterSpacing: ".18em", textTransform: "uppercase", color: T.hint, fontWeight: 700, marginBottom: 6 }}>{p.label}</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
               {slots.map(t => {
                 const on = t === value;
                 return (
                   <button key={t} onClick={() => onPick(t)}
                     style={{
-                      fontFamily: T.font, fontSize: 11.5, fontWeight: 700, fontVariantNumeric: "tabular-nums",
-                      width: 62, padding: "6px 0", textAlign: "center", borderRadius: 8, cursor: "pointer",
+                      fontFamily: T.font, fontSize: T.fs.meta, fontWeight: 700, fontVariantNumeric: "tabular-nums",
+                      width: 62, padding: "6px 0", textAlign: "center", borderRadius: T.r.md, cursor: "pointer",
                       color: on ? T.white : T.muted,
                       background: on ? T.accent : T.bg2,
                       border: `1px solid ${on ? T.accent : T.border}`,
@@ -64,7 +64,7 @@ function TimeSlotPicker({ value, onPick }) {
 
 const iconBtn = {
   background: "transparent", border: "none", cursor: "pointer",
-  fontFamily: T.font, fontSize: 12, padding: "3px 6px", borderRadius: 6, lineHeight: 1,
+  fontFamily: T.font, fontSize: T.fs.body, padding: "3px 6px", borderRadius: T.r.sm, lineHeight: 1,
 };
 
 function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteActivity, onMoveActivity, onTweakActivity }) {
@@ -106,8 +106,8 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
   }
 
   const inputSt = {
-    width: "100%", padding: "7px 10px", border: `1px solid ${T.border2}`, borderRadius: 7,
-    background: T.bg2, color: T.ink, outline: "none", fontSize: 12.5, fontFamily: T.font,
+    width: "100%", padding: "7px 10px", border: `1px solid ${T.border2}`, borderRadius: T.r.sm,
+    background: T.bg2, color: T.ink, outline: "none", fontSize: T.fs.body, fontFamily: T.font,
     boxSizing: "border-box",
   };
 
@@ -115,7 +115,7 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
 
   return (
     <Reorder.Item value={a} as="div" dragListener={false} dragControls={controls}
-      style={{ position: "relative", background: T.bg1, border: `1px solid ${editing ? T.accent : T.border}`, borderRadius: 10, padding: editing ? "11px 12px" : "10px 10px 10px 4px", marginBottom: 8, listStyle: "none" }}>
+      style={{ position: "relative", background: T.bg1, border: `1px solid ${editing ? T.accent : T.border}`, borderRadius: T.r.md, padding: editing ? "11px 12px" : "10px 10px 10px 4px", marginBottom: 8, listStyle: "none" }}>
 
       {editing ? (
         <>
@@ -124,7 +124,7 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
               title="Pick a time"
               style={{ ...inputSt, width: 110, flexShrink: 0, color: T.accent, fontWeight: 700, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{clean(time) || "Set time"}</span>
-              <span style={{ color: T.hint, fontSize: 10, flexShrink: 0 }}>{pickerOpen ? "▴" : "▾"}</span>
+              <span style={{ color: T.hint, fontSize: T.fs.label, flexShrink: 0 }}>{pickerOpen ? "▴" : "▾"}</span>
             </button>
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Place / activity" autoFocus
               style={{ ...inputSt, fontWeight: 700 }} />
@@ -135,35 +135,35 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
           <textarea value={details} onChange={e => setDetails(e.target.value)} placeholder="Details — what it is, how long, how much" rows={3}
             style={{ ...inputSt, lineHeight: 1.5, resize: "vertical", marginBottom: 8 }} />
           <div style={{ display: "flex", gap: 7, justifyContent: "flex-end" }}>
-            <button onClick={cancel} style={{ ...iconBtn, fontSize: 12, color: T.muted, padding: "6px 12px", border: `1px solid ${T.border}` }}>Cancel</button>
-            <button onClick={save} style={{ ...iconBtn, fontSize: 12, fontWeight: 700, color: T.white, background: T.accent, padding: "6px 14px" }}>Save</button>
+            <button onClick={cancel} style={{ ...iconBtn, fontSize: T.fs.body, color: T.muted, padding: "6px 12px", border: `1px solid ${T.border}` }}>Cancel</button>
+            <button onClick={save} style={{ ...iconBtn, fontSize: T.fs.body, fontWeight: 700, color: T.white, background: T.accent, padding: "6px 14px" }}>Save</button>
           </div>
         </>
       ) : (
         <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
           {/* Drag handle — the only drag trigger, so taps elsewhere stay clickable */}
           <span onPointerDown={e => controls.start(e)} title="Drag to reorder"
-            style={{ cursor: "grab", touchAction: "none", color: T.hint, fontSize: 14, padding: "2px 4px", flexShrink: 0, userSelect: "none", lineHeight: 1.2 }}>⠿</span>
-          <div style={{ width: 58, flexShrink: 0, fontSize: 11, color: T.accent, fontWeight: 700, paddingTop: 2 }}>{clean(a.time)}</div>
+            style={{ cursor: "grab", touchAction: "none", color: T.hint, fontSize: T.fs.ui, padding: "2px 4px", flexShrink: 0, userSelect: "none", lineHeight: 1.2 }}>⠿</span>
+          <div style={{ width: 58, flexShrink: 0, fontSize: T.fs.meta, color: T.accent, fontWeight: 700, paddingTop: 2 }}>{clean(a.time)}</div>
           <div style={{ flex: 1, minWidth: 0, paddingRight: 60, paddingTop: 1 }}>
-            <div style={{ fontSize: 12.5, color: T.ink, fontWeight: 700, lineHeight: 1.35, marginBottom: 2 }}>{clean(a.title)}</div>
-            {a.details && <div style={{ fontSize: 11.5, color: T.muted, lineHeight: 1.55 }}>{clean(a.details)}</div>}
+            <div style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.35, marginBottom: 2 }}>{clean(a.title)}</div>
+            {a.details && <div style={{ fontSize: T.fs.meta, color: T.muted, lineHeight: 1.55 }}>{clean(a.details)}</div>}
             {/* Move picker — choose a destination day */}
             {moving && otherDays.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", marginTop: 8 }}>
-                <span style={{ fontSize: 10.5, color: T.hint }}>Move to:</span>
+                <span style={{ fontSize: T.fs.label, color: T.hint }}>Move to:</span>
                 {otherDays.map(d => (
                   <button key={d.idx} onClick={() => { onMoveActivity(dayIdx, a.id, d.idx); setMoving(false); }}
-                    style={{ ...iconBtn, fontSize: 11, color: T.accent, border: `1px solid ${T.accent}`, padding: "3px 9px" }}>
+                    style={{ ...iconBtn, fontSize: T.fs.meta, color: T.accent, border: `1px solid ${T.accent}`, padding: "3px 9px" }}>
                     Day {d.idx + 1}
                   </button>
                 ))}
-                <button onClick={() => setMoving(false)} style={{ ...iconBtn, fontSize: 11, color: T.muted }}>Cancel</button>
+                <button onClick={() => setMoving(false)} style={{ ...iconBtn, fontSize: T.fs.meta, color: T.muted }}>Cancel</button>
               </div>
             )}
             {/* AI tweak — free-text instruction for just this activity */}
             {isTweaking ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 8, fontSize: 11, color: T.accent }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 8, fontSize: T.fs.meta, color: T.accent }}>
                 <span style={{ width: 12, height: 12, border: `1.5px solid ${T.border}`, borderTopColor: T.accent, borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
                 Tweaking this activity…
               </div>
@@ -172,9 +172,9 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
                 <input value={tweakText} onChange={e => setTweakText(e.target.value)} autoFocus
                   onKeyDown={e => e.key === "Enter" && submitTweak()}
                   placeholder="e.g. make it more relaxed · something cheaper nearby"
-                  style={{ flex: 1, minWidth: 0, padding: "6px 9px", border: `1px solid ${T.accent}`, borderRadius: 7, background: T.bg2, color: T.ink, outline: "none", fontSize: 11.5, fontFamily: T.font }} />
-                <button onClick={submitTweak} style={{ ...iconBtn, fontSize: 11, fontWeight: 700, color: T.white, background: T.accent, padding: "5px 11px" }}>Ask AI</button>
-                <button onClick={() => setTweakOpen(false)} style={{ ...iconBtn, fontSize: 11, color: T.muted }}>✕</button>
+                  style={{ flex: 1, minWidth: 0, padding: "6px 9px", border: `1px solid ${T.accent}`, borderRadius: T.r.sm, background: T.bg2, color: T.ink, outline: "none", fontSize: T.fs.meta, fontFamily: T.font }} />
+                <button onClick={submitTweak} style={{ ...iconBtn, fontSize: T.fs.meta, fontWeight: 700, color: T.white, background: T.accent, padding: "5px 11px" }}>Ask AI</button>
+                <button onClick={() => setTweakOpen(false)} style={{ ...iconBtn, fontSize: T.fs.meta, color: T.muted }}>✕</button>
               </div>
             )}
           </div>
@@ -183,8 +183,8 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
           {!isTweaking && (
             <div style={{ position: "absolute", top: 8, right: 8, display: "flex", gap: 2 }}>
               {confirmDel ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 4, background: T.bg3, borderRadius: 7, padding: "2px 4px" }}>
-                  <span style={{ fontSize: 10.5, color: T.muted, paddingLeft: 4 }}>Delete?</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, background: T.bg3, borderRadius: T.r.sm, padding: "2px 4px" }}>
+                  <span style={{ fontSize: T.fs.label, color: T.muted, paddingLeft: 4 }}>Delete?</span>
                   <button onClick={() => onDeleteActivity(dayIdx, a.id)} title="Confirm delete" style={{ ...iconBtn, color: "#f08070", fontWeight: 700 }}>Yes</button>
                   <button onClick={() => setConfirmDel(false)} title="Keep" style={{ ...iconBtn, color: T.muted }}>No</button>
                 </div>
@@ -211,10 +211,10 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
 function FoodRow({ f }) {
   return (
     <tr style={{ borderBottom: `1px solid ${T.border}` }}>
-      <td style={{ padding: "6px 5px", fontSize: 11, color: T.muted, verticalAlign: "top", wordBreak: "break-word" }}>{clean(f.meal)}</td>
-      <td style={{ padding: "6px 5px", fontSize: 11.5, color: T.ink, fontWeight: 600, verticalAlign: "top", wordBreak: "break-word" }}>{clean(f.name)}</td>
-      <td style={{ padding: "6px 5px", fontSize: 11, color: T.muted, verticalAlign: "top", wordBreak: "break-word" }}>{clean(f.order)}</td>
-      <td style={{ padding: "6px 5px", fontSize: 11, color: T.accent, fontWeight: 600, verticalAlign: "top", whiteSpace: "nowrap" }}>{clean(f.price)}</td>
+      <td style={{ padding: "6px 5px", fontSize: T.fs.meta, color: T.muted, verticalAlign: "top", wordBreak: "break-word" }}>{clean(f.meal)}</td>
+      <td style={{ padding: "6px 5px", fontSize: T.fs.meta, color: T.ink, fontWeight: 600, verticalAlign: "top", wordBreak: "break-word" }}>{clean(f.name)}</td>
+      <td style={{ padding: "6px 5px", fontSize: T.fs.meta, color: T.muted, verticalAlign: "top", wordBreak: "break-word" }}>{clean(f.order)}</td>
+      <td style={{ padding: "6px 5px", fontSize: T.fs.meta, color: T.accent, fontWeight: 600, verticalAlign: "top", whiteSpace: "nowrap" }}>{clean(f.price)}</td>
     </tr>
   );
 }
@@ -224,17 +224,17 @@ function FoodRow({ f }) {
    re-time an activity into another bucket. Detailed edits live in Timeline. */
 function BucketCard({ a, dayIdx, bucket, onMoveToBucket }) {
   return (
-    <div style={{ background: T.bg1, border: `1px solid ${T.border}`, borderRadius: 9, padding: "8px 10px", marginBottom: 6 }}>
+    <div style={{ background: T.bg1, border: `1px solid ${T.border}`, borderRadius: T.r.md, padding: "8px 10px", marginBottom: 6 }}>
       <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-        <span style={{ fontSize: 10.5, color: T.accent, fontWeight: 700, flexShrink: 0, width: 54 }}>{clean(a.time)}</span>
-        <span style={{ fontSize: 12, color: T.ink, fontWeight: 700, lineHeight: 1.3 }}>{clean(a.title)}</span>
+        <span style={{ fontSize: T.fs.label, color: T.accent, fontWeight: 700, flexShrink: 0, width: 54 }}>{clean(a.time)}</span>
+        <span style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.3 }}>{clean(a.title)}</span>
       </div>
-      {a.details && <div style={{ fontSize: 11, color: T.muted, lineHeight: 1.5, marginTop: 3, marginLeft: 62 }}>{clean(a.details)}</div>}
+      {a.details && <div style={{ fontSize: T.fs.meta, color: T.muted, lineHeight: 1.5, marginTop: 3, marginLeft: 62 }}>{clean(a.details)}</div>}
       <div style={{ display: "flex", gap: 5, marginTop: 6, marginLeft: 62, alignItems: "center" }}>
-        <span style={{ fontSize: 10, color: T.hint }}>Move to:</span>
+        <span style={{ fontSize: T.fs.label, color: T.hint }}>Move to:</span>
         {BUCKETS.filter(b => b !== bucket).map(b => (
           <button key={b} onClick={() => onMoveToBucket(dayIdx, a.id, b)}
-            style={{ ...iconBtn, fontSize: 10.5, color: T.accent, border: `1px solid ${T.border2}`, padding: "2px 8px" }}>
+            style={{ ...iconBtn, fontSize: T.fs.label, color: T.accent, border: `1px solid ${T.border2}`, padding: "2px 8px" }}>
             {b}
           </button>
         ))}
@@ -253,12 +253,12 @@ export function BucketView({ day, dayIdx, onMoveToBucket }) {
         return (
           <div key={bucket} style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7 }}>
-              <span style={{ fontSize: 10.5, fontWeight: 800, color: T.hint, textTransform: "uppercase", letterSpacing: ".07em" }}>{bucket}</span>
+              <span style={{ fontSize: T.fs.label, fontWeight: 800, color: T.hint, textTransform: "uppercase", letterSpacing: ".07em" }}>{bucket}</span>
               <span style={{ flex: 1, height: 1, background: T.border }} />
-              <span style={{ fontSize: 10, color: T.hint }}>{items.length || ""}</span>
+              <span style={{ fontSize: T.fs.label, color: T.hint }}>{items.length || ""}</span>
             </div>
             {items.length === 0 ? (
-              <div style={{ fontSize: 11, color: T.hint, fontStyle: "italic", paddingLeft: 2, marginBottom: 4 }}>Nothing planned.</div>
+              <div style={{ fontSize: T.fs.meta, color: T.hint, fontStyle: "italic", paddingLeft: 2, marginBottom: 4 }}>Nothing planned.</div>
             ) : (
               items.map(a => <BucketCard key={a.id} a={a} dayIdx={dayIdx} bucket={bucket} onMoveToBucket={onMoveToBucket} />)
             )}
@@ -272,12 +272,12 @@ export function BucketView({ day, dayIdx, onMoveToBucket }) {
 function DayCard({ day, dayIdx, days, viewMode, tweakingId, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onMoveToBucket, onTweakActivity }) {
   return (
     <div style={{ marginBottom: 22 }}>
-      <div style={{ fontSize: 15, fontWeight: 800, color: T.ink, margin: "0 0 12px", paddingBottom: 6, borderBottom: `1px solid ${T.border}` }}>
+      <div style={{ fontSize: T.fs.ui, fontWeight: 800, color: T.ink, margin: "0 0 12px", paddingBottom: 6, borderBottom: `1px solid ${T.border}` }}>
         {clean(day.label)}
       </div>
 
       {day.activities.length === 0 ? (
-        <div style={{ fontSize: 12, color: T.hint, fontStyle: "italic", padding: "8px 0", marginBottom: 8 }}>
+        <div style={{ fontSize: T.fs.body, color: T.hint, fontStyle: "italic", padding: "8px 0", marginBottom: 8 }}>
           No activities left for this day.
         </div>
       ) : viewMode === "buckets" ? (
@@ -293,7 +293,7 @@ function DayCard({ day, dayIdx, days, viewMode, tweakingId, onEditActivity, onDe
 
       {day.food.length > 0 && (
         <div style={{ marginTop: 12, marginBottom: 4 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 5 }}>Eat & Drink — suggestions only</div>
+          <div style={{ fontSize: T.fs.label, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 5 }}>Eat & Drink — suggestions only</div>
           <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
             <colgroup><col style={{ width: "22%" }} /><col style={{ width: "28%" }} /><col style={{ width: "38%" }} /><col style={{ width: "12%" }} /></colgroup>
             <tbody>{day.food.map((f, i) => <FoodRow key={i} f={f} />)}</tbody>
@@ -304,7 +304,7 @@ function DayCard({ day, dayIdx, days, viewMode, tweakingId, onEditActivity, onDe
       {day.tips.length > 0 && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
           {day.tips.map((tip, ti) => (
-            <div key={ti} style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 6, padding: "5px 10px", fontSize: 11.5, color: T.muted, display: "flex", alignItems: "center", gap: 5 }}>
+            <div key={ti} style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "5px 10px", fontSize: T.fs.meta, color: T.muted, display: "flex", alignItems: "center", gap: 5 }}>
               <span style={{ width: 4, height: 4, borderRadius: "50%", background: T.accent, display: "inline-block", flexShrink: 0 }} /> {tip}
             </div>
           ))}
@@ -315,7 +315,7 @@ function DayCard({ day, dayIdx, days, viewMode, tweakingId, onEditActivity, onDe
 }
 
 const viewTab = active => ({
-  ...iconBtn, fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 6,
+  ...iconBtn, fontSize: T.fs.meta, fontWeight: 700, padding: "5px 12px", borderRadius: T.r.sm,
   color: active ? T.white : T.muted, background: active ? T.accent : "transparent",
 });
 
@@ -327,13 +327,13 @@ export default function ItineraryEditor({ model, tweakingId, onEditActivity, onD
     <div style={{ fontFamily: T.font }}>
       {/* View toggle — Timeline (drag/edit) vs Buckets (fast time-of-day rearrange) */}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
-        <div style={{ display: "flex", gap: 2, padding: 2, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 8 }}>
+        <div style={{ display: "flex", gap: 2, padding: 2, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.md }}>
           <button onClick={() => setViewMode("timeline")} style={viewTab(viewMode === "timeline")}>Timeline</button>
           <button onClick={() => setViewMode("buckets")}  style={viewTab(viewMode === "buckets")}>Buckets</button>
         </div>
       </div>
       {model.intro && (
-        <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.7, marginBottom: 18 }}>{model.intro}</div>
+        <div style={{ fontSize: T.fs.body, color: T.muted, lineHeight: 1.7, marginBottom: 18 }}>{model.intro}</div>
       )}
       {model.days.map((day, i) => (
         <DayCard key={i} day={day} dayIdx={i} days={days} viewMode={viewMode} tweakingId={tweakingId}
