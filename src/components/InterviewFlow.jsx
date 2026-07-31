@@ -24,8 +24,8 @@ import InterestsPicker from "./InterestsPicker.jsx";
 const INPUT_MIC = { top: 5, bottom: "auto", right: 8, width: 28, height: 28 };
 
 const inputSt = {
-  width:"100%", padding:"10px 14px", border:`1px solid ${T.border}`, borderRadius:8,
-  background:T.bg3, color:T.ink, outline:"none", fontSize:13.5, fontFamily:T.font,
+  width:"100%", padding:"10px 14px", border:`1px solid ${T.border2}`, borderRadius:T.r.md,
+  background:T.bg3, color:T.ink, outline:"none", fontSize:T.fs.ui, fontFamily:T.font,
   marginBottom:"1.25rem", colorScheme:"dark", boxSizing:"border-box",
 };
 
@@ -86,12 +86,12 @@ export default function InterviewFlow({
 
         {/* Breadcrumb + progress bar */}
         <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:"2.25rem" }}>
-          <button onClick={onWelcome} style={{ fontSize:12, color:T.hint, padding:0, background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>Wandr</button>
-          <div style={{ fontSize:12, color:T.border }}>/</div>
+          <button onClick={onWelcome} style={{ fontSize:T.fs.body, color:T.hint, padding:0, background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>Wandr</button>
+          <div style={{ fontSize:T.fs.body, color:T.border }}>/</div>
           <div style={{ flex:1, height:2, background:T.bg3, borderRadius:1 }}>
             <div style={{ width:`${pct}%`, height:"100%", background:T.accent, borderRadius:1, transition:"width .4s ease" }} />
           </div>
-          <span style={{ fontSize:11, color:T.hint, minWidth:36, textAlign:"right" }}>{num} / {total}</span>
+          <span style={{ fontSize:T.fs.meta, color:T.hint, minWidth:36, textAlign:"right" }}>{num} / {total}</span>
         </div>
 
         <AnimatePresence mode="wait" custom={direction}>
@@ -105,8 +105,8 @@ export default function InterviewFlow({
           transition={STEP_TRANSITION}
         >
 
-        <div style={{ fontSize:22, fontWeight:700, lineHeight:1.25, marginBottom:S.sub?6:"1.5rem", color:T.ink }}>{S.q}</div>
-        {S.sub && <p style={{ fontSize:13, color:T.muted, marginBottom:"1.5rem", lineHeight:1.6 }}>{S.sub}</p>}
+        <div style={{ fontSize:22 /* off-ramp: interview question hero — sits between title(17) and hero(28); mapping to title visibly demotes it */, fontWeight:700, lineHeight:1.25, marginBottom:S.sub?6:"1.5rem", color:T.ink }}>{S.q}</div>
+        {S.sub && <p style={{ fontSize:T.fs.body, color:T.muted, marginBottom:"1.5rem", lineHeight:1.6 }}>{S.sub}</p>}
 
         {/* ── Text ── */}
         {S.type === "text" && (
@@ -120,13 +120,13 @@ export default function InterviewFlow({
 
             {/* Getting around */}
             <div>
-              <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>Getting around</div>
+              <div style={{ fontSize:T.fs.label, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>Getting around</div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
                 {["Car", "Transit / Rideshare", "Walking / Cycling"].map(o => {
                   const sel = logTransport === o;
                   return (
                     <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogTransport(p => p === o ? "" : o)}
-                      style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                       {o}
                     </button>
                   );
@@ -136,13 +136,13 @@ export default function InterviewFlow({
 
             {/* Pace */}
             <div>
-              <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>Pace</div>
+              <div style={{ fontSize:T.fs.label, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>Pace</div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
                 {["Slow", "Balanced", "Fast"].map(o => {
                   const sel = logPace === o;
                   return (
                     <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogPace(p => p === o ? "" : o)}
-                      style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                       {o}
                     </button>
                   );
@@ -152,13 +152,13 @@ export default function InterviewFlow({
 
             {/* Rhythm — when the day starts/ends (distinct from Pace = how much per day) */}
             <div>
-              <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>Rhythm</div>
+              <div style={{ fontSize:T.fs.label, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>Rhythm</div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
                 {["Early riser", "Flexible", "Night owl"].map(o => {
                   const sel = logRhythm === o;
                   return (
                     <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogRhythm(p => p === o ? "" : o)}
-                      style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                       {o}
                     </button>
                   );
@@ -168,13 +168,13 @@ export default function InterviewFlow({
 
             {/* What are you after? */}
             <div>
-              <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>What are you after?</div>
+              <div style={{ fontSize:T.fs.label, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>What are you after?</div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
                 {["Famous sights", "Hidden gems", "Mix of both"].map(o => {
                   const sel = logFocus === o;
                   return (
                     <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogFocus(p => p === o ? "" : o)}
-                      style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                       {o}
                     </button>
                   );
@@ -184,7 +184,7 @@ export default function InterviewFlow({
 
             {/* Where are you staying — optional */}
             <div>
-              <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:5 }}>
+              <div style={{ fontSize:T.fs.label, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:5 }}>
                 Where are you staying? <span style={{ fontWeight:400, letterSpacing:"normal", textTransform:"none", color:T.hint, opacity:.6 }}>· optional</span>
               </div>
               <input type="text" value={logStay} onChange={e => setLogStay(e.target.value)}
@@ -206,14 +206,14 @@ export default function InterviewFlow({
               <div style={{ marginTop:2, marginBottom:"1.25rem" }}>
                 {/* Dedicated avoid field — fed to the AVOID prompt instruction as a hard exclusion */}
                 <div>
-                  <div style={{ fontSize:11, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 }}>Anything to avoid?</div>
+                  <div style={{ fontSize:T.fs.meta, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 }}>Anything to avoid?</div>
                   <div style={{ position:"relative" }}>
                     <input type="text" value={avoidText || ""} onChange={e => setAvoidText(e.target.value)}
                       placeholder="e.g. crowds · seafood · long hikes · touristy spots"
                       style={{...inputSt, paddingRight:40}} />
                     <DictationButton value={avoidText || ""} onChange={setAvoidText} style={INPUT_MIC} />
                   </div>
-                  <div style={{ fontSize:11, color:T.hint, marginTop:6 }}>Hard no's — we'll keep these out of every suggestion.</div>
+                  <div style={{ fontSize:T.fs.meta, color:T.hint, marginTop:6 }}>Hard no's — we'll keep these out of every suggestion.</div>
                 </div>
               </div>
             )}
@@ -232,7 +232,7 @@ export default function InterviewFlow({
               const sel = chips.includes(o);
               return (
                 <button key={o} className="wandr-chip" data-label={o} onClick={() => toggleChip(o)}
-                  style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?T.accent:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.white:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                  style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accent:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.white:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                   {o}
                 </button>
               );
@@ -256,7 +256,7 @@ export default function InterviewFlow({
                 <div style={{ position:"relative" }}>
                   <input type="text" value={cur} onChange={e => setCur(e.target.value)}
                     placeholder={S.ph}
-                    style={{...inputSt, marginBottom:0, fontSize:12.5, paddingRight:40}} />
+                    style={{...inputSt, marginBottom:0, fontSize:T.fs.body, paddingRight:40}} />
                   <DictationButton value={cur} onChange={setCur} style={INPUT_MIC} />
                 </div>
               </InterestsPicker>
@@ -268,7 +268,7 @@ export default function InterviewFlow({
                     const sel = chips.includes(o);
                     return (
                       <button key={o} className="wandr-chip" data-label={o} onClick={() => toggleChip(o)}
-                        style={{ padding:"7px 14px", fontSize:12.5, borderRadius:100, background:sel?T.accent:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.white:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                        style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accent:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.white:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                         {o}
                       </button>
                     );
@@ -276,14 +276,14 @@ export default function InterviewFlow({
                 </div>
                 {/* Kids sub-question — shown when a group is selected (not Solo) */}
                 {S.id === "party" && chips.length > 0 && !chips.includes("Solo") && (
-                  <div style={{ marginBottom:10, padding:"12px 14px", background:T.bg2, borderRadius:10, border:`1px solid ${T.border}` }}>
-                    <div style={{ fontSize:12, fontWeight:700, color:T.muted, marginBottom:8 }}>Any kids?</div>
+                  <div style={{ marginBottom:10, padding:"12px 14px", background:T.bg2, borderRadius:T.r.md, border:`1px solid ${T.border}` }}>
+                    <div style={{ fontSize:T.fs.body, fontWeight:700, color:T.muted, marginBottom:8 }}>Any kids?</div>
                     <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
                       {["No kids", "Under 5", "5 to 12", "Teens"].map(o => {
                         const sel = kids === o;
                         return (
                           <button key={o} className="wandr-chip" data-label={o} onClick={() => setKids(k => k === o ? "" : o)}
-                            style={{ padding:"6px 12px", fontSize:12, borderRadius:100, background:sel?"#2a1a12":T.bg3, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                            style={{ padding:"6px 12px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?"#2a1a12":T.bg3, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                             {o}
                           </button>
                         );
@@ -300,7 +300,7 @@ export default function InterviewFlow({
               <div style={{ position:"relative" }}>
                 <input type="text" value={cur} onChange={e => setCur(e.target.value)}
                   placeholder={S.ph}
-                  style={{...inputSt, marginBottom:0, fontSize:12.5, paddingRight:40}} />
+                  style={{...inputSt, marginBottom:0, fontSize:T.fs.body, paddingRight:40}} />
                 <DictationButton value={cur} onChange={setCur} style={INPUT_MIC} />
               </div>
             )}
@@ -319,14 +319,14 @@ export default function InterviewFlow({
 
         {/* ── Navigation ── */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:".5rem" }}>
-          <button onClick={step > 0 ? onBack : onWelcome} style={{ fontSize:12.5, color:T.hint, padding:"8px 0", background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>← Back</button>
+          <button onClick={step > 0 ? onBack : onWelcome} style={{ fontSize:T.fs.body, color:T.hint, padding:"8px 0", background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>← Back</button>
           <button onClick={onAdvance} disabled={!isValid}
-            style={{ background:isValid?T.accent:T.bg3, color:isValid?T.white:T.hint, padding:"10px 26px", borderRadius:8, fontSize:13, fontWeight:700, cursor:isValid?"pointer":"default", border:"none", fontFamily:T.font, transition:"all .15s" }}>
+            style={{ background:isValid?T.accent:T.bg3, color:isValid?T.white:T.hint, padding:"10px 26px", borderRadius:T.r.md, fontSize:T.fs.body, fontWeight:700, cursor:isValid?"pointer":"default", border:"none", fontFamily:T.font, transition:"all .15s" }}>
             {step === STEPS.length - 1 ? "Build my trip →" : "Continue →"}
           </button>
         </div>
         {S.id === "notes" && (
-          <p style={{ fontSize:11, color:T.hint, textAlign:"center", marginTop:12 }}>Optional — tap Continue to skip</p>
+          <p style={{ fontSize:T.fs.meta, color:T.hint, textAlign:"center", marginTop:12 }}>Optional — tap Continue to skip</p>
         )}
 
       </div>
