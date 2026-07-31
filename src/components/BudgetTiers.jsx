@@ -22,7 +22,7 @@ export default function BudgetTiers({ value, onChange }) {
             onClick={() => onChange(v)}
             style={{
               display: "flex", alignItems: "center", gap: 12,
-              padding: "11px 14px", borderRadius: 10,
+              padding: "11px 14px", borderRadius: T.r.md,
               background: sel ? "#2a1a12" : T.bg1,
               border: sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
               cursor: "pointer", fontFamily: T.font, textAlign: "left",
@@ -30,13 +30,13 @@ export default function BudgetTiers({ value, onChange }) {
             }}
           >
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: sel ? T.accent : T.ink, marginBottom: 1 }}>
+              <div style={{ fontSize: T.fs.body, fontWeight: 700, color: sel ? T.accent : T.ink, marginBottom: 1 }}>
                 {label}
-                {price && <span style={{ fontWeight: 400, fontSize: 12, color: sel ? "#a06040" : T.hint, marginLeft: 8 }}>{price}</span>}
+                {price && <span style={{ fontWeight: 400, fontSize: T.fs.body, color: sel ? "#a06040" : T.hint, marginLeft: 8 }}>{price}</span>}
               </div>
-              <div style={{ fontSize: 11.5, color: sel ? "#a06040" : T.hint }}>{desc}</div>
+              <div style={{ fontSize: T.fs.meta, color: sel ? "#a06040" : T.hint }}>{desc}</div>
             </div>
-            {sel && <span style={{ fontSize: 14, color: T.accent }}>✓</span>}
+            {sel && <span style={{ fontSize: T.fs.ui, color: T.accent }}>✓</span>}
           </button>
         );
       })}
