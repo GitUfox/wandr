@@ -100,16 +100,16 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
       : t.nights ? `${t.nights} ${t.nights === 1 ? "night" : "nights"}` : "";
     if (confirming) {
       return (
-        <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, border: `1px solid ${T.border2}`, borderRadius: 12, background: T.bg1, padding: "12px 14px", marginBottom: 8 }}>
-          <div style={{ flex: 1, fontSize: 12, color: T.muted }}>
+        <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, border: `1px solid ${T.border2}`, borderRadius: T.r.md, background: T.bg1, padding: "12px 14px", marginBottom: 8 }}>
+          <div style={{ flex: 1, fontSize: T.fs.body, color: T.muted }}>
             Delete <strong style={{ color: T.ink }}>{t.destination}</strong> and its itinerary?
           </div>
           <button onClick={() => { onDeleteTrip?.(t.id); setConfirmDeleteId(null); }}
-            style={{ fontSize: 11, fontWeight: 700, color: T.white, background: T.accent, border: "none", borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontFamily: T.font }}>
+            style={{ fontSize: T.fs.meta, fontWeight: 700, color: T.white, background: T.accent, border: "none", borderRadius: T.r.sm, padding: "5px 10px", cursor: "pointer", fontFamily: T.font }}>
             Delete
           </button>
           <button onClick={() => setConfirmDeleteId(null)}
-            style={{ fontSize: 11, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: 6, padding: "5px 10px", cursor: "pointer", fontFamily: T.font }}>
+            style={{ fontSize: T.fs.meta, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "5px 10px", cursor: "pointer", fontFamily: T.font }}>
             Keep
           </button>
         </div>
@@ -117,12 +117,12 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
     }
     return (
       <div key={t.id}
-        style={{ display: "flex", alignItems: "stretch", border: `1px solid ${isActive ? T.border2 : T.border}`, borderRadius: 12, background: T.bg1, overflow: "hidden", marginBottom: 8, opacity: broken ? .9 : 1 }}>
+        style={{ display: "flex", alignItems: "stretch", border: `1px solid ${isActive ? T.border2 : T.border}`, borderRadius: T.r.md, background: T.bg1, overflow: "hidden", marginBottom: 8, opacity: broken ? .9 : 1 }}>
         <div style={{ background: T.bg2, borderRight: `1px dashed ${T.border2}`, padding: "9px 12px", textAlign: "center", alignSelf: "stretch", display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 46 }}>
           {stub ? (
             <>
-              <div style={{ fontSize: 9, fontWeight: 800, color: T.accent, letterSpacing: ".08em" }}>{stub.mon}</div>
-              <div style={{ fontSize: 17, fontWeight: 800, color: T.ink, fontVariantNumeric: "tabular-nums" }}>{stub.day}</div>
+              <div style={{ fontSize: T.fs.micro, fontWeight: 800, color: T.accent, letterSpacing: ".08em" }}>{stub.mon}</div>
+              <div style={{ fontSize: T.fs.title, fontWeight: 800, color: T.ink, fontVariantNumeric: "tabular-nums" }}>{stub.day}</div>
             </>
           ) : (
             <Glyph name="plane" size={14} color={T.hint} style={{ margin: "0 auto" }} />
@@ -130,16 +130,16 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
         </div>
         <button onClick={() => onResume(t.id)}
           style={{ flex: 1, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "9px 13px", minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: T.ink, display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
+          <div style={{ fontSize: T.fs.body, fontWeight: 800, color: T.ink, display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.destination}</span>
-            {isActive && <span style={{ fontSize: 8.5, fontWeight: 700, color: T.accent, border: `1px solid ${T.accent}`, borderRadius: 100, padding: "1px 6px", letterSpacing: ".06em", flexShrink: 0 }}>CURRENT</span>}
+            {isActive && <span style={{ fontSize: T.fs.micro, fontWeight: 700, color: T.accent, border: `1px solid ${T.accent}`, borderRadius: T.r.pill, padding: "1px 6px", letterSpacing: ".06em", flexShrink: 0 }}>CURRENT</span>}
           </div>
-          <div style={{ fontSize: 10.5, color: broken ? "#f08070" : T.hint, marginTop: 2 }}>{sub}</div>
+          <div style={{ fontSize: T.fs.label, color: broken ? "#f08070" : T.hint, marginTop: 2 }}>{sub}</div>
         </button>
         <div style={{ display: "flex", alignItems: "center", gap: 2, paddingRight: 10 }}>
-          <span style={{ color: broken ? T.hint : T.accent, fontWeight: 800, fontSize: 13 }}>{broken ? "↻" : "↩"}</span>
+          <span style={{ color: broken ? T.hint : T.accent, fontWeight: 800, fontSize: T.fs.body }}>{broken ? "↻" : "↩"}</span>
           <button onClick={() => setConfirmDeleteId(t.id)} aria-label={`Delete ${t.destination}`}
-            style={{ fontSize: 14, lineHeight: 1, color: T.hint, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "4px 4px" }}>
+            style={{ fontSize: T.fs.ui, lineHeight: 1, color: T.hint, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "4px 4px" }}>
             ×
           </button>
         </div>
@@ -175,7 +175,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
 
       {/* Help affordance — unambiguous "?" that opens an About panel */}
       <button onClick={() => setShowAbout(true)} aria-label="About Wandr"
-        style={{ position: "fixed", top: 16, right: isWide ? 332 : 16, width: 32, height: 32, borderRadius: "50%", background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: T.font, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
+        style={{ position: "fixed", top: 16, right: isWide ? 332 : 16, width: 32, height: 32, borderRadius: "50%", background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, fontSize: T.fs.ui, fontWeight: 700, cursor: "pointer", fontFamily: T.font, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
         ?
       </button>
 
@@ -184,13 +184,13 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
         <div onClick={() => setShowAbout(false)}
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center", padding: "1.5rem" }}>
           <div onClick={e => e.stopPropagation()} className="fade-up"
-            style={{ width: "100%", maxWidth: 380, background: T.bg1, border: `1px solid ${T.border}`, borderRadius: 14, padding: "1.5rem 1.5rem 1.75rem" }}>
+            style={{ width: "100%", maxWidth: 380, background: T.bg1, border: `1px solid ${T.border}`, borderRadius: T.r.lg, padding: "1.5rem 1.5rem 1.75rem" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: T.ink }}>Wandr into your next trip</div>
+              <div style={{ fontSize: T.fs.title, fontWeight: 700, color: T.ink }}>Wandr into your next trip</div>
               <button onClick={() => setShowAbout(false)} aria-label="Close"
-                style={{ width: 26, height: 26, borderRadius: "50%", background: "transparent", border: "none", color: T.hint, fontSize: 18, cursor: "pointer", fontFamily: T.font, lineHeight: 1 }}>×</button>
+                style={{ width: 26, height: 26, borderRadius: "50%", background: "transparent", border: "none", color: T.hint, fontSize: T.fs.title, cursor: "pointer", fontFamily: T.font, lineHeight: 1 }}>×</button>
             </div>
-            <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.6, marginBottom: 16 }}>
+            <div style={{ fontSize: T.fs.body, color: T.muted, lineHeight: 1.6, marginBottom: 16 }}>
               Answer a few quick questions and Wandr builds you a personal trip — tailored to your pace, budget, and what you actually care about.
             </div>
             {[
@@ -201,8 +201,8 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
               <div key={title} style={{ display: "flex", gap: 9, marginBottom: 11 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.accent, flexShrink: 0, marginTop: 6 }} />
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{title}</div>
-                  <div style={{ fontSize: 12, color: T.hint, lineHeight: 1.5 }}>{desc}</div>
+                  <div style={{ fontSize: T.fs.body, fontWeight: 700, color: T.ink }}>{title}</div>
+                  <div style={{ fontSize: T.fs.body, color: T.hint, lineHeight: 1.5 }}>{desc}</div>
                 </div>
               </div>
             ))}
@@ -229,7 +229,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           ? { display: "flex", alignItems: "baseline", gap: 12, marginBottom: 0 }
           : { textAlign: "center", marginBottom: "2.75rem" } }>
           <WandrLogo size={isWide ? "sm" : "lg"} globe="animated" showTrail={false} />
-          <div style={{ fontSize: isWide ? 12 : 14, fontWeight: 600, color: T.muted, letterSpacing: ".02em", marginTop: isWide ? 0 : "1rem" }}>
+          <div style={{ fontSize: isWide ? T.fs.body : T.fs.ui, fontWeight: 600, color: T.muted, letterSpacing: ".02em", marginTop: isWide ? 0 : "1rem" }}>
             Make it your trip.
           </div>
         </div>
@@ -240,11 +240,11 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
 
         {/* Destination input */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", marginBottom: 8 }}>Where to?</div>
+          <div style={{ fontSize: T.fs.meta, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", marginBottom: 8 }}>Where to?</div>
           {/* Comet ring (8A): the wrapper IS the border — a 1.5px ring the
               gradient orbits while idle, solid accent otherwise. */}
           <div className={destIdle ? "wbeam-idle" : undefined}
-            style={{ position: "relative", borderRadius: 12, padding: 1.5, ...(destIdle ? {} : { background: T.accent }) }}>
+            style={{ position: "relative", borderRadius: T.r.md, padding: 1.5, ...(destIdle ? {} : { background: T.accent }) }}>
             <input
               ref={inputRef}
               autoFocus
@@ -252,21 +252,21 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
               value={dest}
               onChange={e => { setDest(e.target.value); setDestPicked(false); }}
               onKeyDown={e => e.key === "Enter" && handleStart(hasProfile ? "continue" : "fresh")}
-              style={{ width: "100%", padding: "14px 16px", fontSize: 16, fontWeight: 600, background: T.bg1, border: "none", borderRadius: 10.5, color: T.ink, outline: "none", fontFamily: T.font, colorScheme: "dark", boxSizing: "border-box", display: "block" }}
+              style={{ width: "100%", padding: "14px 16px", fontSize: T.fs.title, fontWeight: 600, background: T.bg1, border: "none", borderRadius: 10.5 /* off-ramp: inner radius = ring wrapper T.r.md(12) minus 1.5 padding */, color: T.ink, outline: "none", fontFamily: T.font, colorScheme: "dark", boxSizing: "border-box", display: "block" }}
             />
             {dest.length === 0 && (
               <div className={destIdle ? "wshim" : undefined}
-                style={{ position: "absolute", left: 24, top: "50%", transform: "translateY(-50%)", fontSize: 16, fontWeight: 600, color: destIdle ? undefined : T.hint, pointerEvents: "none", opacity: placeholderFade ? 1 : 0, transition: "opacity .18s ease" }}>
+                style={{ position: "absolute", left: 24, top: "50%", transform: "translateY(-50%)", fontSize: T.fs.title, fontWeight: 600, color: destIdle ? undefined : T.hint, pointerEvents: "none", opacity: placeholderFade ? 1 : 0, transition: "opacity .18s ease" }}>
                 {DEST_PLACEHOLDERS[placeholderIdx]}
               </div>
             )}
             {destPicked && (
-              <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: T.accent, fontWeight: 800, fontSize: 14, pointerEvents: "none" }}>✓</span>
+              <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: T.accent, fontWeight: 800, fontSize: T.fs.ui, pointerEvents: "none" }}>✓</span>
             )}
             <StardustBurst burstKey={pickBurst} origin={{ right: 12, top: "50%" }} />
           </div>
           {suggestions.length > 0 && (
-            <div className="fade-up" style={{ marginTop: 6, background: T.bg1, border: `1px solid ${T.border2}`, borderRadius: 12, overflow: "hidden" }}>
+            <div className="fade-up" style={{ marginTop: 6, background: T.bg1, border: `1px solid ${T.border2}`, borderRadius: T.r.md, overflow: "hidden" }}>
               {suggestions.map((s, i) => (
                 <button key={s.placeId || i} onClick={() => pickSuggestion(s)}
                   style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", padding: "11px 14px", background: "transparent", border: "none", borderTop: i === 0 ? "none" : `1px solid ${T.border}`, cursor: "pointer", fontFamily: T.font }}>
@@ -274,14 +274,14 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
                     <path d="M12 21s7-6.1 7-11.5A7 7 0 105 9.5C5 14.9 12 21 12 21z" stroke={i === 0 ? T.accent : T.hint} strokeWidth="2" />
                     {i === 0 && <circle cx="12" cy="9.5" r="2.4" fill={T.accent} />}
                   </svg>
-                  <span style={{ fontSize: 13.5, color: T.ink, fontWeight: 600 }}>
+                  <span style={{ fontSize: T.fs.ui, color: T.ink, fontWeight: 600 }}>
                     {s.main}
                     {s.secondary && <span style={{ color: T.hint, fontWeight: 400 }}> — {s.secondary}</span>}
                   </span>
                 </button>
               ))}
               <button onClick={() => { setDestPicked(true); setSuggestions([]); setPickBurst(b => b + 1); }}
-                style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", borderTop: `1px solid ${T.border}`, cursor: "pointer", fontFamily: T.font, fontSize: 12, color: T.accent, fontWeight: 700 }}>
+                style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", borderTop: `1px solid ${T.border}`, cursor: "pointer", fontFamily: T.font, fontSize: T.fs.body, color: T.accent, fontWeight: 700 }}>
                 Use “{dest.trim()}” as typed →
               </button>
             </div>
@@ -291,7 +291,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
         {/* Offline notice — building a trip needs the AI, so say so plainly
             instead of letting the CTA fail on tap. A saved trip still opens. */}
         {!online && (
-          <div style={{ marginBottom: 16, padding: "10px 12px", background: T.bg1, border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 12, color: T.muted, lineHeight: 1.5 }}>
+          <div style={{ marginBottom: 16, padding: "10px 12px", background: T.bg1, border: `1px solid ${T.border}`, borderRadius: T.r.md, fontSize: T.fs.body, color: T.muted, lineHeight: 1.5 }}>
             <strong style={{ color: T.ink }}>You're offline.</strong>{" "}
             {savedTrip?.destination
               ? "Your saved trip opens below — new trips need a connection."
@@ -305,13 +305,13 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
             interview. */}
         {destValid && online && !hasProfile && (
           <button onClick={() => handleStart("fresh")} className="fade-up"
-            style={{ width: "100%", background: T.accent, color: T.white, padding: "14px 0", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", border: "none", fontFamily: T.font, marginBottom: "1rem" }}>
+            style={{ width: "100%", background: T.accent, color: T.white, padding: "14px 0", borderRadius: T.r.md, fontSize: T.fs.ui, fontWeight: 700, cursor: "pointer", border: "none", fontFamily: T.font, marginBottom: "1rem" }}>
             Let's go →
           </button>
         )}
         {destValid && online && hasProfile && (
           <button onClick={() => handleStart("continue")} className="fade-up"
-            style={{ width: "100%", background: T.accent, color: T.white, padding: "14px 0", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", border: "none", fontFamily: T.font, marginBottom: 10 }}>
+            style={{ width: "100%", background: T.accent, color: T.white, padding: "14px 0", borderRadius: T.r.md, fontSize: T.fs.ui, fontWeight: 700, cursor: "pointer", border: "none", fontFamily: T.font, marginBottom: 10 }}>
             Plan it my way →
           </button>
         )}
@@ -319,18 +319,18 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
         {/* Traveler profile strip — always visible once a profile exists, so
             "my way" is never a mystery. Edit opens the profile sheet. */}
         {hasProfile && (
-          <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1px solid ${T.border}`, borderRadius: 12, background: T.bg1, padding: "11px 14px", marginBottom: destValid ? 8 : 16 }}>
-            <span style={{ color: T.accent, fontSize: 13, flexShrink: 0 }}>✦</span>
-            <span style={{ fontSize: 11.5, color: T.muted, flex: 1, lineHeight: 1.45 }}>{profileSummary(profile) || "Your traveler profile"}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, border: `1px solid ${T.border}`, borderRadius: T.r.md, background: T.bg1, padding: "11px 14px", marginBottom: destValid ? 8 : 16 }}>
+            <span style={{ color: T.accent, fontSize: T.fs.body, flexShrink: 0 }}>✦</span>
+            <span style={{ fontSize: T.fs.meta, color: T.muted, flex: 1, lineHeight: 1.45 }}>{profileSummary(profile) || "Your traveler profile"}</span>
             <button onClick={() => setShowProfile(true)}
-              style={{ fontSize: 11, fontWeight: 700, color: T.accent, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "2px 2px", flexShrink: 0 }}>
+              style={{ fontSize: T.fs.meta, fontWeight: 700, color: T.accent, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "2px 2px", flexShrink: 0 }}>
               Edit
             </button>
           </div>
         )}
         {destValid && online && hasProfile && (
           <button onClick={() => handleStart("fresh")}
-            style={{ width: "100%", padding: "4px 0 0", background: "transparent", border: "none", color: T.hint, fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: T.font, marginBottom: 16 }}>
+            style={{ width: "100%", padding: "4px 0 0", background: "transparent", border: "none", color: T.hint, fontSize: T.fs.meta, fontWeight: 600, cursor: "pointer", fontFamily: T.font, marginBottom: 16 }}>
             or start from a blank slate
           </button>
         )}
@@ -341,7 +341,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
             on desktop the departures rail (12B) is the trips surface. */}
         {!isWide && trips.length > 0 && (
           <div style={{ marginBottom: "1.5rem" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".16em", margin: "4px 0 8px" }}>My trips</div>
+            <div style={{ fontSize: T.fs.label, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".16em", margin: "4px 0 8px" }}>My trips</div>
             {trips.map(renderTripCard)}
           </div>
         )}
@@ -352,10 +352,10 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           Same renderTripCard as the mobile shelf; only the arrangement differs. */}
       {isWide && (
         <div style={{ width: 316, flexShrink: 0, borderLeft: `1px solid ${T.border}`, background: T.bg1, padding: "22px 18px", overflowY: "auto" }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".18em", margin: "2px 0 12px" }}>Departures</div>
+          <div style={{ fontSize: T.fs.label, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".18em", margin: "2px 0 12px" }}>Departures</div>
           {trips.map(renderTripCard)}
           <button onClick={() => inputRef.current?.focus()}
-            style={{ width: "100%", border: `1px dashed ${T.border2}`, borderRadius: 12, background: "transparent", textAlign: "center", padding: "11px 0", fontSize: 12, color: T.muted, fontWeight: 700, cursor: "pointer", fontFamily: T.font }}>
+            style={{ width: "100%", border: `1px dashed ${T.border2}`, borderRadius: T.r.md, background: "transparent", textAlign: "center", padding: "11px 0", fontSize: T.fs.body, color: T.muted, fontWeight: 700, cursor: "pointer", fontFamily: T.font }}>
             + New trip
           </button>
         </div>
