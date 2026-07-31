@@ -75,7 +75,7 @@ function Field({ label, children }) {
   return (
     <div>
       <div style={{
-        fontSize: 10.5, fontWeight: 700, color: T.hint,
+        fontSize: T.fs.label, fontWeight: 700, color: T.hint,
         textTransform: "uppercase", letterSpacing: ".12em", marginBottom: 8,
       }}>
         {label}
@@ -88,9 +88,9 @@ function Field({ label, children }) {
 const inputStyle = {
   background: T.bg2,
   border: `1px solid ${T.border2}`,
-  borderRadius: 8,
+  borderRadius: T.r.md,
   color: T.ink,
-  fontSize: 13,
+  fontSize: T.fs.body,
   fontFamily: T.font,
   padding: "9px 12px",
   outline: "none",
@@ -113,11 +113,11 @@ function SubmitBar({ label, enabled, loading, onSubmit }) {
         style={{
           width: "100%",
           padding: "13px",
-          borderRadius: 10,
+          borderRadius: T.r.md,
           background: !enabled || loading ? T.bg3 : T.accent,
           border: "none",
           color: !enabled || loading ? T.hint : "#fff",
-          fontSize: 14,
+          fontSize: T.fs.ui,
           fontWeight: 700,
           cursor: !enabled || loading ? "not-allowed" : "pointer",
           fontFamily: T.font,
@@ -336,21 +336,21 @@ export default function EditTripSheet({
               onClick={goBack}
               style={{
                 background: "none", border: "none", color: T.muted,
-                fontSize: 20, cursor: "pointer", padding: "0 6px 0 0",
+                fontSize: 20 /* off-ramp: back-chevron glyph tap target — title(17) visibly shrinks it */, cursor: "pointer", padding: "0 6px 0 0",
                 lineHeight: 1, fontFamily: T.font,
               }}
             >
               ‹
             </button>
           )}
-          <div style={{ flex: 1, fontSize: 16, fontWeight: 800, color: T.ink }}>
+          <div style={{ flex: 1, fontSize: T.fs.title, fontWeight: 800, color: T.ink }}>
             {stageTitle}
           </div>
           <button
             onClick={handleClose}
             style={{
               background: "none", border: "none", color: T.hint,
-              fontSize: 20, cursor: "pointer", lineHeight: 1,
+              fontSize: 20 /* off-ramp: close-glyph tap target — title(17) visibly shrinks it */, cursor: "pointer", lineHeight: 1,
               padding: 0, fontFamily: T.font,
             }}
           >
@@ -386,14 +386,14 @@ export default function EditTripSheet({
                       <Glyph name={opt.icon} size={18} color={T.accent} />
                     </span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 1 }}>
+                      <div style={{ fontSize: T.fs.ui, fontWeight: 700, color: T.ink, marginBottom: 1 }}>
                         {opt.title}
                       </div>
-                      <div style={{ fontSize: 12, color: T.muted }}>
+                      <div style={{ fontSize: T.fs.body, color: T.muted }}>
                         {isDisabled ? "Generate a plan first" : opt.sub}
                       </div>
                     </div>
-                    <span style={{ color: T.hint, fontSize: 18 }}>›</span>
+                    <span style={{ color: T.hint, fontSize: T.fs.title }}>›</span>
                   </button>
                 );
               })}
@@ -403,7 +403,7 @@ export default function EditTripSheet({
           {/* ── SPECIFIC ACTIVITIES ──────────────────────────────────────────── */}
           {stage === "specific-activities" && (
             <div style={{ paddingTop: 14 }}>
-              <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 16, lineHeight: 1.65 }}>
+              <div style={{ fontSize: T.fs.body, color: T.muted, marginBottom: 16, lineHeight: 1.65 }}>
                 Describe what you'd like to change. Be as specific as you like — mention the day, activity name, or just describe the kind of change.
               </div>
               <textarea
@@ -414,7 +414,7 @@ export default function EditTripSheet({
                 rows={4}
                 style={textareaStyle}
               />
-              <div style={{ fontSize: 11, color: T.hint, marginTop: 7 }}>
+              <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 7 }}>
                 Tip: mention the specific day or activity name for best results.
               </div>
               <SubmitBar
@@ -429,11 +429,11 @@ export default function EditTripSheet({
           {/* ── SPECIFIC DAY ─────────────────────────────────────────────────── */}
           {stage === "specific-day" && (
             <div style={{ paddingTop: 14 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 600, color: T.hint, marginBottom: 10 }}>
+              <div style={{ fontSize: T.fs.meta, fontWeight: 600, color: T.hint, marginBottom: 10 }}>
                 Which day?
               </div>
               {dayHeaders.length === 0 ? (
-                <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 16 }}>
+                <div style={{ fontSize: T.fs.body, color: T.muted, marginBottom: 16 }}>
                   No days found — generate a Full Itinerary first.
                 </div>
               ) : (
@@ -448,7 +448,7 @@ export default function EditTripSheet({
                         style={{
                           background: active ? "#2a1a12" : T.bg2,
                           border: active ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
-                          borderRadius: 8,
+                          borderRadius: T.r.md,
                           cursor: "pointer",
                           fontFamily: T.font,
                           padding: "7px 12px",
@@ -456,11 +456,11 @@ export default function EditTripSheet({
                           minWidth: 64,
                         }}
                       >
-                        <div style={{ fontSize: 11, fontWeight: 700, color: active ? T.accent : T.ink }}>
+                        <div style={{ fontSize: T.fs.meta, fontWeight: 700, color: active ? T.accent : T.ink }}>
                           {day}
                         </div>
                         {date && (
-                          <div style={{ fontSize: 10, color: active ? "#a06040" : T.hint, marginTop: 1 }}>
+                          <div style={{ fontSize: T.fs.label, color: active ? "#a06040" : T.hint, marginTop: 1 }}>
                             {date}
                           </div>
                         )}
@@ -469,7 +469,7 @@ export default function EditTripSheet({
                   })}
                 </div>
               )}
-              <div style={{ fontSize: 11.5, fontWeight: 600, color: T.hint, marginBottom: 8 }}>
+              <div style={{ fontSize: T.fs.meta, fontWeight: 600, color: T.hint, marginBottom: 8 }}>
                 What should change? <span style={{ fontWeight: 400, color: T.border2 }}>(optional)</span>
               </div>
               <textarea
@@ -491,7 +491,7 @@ export default function EditTripSheet({
           {/* ── FULL ITINERARY ───────────────────────────────────────────────── */}
           {stage === "full-itinerary" && (
             <div style={{ paddingTop: 14 }}>
-              <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 16, lineHeight: 1.65 }}>
+              <div style={{ fontSize: T.fs.body, color: T.muted, marginBottom: 16, lineHeight: 1.65 }}>
                 How should the feel of this itinerary change? Pick one or more, or describe it yourself.
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 18 }}>
@@ -504,9 +504,9 @@ export default function EditTripSheet({
                       style={{
                         background: active ? "#2a1a12" : T.bg2,
                         border: active ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
-                        borderRadius: 100,
+                        borderRadius: T.r.pill,
                         color: active ? T.accent : T.muted,
-                        fontSize: 12,
+                        fontSize: T.fs.body,
                         fontWeight: active ? 700 : 400,
                         padding: "5px 12px",
                         cursor: "pointer",
@@ -532,17 +532,17 @@ export default function EditTripSheet({
                   display: "flex", alignItems: "center", gap: 9, width: "100%", marginTop: 12,
                   background: surprise ? "#2a1a12" : T.bg2,
                   border: surprise ? `1.5px solid ${T.accent}` : `1px dashed ${T.border2}`,
-                  borderRadius: 10, padding: "10px 13px", cursor: "pointer", fontFamily: T.font,
+                  borderRadius: T.r.md, padding: "10px 13px", cursor: "pointer", fontFamily: T.font,
                   textAlign: "left", transition: "all .12s",
                 }}
               >
                 <Glyph name="dice" size={17} color={surprise ? T.accent : T.muted} />
                 <span style={{ flex: 1 }}>
-                  <span style={{ display: "block", fontSize: 12.5, fontWeight: 700, color: surprise ? T.accent : T.ink }}>Surprise me</span>
-                  <span style={{ display: "block", fontSize: 11, color: T.muted, marginTop: 1 }}>A genuinely different take — none of the current stops repeat</span>
+                  <span style={{ display: "block", fontSize: T.fs.body, fontWeight: 700, color: surprise ? T.accent : T.ink }}>Surprise me</span>
+                  <span style={{ display: "block", fontSize: T.fs.meta, color: T.muted, marginTop: 1 }}>A genuinely different take — none of the current stops repeat</span>
                 </span>
               </button>
-              <div style={{ fontSize: 11, color: T.hint, lineHeight: 1.5, marginTop: 12 }}>
+              <div style={{ fontSize: T.fs.meta, color: T.hint, lineHeight: 1.5, marginTop: 12 }}>
                 Heads up — this rebuilds the whole itinerary, including any edits you've made to it.
               </div>
               <SubmitBar
@@ -591,9 +591,9 @@ export default function EditTripSheet({
                         style={{
                           background: active ? "#2a1a12" : T.bg2,
                           border: active ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
-                          borderRadius: 100,
+                          borderRadius: T.r.pill,
                           color: active ? T.accent : T.muted,
-                          fontSize: 12,
+                          fontSize: T.fs.body,
                           fontWeight: active ? 700 : 400,
                           padding: "5px 12px",
                           cursor: "pointer",
@@ -616,7 +616,7 @@ export default function EditTripSheet({
                   teams={localTeams} setTeams={setLocalTeams}
                   compact
                 />
-                <div style={{ fontSize: 11, color: T.hint, marginTop: 10, lineHeight: 1.5 }}>
+                <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 10, lineHeight: 1.5 }}>
                   Starred interests win scheduling conflicts. Ranking happens when the
                   trip is built, so changes here take effect on the rebuild below.
                 </div>
@@ -648,23 +648,23 @@ export default function EditTripSheet({
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: T.bg1, border: `1px solid ${T.border}`, borderRadius: 14,
+              background: T.bg1, border: `1px solid ${T.border}`, borderRadius: T.r.lg,
               padding: "22px 20px", maxWidth: 340, width: "100%", fontFamily: T.font,
             }}
           >
-            <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginBottom: 8 }}>
+            <div style={{ fontSize: T.fs.title, fontWeight: 700, color: T.ink, marginBottom: 8 }}>
               Rebuild this trip?
             </div>
-            <div style={{ fontSize: 13, color: T.muted, lineHeight: 1.55, marginBottom: 18 }}>
+            <div style={{ fontSize: T.fs.body, color: T.muted, lineHeight: 1.55, marginBottom: 18 }}>
               This rebuilds the trip from your new answers. Any itinerary you've generated — including edits you've made by hand — is cleared. Your current trip stays until the new one's ready.
             </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 onClick={() => setConfirmRebuild(false)}
                 style={{
-                  flex: 1, padding: "11px", borderRadius: 9,
+                  flex: 1, padding: "11px", borderRadius: T.r.md,
                   background: T.bg3, border: `1px solid ${T.border}`, color: T.ink,
-                  fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: T.font,
+                  fontSize: T.fs.body, fontWeight: 700, cursor: "pointer", fontFamily: T.font,
                 }}
               >
                 Cancel
@@ -672,9 +672,9 @@ export default function EditTripSheet({
               <button
                 onClick={doRebuild}
                 style={{
-                  flex: 1, padding: "11px", borderRadius: 9,
+                  flex: 1, padding: "11px", borderRadius: T.r.md,
                   background: T.accent, border: "none", color: "#fff",
-                  fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: T.font,
+                  fontSize: T.fs.body, fontWeight: 700, cursor: "pointer", fontFamily: T.font,
                 }}
               >
                 Rebuild
