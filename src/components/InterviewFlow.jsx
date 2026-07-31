@@ -58,6 +58,9 @@ export default function InterviewFlow({
   logRhythm, setLogRhythm,
   isValid,
 }) {
+  // Presentation-only state: the "leave setup?" confirm in front of onWelcome.
+  // One exit path — this gates the same handler, it never adds a second one.
+  const [confirmHome, setConfirmHome] = useState(false);
   const S   = STEPS[step];
   // Progress is measured over the steps this run will actually show, not all
   // six — continue mode skips four of them.
@@ -84,15 +87,42 @@ export default function InterviewFlow({
         .wandr-chip::after{content:attr(data-label);display:block;height:0;overflow:hidden;visibility:hidden;font-weight:700;pointer-events:none}`}</style>
       <div style={{ maxWidth:560, margin:"0 auto", padding:"2rem 1.5rem", minHeight:"100vh" }}>
 
-        {/* Breadcrumb + progress bar */}
+        {/* Breadcrumb + progress bar. The mark is the way home, but answers
+            live only in memory until a build succeeds — so past step 1 the
+            exit goes through a confirm; on step 1 there's nothing to lose. */}
         <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:"2.25rem" }}>
-          <button onClick={onWelcome} style={{ fontSize:T.fs.body, color:T.hint, padding:0, background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>Wandr</button>
+          <button onClick={() => (step > 0 ? setConfirmHome(true) : onWelcome())} aria-label="Back to home"
+            style={{ fontSize:T.fs.body, color:T.hint, padding:0, background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>Wandr</button>
           <div style={{ fontSize:T.fs.body, color:T.border }}>/</div>
           <div style={{ flex:1, height:2, background:T.bg3, borderRadius:1 }}>
             <div style={{ width:`${pct}%`, height:"100%", background:T.accent, borderRadius:1, transition:"width .4s ease" }} />
           </div>
           <span style={{ fontSize:T.fs.meta, color:T.hint, minWidth:36, textAlign:"right" }}>{num} / {total}</span>
         </div>
+
+        {/* Leave-setup confirm — backdrop tap stays (the safe default). */}
+        {confirmHome && (
+          <div onClick={() => setConfirmHome(false)}
+            style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.6)", zIndex:20, display:"flex", alignItems:"center", justifyContent:"center", padding:"1.5rem" }}>
+            <div onClick={e => e.stopPropagation()}
+              style={{ width:"100%", maxWidth:340, background:T.bg1, border:`1px solid ${T.border2}`, borderRadius:T.r.lg, padding:"1.4rem 1.5rem" }}>
+              <div style={{ fontSize:T.fs.title, fontWeight:800, color:T.ink, marginBottom:6 }}>Leave this trip setup?</div>
+              <div style={{ fontSize:T.fs.body, color:T.muted, lineHeight:1.55, marginBottom:16 }}>
+                Your answers so far won't be saved.
+              </div>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={() => setConfirmHome(false)}
+                  style={{ flex:1, padding:"11px 0", borderRadius:T.r.md, fontSize:T.fs.ui, fontWeight:700, color:T.white, background:T.accent, border:"none", cursor:"pointer", fontFamily:T.font }}>
+                  Keep planning
+                </button>
+                <button onClick={() => { setConfirmHome(false); onWelcome(); }}
+                  style={{ flex:1, padding:"11px 0", borderRadius:T.r.md, fontSize:T.fs.ui, fontWeight:600, color:T.muted, background:"transparent", border:`1px solid ${T.border}`, cursor:"pointer", fontFamily:T.font }}>
+                  Leave
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <AnimatePresence mode="wait" custom={direction}>
         <motion.div
