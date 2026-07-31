@@ -8,8 +8,8 @@ export default function LoadingScreen({ message, destination }) {
         <WandrLogo size="md" showTrail={false} globe="animated" />
       </div>
       <div style={{ width: 28, height: 28, border: `2px solid ${T.border}`, borderTopColor: T.accent, borderRadius: "50%", animation: "spin .7s linear infinite", marginBottom: "1.25rem" }} />
-      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 5, color: T.ink }}>{message}</div>
-      <div style={{ fontSize: 12, color: T.hint }}>Building your guide for {destination}</div>
+      <div style={{ fontSize: T.fs.title, fontWeight: 700, marginBottom: 5, color: T.ink }}>{message}</div>
+      <div style={{ fontSize: T.fs.body, color: T.hint }}>Building your guide for {destination}</div>
     </div>
   );
 }
