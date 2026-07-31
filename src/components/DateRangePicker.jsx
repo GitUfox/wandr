@@ -126,13 +126,13 @@ export default function DateRangePicker({ d1, setD1, d2, setD2 }) {
           const active = open && phase === p;
           return (
             <div key={label}>
-              <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".12em", color: T.hint, marginBottom: 5 }}>{label}</div>
+              <div style={{ fontSize: T.fs.label, textTransform: "uppercase", letterSpacing: ".12em", color: T.hint, marginBottom: 5 }}>{label}</div>
               <button
                 onClick={() => open && phase === p ? setOpen(false) : openForPhase(p)}
                 style={{
-                  width: "100%", padding: "10px 14px", borderRadius: 8, background: active ? "#2a1a12" : T.bg3,
-                  border: active ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
-                  color: iso ? T.ink : T.hint, fontSize: 13.5, fontFamily: T.font,
+                  width: "100%", padding: "10px 14px", borderRadius: T.r.md, background: active ? "#2a1a12" : T.bg3,
+                  border: active ? `1.5px solid ${T.accent}` : `1px solid ${T.border2}`,
+                  color: iso ? T.ink : T.hint, fontSize: T.fs.ui, fontFamily: T.font,
                   textAlign: "left", cursor: "pointer", transition: "all .15s",
                 }}>
                 {fmt(iso) || ph}
@@ -144,35 +144,35 @@ export default function DateRangePicker({ d1, setD1, d2, setD2 }) {
 
       {/* Nights badge */}
       {nights && nights > 0 && !open && (
-        <div style={{ fontSize: 11, color: T.accent, marginBottom: 8 }}>
+        <div style={{ fontSize: T.fs.meta, color: T.accent, marginBottom: 8 }}>
           {nights} night{nights !== 1 ? "s" : ""}
         </div>
       )}
 
       {/* Validation message */}
       {d1 && d2 && d2 <= d1 && (
-        <div style={{ fontSize: 12, color: "#f08070", padding: "6px 10px", background: "rgba(200,80,60,.1)", border: "1px solid rgba(200,80,60,.25)", borderRadius: 7, marginTop: 6 }}>
+        <div style={{ fontSize: T.fs.body, color: "#f08070", padding: "6px 10px", background: "rgba(200,80,60,.1)", border: "1px solid rgba(200,80,60,.25)", borderRadius: T.r.sm, marginTop: 6 }}>
           Departure must be after arrival
         </div>
       )}
 
       {/* Calendar */}
       {open && (
-        <div style={{ background: T.bg1, border: `1px solid ${T.border}`, borderRadius: 12, padding: "16px", userSelect: "none" }}>
+        <div style={{ background: T.bg1, border: `1px solid ${T.border}`, borderRadius: T.r.md, padding: "16px", userSelect: "none" }}>
 
           {/* Month nav */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <button onClick={prevMonth} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 18, padding: "0 8px", fontFamily: T.font, lineHeight: 1 }}>‹</button>
-            <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, letterSpacing: ".01em" }}>
+            <button onClick={prevMonth} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: T.fs.title, padding: "0 8px", fontFamily: T.font, lineHeight: 1 }}>‹</button>
+            <div style={{ fontSize: T.fs.body, fontWeight: 700, color: T.ink, letterSpacing: ".01em" }}>
               {MONTHS[view.month]} {view.year}
             </div>
-            <button onClick={nextMonth} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 18, padding: "0 8px", fontFamily: T.font, lineHeight: 1 }}>›</button>
+            <button onClick={nextMonth} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: T.fs.title, padding: "0 8px", fontFamily: T.font, lineHeight: 1 }}>›</button>
           </div>
 
           {/* Day headers */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 6 }}>
             {DAYS.map(d => (
-              <div key={d} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: T.hint, letterSpacing: ".06em", padding: "2px 0" }}>{d}</div>
+              <div key={d} style={{ textAlign: "center", fontSize: T.fs.label, fontWeight: 700, color: T.hint, letterSpacing: ".06em", padding: "2px 0" }}>{d}</div>
             ))}
           </div>
 
@@ -227,7 +227,7 @@ export default function DateRangePicker({ d1, setD1, d2, setD2 }) {
                   <span style={{
                     display: "inline-flex", alignItems: "center", justifyContent: "center",
                     width: 28, height: 28, borderRadius: "50%",
-                    fontSize: 12.5, color, fontWeight, fontFamily: T.font,
+                    fontSize: T.fs.body, color, fontWeight, fontFamily: T.font,
                     border: isToday && !isSelected ? `1px solid ${T.border2}` : "none",
                   }}>
                     {day.getDate()}
@@ -239,18 +239,18 @@ export default function DateRangePicker({ d1, setD1, d2, setD2 }) {
 
           {/* Footer */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
-            <div style={{ fontSize: 11, color: T.hint }}>
+            <div style={{ fontSize: T.fs.meta, color: T.hint }}>
               {phase === "start" ? "Pick your arrival date" : "Now pick your departure"}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               {(d1 || d2) && (
                 <button onClick={() => { setD1(""); setD2(""); setPhase("start"); }}
-                  style={{ fontSize: 11, color: T.muted, background: "none", border: "none", cursor: "pointer", fontFamily: T.font }}>
+                  style={{ fontSize: T.fs.meta, color: T.muted, background: "none", border: "none", cursor: "pointer", fontFamily: T.font }}>
                   Clear
                 </button>
               )}
               <button onClick={() => { setOpen(false); setHovered(null); }}
-                style={{ fontSize: 11, color: T.accent, background: "none", border: "none", cursor: "pointer", fontFamily: T.font, fontWeight: 700 }}>
+                style={{ fontSize: T.fs.meta, color: T.accent, background: "none", border: "none", cursor: "pointer", fontFamily: T.font, fontWeight: 700 }}>
                 Done
               </button>
             </div>
