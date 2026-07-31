@@ -272,23 +272,23 @@ export default function Dashboard({
           </div>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, flexWrap:"wrap", marginBottom:10 }}>
             <div>
-              <div style={{ fontSize:9, letterSpacing:".2em", textTransform:"uppercase", color:T.accent, fontWeight:700, marginBottom:5 }}>My trip</div>
-              <div style={{ fontSize:28, fontWeight:800, color:T.ink, lineHeight:1.08, letterSpacing:"-.015em" }}>{destMain}</div>
+              <div style={{ fontSize:T.fs.micro, letterSpacing:".2em", textTransform:"uppercase", color:T.accent, fontWeight:700, marginBottom:5 }}>My trip</div>
+              <div style={{ fontSize:T.fs.hero, fontWeight:800, color:T.ink, lineHeight:1.08, letterSpacing:"-.015em" }}>{destMain}</div>
               {destRegion && (
-                <div style={{ fontSize:11.5, color:T.hint, fontWeight:700, letterSpacing:".08em", textTransform:"uppercase", marginTop:4 }}>{destRegion}</div>
+                <div style={{ fontSize:T.fs.meta, color:T.hint, fontWeight:700, letterSpacing:".08em", textTransform:"uppercase", marginTop:4 }}>{destRegion}</div>
               )}
             </div>
             <div style={{ display:"flex", gap:7, alignItems:"flex-start" }}>
               {!online && (
                 <span title="Your saved trip is readable offline. Building or editing needs a connection."
-                  style={{ fontSize:10, fontWeight:700, color:T.muted, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:100, padding:"4px 9px", whiteSpace:"nowrap" }}>
+                  style={{ fontSize:T.fs.label, fontWeight:700, color:T.muted, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:T.r.pill, padding:"4px 9px", whiteSpace:"nowrap" }}>
                   ● Offline
                 </span>
               )}
               {otherTrips.length > 0 && (
                 <div style={{ position:"relative" }}>
                   <button onClick={() => setSwitcherOpen(v => !v)}
-                    style={{ fontSize:11, color:T.muted, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 10px", cursor:"pointer", fontFamily:T.font }}>
+                    style={{ fontSize:T.fs.meta, color:T.muted, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:T.r.sm, padding:"5px 10px", cursor:"pointer", fontFamily:T.font }}>
                     Switch ▾
                   </button>
                   {switcherOpen && (
@@ -296,13 +296,13 @@ export default function Dashboard({
                       {/* Click-away closes the menu — no dead-end open state. */}
                       <div onClick={() => setSwitcherOpen(false)} style={{ position:"fixed", inset:0, zIndex:30 }} />
                       <div className="fade-up"
-                        style={{ position:"absolute", top:"calc(100% + 4px)", right:0, zIndex:31, minWidth:190, background:T.bg1, border:`1px solid ${T.border}`, borderRadius:10, overflow:"hidden", boxShadow:"0 8px 24px rgba(0,0,0,.5)" }}>
+                        style={{ position:"absolute", top:"calc(100% + 4px)", right:0, zIndex:31, minWidth:190, background:T.bg1, border:`1px solid ${T.border}`, borderRadius:T.r.md, overflow:"hidden", boxShadow:"0 8px 24px rgba(0,0,0,.5)" }}>
                         {otherTrips.map((t, i) => (
                           <button key={t.id}
                             onClick={() => { setSwitcherOpen(false); onSwitchTrip?.(t.id); }}
                             style={{ display:"block", width:"100%", textAlign:"left", padding:"9px 12px", background:"transparent", border:"none", borderTop: i === 0 ? "none" : `1px solid ${T.border}`, cursor:"pointer", fontFamily:T.font }}>
-                            <div style={{ fontSize:12.5, fontWeight:700, color:T.ink }}>{t.destination}</div>
-                            <div style={{ fontSize:10.5, color:T.hint, marginTop:1 }}>
+                            <div style={{ fontSize:T.fs.body, fontWeight:700, color:T.ink }}>{t.destination}</div>
+                            <div style={{ fontSize:T.fs.label, color:T.hint, marginTop:1 }}>
                               {[t.answers?.dates?.start, t.answers?.dates?.end].every(Boolean)
                                 ? `${fmtDate(t.answers.dates.start)} → ${fmtDate(t.answers.dates.end)}`
                                 : `${t.nights || "?"} nights`}
@@ -318,29 +318,29 @@ export default function Dashboard({
                 onClick={() => { if (online) { setEditSheetStage(null); setEditSheetOpen(true); } }}
                 disabled={!online}
                 title={online ? undefined : "Editing needs a connection"}
-                style={{ fontSize:11, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:6, padding:"5px 12px", cursor:online?"pointer":"not-allowed", opacity:online?1:.45, fontFamily:T.font, fontWeight:600 }}
+                style={{ fontSize:T.fs.meta, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:online?"pointer":"not-allowed", opacity:online?1:.45, fontFamily:T.font, fontWeight:600 }}
               >
                 Edit trip
               </button>
-              <button onClick={onReset} style={{ fontSize:11, color:T.muted, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px", cursor:"pointer", fontFamily:T.font }}>New trip</button>
+              <button onClick={onReset} style={{ fontSize:T.fs.meta, color:T.muted, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:"pointer", fontFamily:T.font }}>New trip</button>
             </div>
           </div>
           {/* Boarding-pass ticket — dates + vitals as one object (design pick 1B).
               trip.season (the full sentence) now lives only in the PDF export;
               the stub shows a short derived label instead. */}
           {(() => {
-            const stubLabel = { fontSize:8.5, letterSpacing:".18em", textTransform:"uppercase", color:T.hint, fontWeight:700 };
+            const stubLabel = { fontSize:T.fs.micro, letterSpacing:".18em", textTransform:"uppercase", color:T.hint, fontWeight:700 };
             const notch = { position:"absolute", width:22, height:22, borderRadius:"50%", background:T.bg1, border:`1px solid ${T.border2}`, top:-11 };
             const stubs = tripStubs;
             return (
-              <div style={{ position:"relative", marginTop:4, background:T.bg2, border:`1px solid ${T.border2}`, borderRadius:16, overflow:"hidden" }}>
+              <div style={{ position:"relative", marginTop:4, background:T.bg2, border:`1px solid ${T.border2}`, borderRadius:T.r.lg, overflow:"hidden" }}>
                 <div style={{ position:"absolute", right:12, top:14, bottom:14, width:13, background:`repeating-linear-gradient(180deg, ${T.border2} 0 2px, transparent 2px 5px)`, opacity:.5, borderRadius:2 }} />
                 {dep && ret && (
                   <>
                     <div style={{ display:"flex", alignItems:"center", gap:14, padding:"15px 38px 13px 18px" }}>
                       <div>
                         <div style={stubLabel}>Depart</div>
-                        <div style={{ fontSize:19, fontWeight:800, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{dep}</div>
+                        <div style={{ fontSize:19 /* off-ramp: ticket DEPART/RETURN dates — hero-tier numerals, title(17) visibly demotes them */, fontWeight:800, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{dep}</div>
                       </div>
                       <svg viewBox="0 0 46 16" style={{ flex:1, height:16, minWidth:36 }} aria-hidden="true">
                         <line x1="0" y1="8" x2="18" y2="8" stroke={T.border2} strokeDasharray="2 3" />
@@ -348,7 +348,7 @@ export default function Dashboard({
                       </svg>
                       <div style={{ textAlign:"right" }}>
                         <div style={stubLabel}>Return</div>
-                        <div style={{ fontSize:19, fontWeight:800, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{ret}</div>
+                        <div style={{ fontSize:19 /* off-ramp: ticket DEPART/RETURN dates — hero-tier numerals, title(17) visibly demotes them */, fontWeight:800, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{ret}</div>
                       </div>
                     </div>
                     <div style={{ position:"relative", borderTop:`1.5px dashed ${T.border2}`, margin:"0 26px" }}>
@@ -361,7 +361,7 @@ export default function Dashboard({
                   {stubs.map(([l, v]) => (
                     <div key={l}>
                       <div style={stubLabel}>{l}</div>
-                      <div style={{ fontSize:12.5, fontWeight:700, color:T.ink, marginTop:1 }}>{v}</div>
+                      <div style={{ fontSize:T.fs.body, fontWeight:700, color:T.ink, marginTop:1 }}>{v}</div>
                     </div>
                   ))}
                 </div>
@@ -369,19 +369,19 @@ export default function Dashboard({
             );
           })()}
           {trip.tagline && (
-            <div style={{ fontSize:12, color:T.muted, fontStyle:"italic", margin:"12px 2px 0" }}>{trip.tagline}</div>
+            <div style={{ fontSize:T.fs.body, color:T.muted, fontStyle:"italic", margin:"12px 2px 0" }}>{trip.tagline}</div>
           )}
           {Array.isArray(trip.highlights) && trip.highlights.length > 0 && (
             <div style={{ display:"flex", flexDirection:"column", gap:7, marginTop:12 }}>
               {trip.highlights.map((h, i) => (
-                <div key={i} style={{ display:"flex", gap:9, fontSize:11.5, color:T.muted, lineHeight:1.5 }}>
+                <div key={i} style={{ display:"flex", gap:9, fontSize:T.fs.meta, color:T.muted, lineHeight:1.5 }}>
                   <span style={{ color:T.accent, fontWeight:800, flexShrink:0 }}>✓</span>{h}
                 </div>
               ))}
             </div>
           )}
           {debugMsg && (
-            <div style={{ marginTop:10, padding:"6px 10px", background:"rgba(200,80,60,.12)", border:"1px solid rgba(200,80,60,.3)", borderRadius:6, fontSize:11, color:"#f08070" }}>
+            <div style={{ marginTop:10, padding:"6px 10px", background:"rgba(200,80,60,.12)", border:"1px solid rgba(200,80,60,.3)", borderRadius:T.r.sm, fontSize:T.fs.meta, color:"#f08070" }}>
               {"Couldn't load full trip data — some sections may be missing. You can still generate your itinerary below."}
               <div style={{ marginTop:4, opacity:0.7 }}>{debugMsg}</div>
             </div>
@@ -392,16 +392,16 @@ export default function Dashboard({
 
           {/* One-time "save these as your defaults?" prompt (first-time users) */}
           {showProfilePrompt && (
-            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", background:"#2a1a12", border:`1px solid ${T.accent}`, borderRadius:10, marginBottom:12 }}>
-              <div style={{ flex:1, fontSize:12.5, color:T.ink, lineHeight:1.4 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", background:"#2a1a12", border:`1px solid ${T.accent}`, borderRadius:T.r.md, marginBottom:12 }}>
+              <div style={{ flex:1, fontSize:T.fs.body, color:T.ink, lineHeight:1.4 }}>
                 Save these as your <strong style={{ color:T.accent }}>defaults</strong>? Skip the questions next time.
               </div>
               <button onClick={onSaveProfile}
-                style={{ padding:"7px 14px", borderRadius:8, fontSize:12.5, fontWeight:700, color:T.white, background:T.accent, border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>
+                style={{ padding:"7px 14px", borderRadius:T.r.md, fontSize:T.fs.body, fontWeight:700, color:T.white, background:T.accent, border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>
                 Save
               </button>
               <button onClick={onDismissProfilePrompt}
-                style={{ padding:"7px 4px", fontSize:12, fontWeight:600, color:T.hint, background:"none", border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>
+                style={{ padding:"7px 4px", fontSize:T.fs.body, fontWeight:600, color:T.hint, background:"none", border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>
                 Not now
               </button>
             </div>
@@ -409,18 +409,18 @@ export default function Dashboard({
 
           {/* Happening during your trip — real MLB games at the destination (§7) */}
           {Array.isArray(tripGames) && tripGames.length > 0 && !eventsDismissed && (
-            <div style={{ padding:"13px 15px", background:T.bg1, border:`1px solid ${T.border2}`, borderRadius:12, marginBottom:12 }}>
+            <div style={{ padding:"13px 15px", background:T.bg1, border:`1px solid ${T.border2}`, borderRadius:T.r.md, marginBottom:12 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:9 }}>
                 <Glyph name="ticket" size={15} color={T.accent} />
-                <span style={{ flex:1, fontSize:12.5, fontWeight:800, color:T.ink }}>Happening during your trip</span>
+                <span style={{ flex:1, fontSize:T.fs.body, fontWeight:800, color:T.ink }}>Happening during your trip</span>
                 <button onClick={() => setEventsDismissed(true)} title="Dismiss"
-                  style={{ padding:"2px 6px", fontSize:12, color:T.hint, background:"none", border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>✕</button>
+                  style={{ padding:"2px 6px", fontSize:T.fs.body, color:T.hint, background:"none", border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>✕</button>
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {tripGames.slice(0, 4).map((g, i) => {
                   const favShort = g.yours ? TEAM_SHORT[g.role === "away" ? g.away : g.home] : null;
                   return (
-                    <div key={i} style={{ display:"flex", alignItems:"baseline", gap:8, fontSize:12,
+                    <div key={i} style={{ display:"flex", alignItems:"baseline", gap:8, fontSize:T.fs.body,
                       ...(g.yours ? { borderLeft:`2px solid ${T.accent}`, paddingLeft:9, marginLeft:-2 } : {}) }}>
                       <span style={{ color:T.accent, fontWeight:700, flexShrink:0, width:64 }}>{formatShortDate(g.date)}</span>
                       <span style={{ lineHeight:1.4 }}>
@@ -436,7 +436,7 @@ export default function Dashboard({
                   );
                 })}
                 {tripGames.length > 4 && (
-                  <div style={{ fontSize:11, color:T.hint, marginTop:1 }}>+{tripGames.length - 4} more</div>
+                  <div style={{ fontSize:T.fs.meta, color:T.hint, marginTop:1 }}>+{tripGames.length - 4} more</div>
                 )}
               </div>
             </div>
@@ -452,12 +452,12 @@ export default function Dashboard({
                 const hero = MODES[0];
                 return (
                   <button onClick={() => online && onGenerate(hero.id)} disabled={!online}
-                    style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"14px 16px", borderRadius:12, background:T.bg1, border:`1px solid ${T.border2}`, cursor:online?"pointer":"not-allowed", opacity:online?1:.5, fontFamily:T.font, marginBottom:8, textAlign:"left", transition:"all .15s" }}>
+                    style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"14px 16px", borderRadius:T.r.md, background:T.bg1, border:`1px solid ${T.border2}`, cursor:online?"pointer":"not-allowed", opacity:online?1:.5, fontFamily:T.font, marginBottom:8, textAlign:"left", transition:"all .15s" }}>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontSize:14, fontWeight:800, color:T.ink, marginBottom:2 }}>{hero.label}</div>
-                      <div style={{ fontSize:12, color:T.muted }}>{online ? hero.desc : "Needs a connection"}</div>
+                      <div style={{ fontSize:T.fs.ui, fontWeight:800, color:T.ink, marginBottom:2 }}>{hero.label}</div>
+                      <div style={{ fontSize:T.fs.body, color:T.muted }}>{online ? hero.desc : "Needs a connection"}</div>
                     </div>
-                    <div style={{ fontSize:11, fontWeight:700, color:T.hint, background:T.bg3, padding:"4px 10px", borderRadius:100, flexShrink:0 }}>
+                    <div style={{ fontSize:T.fs.meta, fontWeight:700, color:T.hint, background:T.bg3, padding:"4px 10px", borderRadius:T.r.pill, flexShrink:0 }}>
                       Generate →
                     </div>
                   </button>
@@ -466,8 +466,8 @@ export default function Dashboard({
                 <div style={{ position:"relative", display:"flex", flexWrap:"wrap", alignItems:"center", gap:10, rowGap:8, padding:"4px 2px 12px", borderBottom:`1px solid ${T.border}`, marginBottom:12 }}>
                   <StardustBurst burstKey={readyBurst} origin={{ left: 4, top: "40%" }} />
                   <span style={{ width:7, height:7, borderRadius:"50%", background:T.accent, boxShadow:"0 0 0 3px rgba(201,100,66,.14)", flexShrink:0, animation:planLoading?"pulse 1.2s ease-in-out infinite":"pulse 2.4s ease-in-out infinite" }} />
-                  <span style={{ fontSize:13, fontWeight:800, color:T.ink }}>Full itinerary</span>
-                  <span style={{ fontSize:11, color:T.hint }}>
+                  <span style={{ fontSize:T.fs.body, fontWeight:800, color:T.ink }}>Full itinerary</span>
+                  <span style={{ fontSize:T.fs.meta, color:T.hint }}>
                     {planLoading ? "writing your days…" : generatedAt ? `generated ${timeAgo(generatedAt)}` : ""}
                   </span>
                   {/* One toolbar for every itinerary action (audit R3) —
@@ -477,11 +477,11 @@ export default function Dashboard({
                     {!planLoading && planText && (
                       <>
                         <button onClick={copyPlan}
-                          style={{ fontSize:11, fontWeight:600, color:copied==="error"?"#f08070":copied?T.ink:T.muted, background:copied?T.bg3:"transparent", border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px", cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                          style={{ fontSize:T.fs.meta, fontWeight:600, color:copied==="error"?"#f08070":copied?T.ink:T.muted, background:copied?T.bg3:"transparent", border:`1px solid ${T.border}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                           {copied === "error" ? "Copy failed" : copied ? "✓ Copied" : "Copy"}
                         </button>
                         <button onClick={exportToPdf}
-                          style={{ fontSize:11, fontWeight:600, color:T.muted, background:"transparent", border:`1px solid ${T.border}`, borderRadius:6, padding:"5px 12px", cursor:"pointer", fontFamily:T.font }}>
+                          style={{ fontSize:T.fs.meta, fontWeight:600, color:T.muted, background:"transparent", border:`1px solid ${T.border}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:"pointer", fontFamily:T.font }}>
                           Export PDF
                         </button>
                       </>
@@ -490,7 +490,7 @@ export default function Dashboard({
                       onClick={() => { if (online && !planLoading) { setEditSheetStage("full-itinerary"); setEditSheetOpen(true); } }}
                       disabled={!online || planLoading}
                       title={online ? "Rework this itinerary — with your direction" : "Needs a connection"}
-                      style={{ fontSize:11, fontWeight:600, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:6, padding:"5px 12px", cursor:online&&!planLoading?"pointer":"not-allowed", opacity:online&&!planLoading?1:.45, fontFamily:T.font }}>
+                      style={{ fontSize:T.fs.meta, fontWeight:600, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:online&&!planLoading?"pointer":"not-allowed", opacity:online&&!planLoading?1:.45, fontFamily:T.font }}>
                       ↻ Remix
                     </button>
                   </div>
@@ -498,14 +498,14 @@ export default function Dashboard({
               )}
               {/* Patch error banner (day-edit failure — plan text is preserved) */}
               {patchError && !planLoading && (
-                <div style={{ display:"flex", alignItems:"center", gap:9, padding:"10px 14px", background:"rgba(180,60,40,.12)", border:"1px solid rgba(180,60,40,.3)", borderRadius:9, marginBottom:10, fontSize:12.5, color:"#f08070" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:9, padding:"10px 14px", background:"rgba(180,60,40,.12)", border:"1px solid rgba(180,60,40,.3)", borderRadius:T.r.md, marginBottom:10, fontSize:T.fs.body, color:"#f08070" }}>
                   <Glyph name="warning" size={14} color="#f08070" />
                   <span>{patchError}</span>
                 </div>
               )}
               {/* Loading spinner */}
               {planLoading && !planText && (
-                <div style={{ display:"flex", alignItems:"center", gap:9, padding:"1.25rem 0", fontSize:12.5, color:T.muted }}>
+                <div style={{ display:"flex", alignItems:"center", gap:9, padding:"1.25rem 0", fontSize:T.fs.body, color:T.muted }}>
                   <div style={{ width:18, height:18, border:`1.5px solid ${T.border}`, borderTopColor:T.accent, borderRadius:"50%", animation:"spin .7s linear infinite" }} />
                   Writing your {MODES.find(m => m.id === planMode)?.label?.toLowerCase()}…
                 </div>
@@ -526,7 +526,7 @@ export default function Dashboard({
                     <span style={{ display:"inline-block", width:7, height:14, background:T.accent, marginLeft:3, animation:"blink 1s step-end infinite", borderRadius:1 }} />
                   )}
                   {!planLoading && (
-                    <div style={{ marginTop:"1.25rem", paddingTop:"1rem", borderTop:`1px solid ${T.border}`, fontSize:11, color:T.hint, lineHeight:1.6 }}>
+                    <div style={{ marginTop:"1.25rem", paddingTop:"1rem", borderTop:`1px solid ${T.border}`, fontSize:T.fs.meta, color:T.hint, lineHeight:1.6 }}>
                       {AI_DISCLAIMER}
                     </div>
                   )}
