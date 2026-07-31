@@ -266,9 +266,14 @@ export default function Dashboard({
 
         {/* Header */}
         <div style={{ background:`radial-gradient(120% 90% at 18% 0%, rgba(201,100,66,.13), transparent 55%), ${T.bg1}`, borderBottom:`1px solid ${T.border}`, padding:"1.75rem 1.75rem 1.5rem" }}>
-          {/* Brand bar */}
+          {/* Brand bar — the mark is the way home (standard logo-to-home
+              pattern). The trip is already persisted, so leaving is safe:
+              it waits on the welcome shelf, one tap from resuming. */}
           <div style={{ marginBottom:"1.25rem" }}>
-            <WandrLogo size="sm" showTrail={false} globe="animated" />
+            <button onClick={onReset} aria-label="Back to home" title="Back to home"
+              style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", display:"inline-block" }}>
+              <WandrLogo size="sm" showTrail={false} globe="animated" />
+            </button>
           </div>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, flexWrap:"wrap", marginBottom:10 }}>
             <div>
