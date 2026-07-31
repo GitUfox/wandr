@@ -56,7 +56,7 @@ export default function ProfileSheet({ open, profile, onClose, onSave }) {
     onClose();
   }
 
-  const label = { fontSize: 10.5, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", marginBottom: 8 };
+  const label = { fontSize: T.fs.label, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", marginBottom: 8 };
 
   return (
     <>
@@ -72,13 +72,13 @@ export default function ProfileSheet({ open, profile, onClose, onSave }) {
         padding: "1.25rem 1.5rem 1.75rem", fontFamily: T.font, boxSizing: "border-box",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-          <div style={{ width: 34, height: 34, borderRadius: "50%", background: T.accent, color: T.bg0, fontWeight: 800, fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✦</div>
+          <div style={{ width: 34, height: 34, borderRadius: "50%", background: T.accent, color: T.bg0, fontWeight: 800, fontSize: T.fs.title, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✦</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: T.ink }}>Your traveler profile</div>
-            <div style={{ fontSize: 11, color: T.hint, marginTop: 1 }}>No dates. No destinations. Just you.</div>
+            <div style={{ fontSize: T.fs.title, fontWeight: 800, color: T.ink }}>Your traveler profile</div>
+            <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 1 }}>No dates. No destinations. Just you.</div>
           </div>
           <button onClick={onClose} aria-label="Close"
-            style={{ width: 28, height: 28, borderRadius: "50%", background: "transparent", border: "none", color: T.hint, fontSize: 18, cursor: "pointer", fontFamily: T.font, lineHeight: 1 }}>×</button>
+            style={{ width: 28, height: 28, borderRadius: "50%", background: "transparent", border: "none", color: T.hint, fontSize: T.fs.title, cursor: "pointer", fontFamily: T.font, lineHeight: 1 }}>×</button>
         </div>
 
         <div style={{ marginTop: 18 }}>
@@ -94,12 +94,12 @@ export default function ProfileSheet({ open, profile, onClose, onSave }) {
 
         <div style={{ marginTop: 18 }}>
           <div style={label}>Pace</div>
-          <div style={{ display: "inline-flex", background: T.bg2, border: `1px solid ${T.border}`, borderRadius: 100, padding: 3 }}>
+          <div style={{ display: "inline-flex", background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.pill, padding: 3 }}>
             {PACE_OPTS.map(o => {
               const on = pace === o;
               return (
                 <button key={o} onClick={() => setPace(on ? "" : o)}
-                  style={{ border: "none", borderRadius: 100, padding: "6px 14px", fontSize: 12.5, fontWeight: 700, fontFamily: T.font, cursor: "pointer", background: on ? T.accent : "transparent", color: on ? T.white : T.muted, transition: "all .12s" }}>
+                  style={{ border: "none", borderRadius: T.r.pill, padding: "6px 14px", fontSize: T.fs.body, fontWeight: 700, fontFamily: T.font, cursor: "pointer", background: on ? T.accent : "transparent", color: on ? T.white : T.muted, transition: "all .12s" }}>
                   {o}
                 </button>
               );
@@ -114,7 +114,7 @@ export default function ProfileSheet({ open, profile, onClose, onSave }) {
               const on = crew === o;
               return (
                 <button key={o} onClick={() => setCrew(on ? "" : o)}
-                  style={{ background: on ? "#2a1a12" : T.bg2, border: on ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`, borderRadius: 100, color: on ? T.accent : T.muted, fontSize: 12.5, fontWeight: on ? 700 : 400, padding: "6px 14px", cursor: "pointer", fontFamily: T.font, transition: "all .12s" }}>
+                  style={{ background: on ? "#2a1a12" : T.bg2, border: on ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`, borderRadius: T.r.pill, color: on ? T.accent : T.muted, fontSize: T.fs.body, fontWeight: on ? 700 : 400, padding: "6px 14px", cursor: "pointer", fontFamily: T.font, transition: "all .12s" }}>
                   {o}
                 </button>
               );
@@ -123,7 +123,7 @@ export default function ProfileSheet({ open, profile, onClose, onSave }) {
         </div>
 
         <button onClick={save}
-          style={{ width: "100%", marginTop: 22, padding: 13, borderRadius: 10, background: T.accent, border: "none", color: T.white, fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: T.font }}>
+          style={{ width: "100%", marginTop: 22, padding: 13, borderRadius: T.r.md, background: T.accent, border: "none", color: T.white, fontSize: T.fs.ui, fontWeight: 800, cursor: "pointer", fontFamily: T.font }}>
           Save profile
         </button>
       </div>
