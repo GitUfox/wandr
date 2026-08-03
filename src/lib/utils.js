@@ -1,3 +1,5 @@
+import { getTimeFormat } from "./settings.js";
+
 /**
  * Flatten an answer value to a plain string for use in prompts.
  * Handles arrays, chip+text objects, and primitives.
@@ -100,16 +102,31 @@ export function parseTime(str) {
 }
 
 /**
- * Format minutes-since-midnight as a 24-hour "HH:MM" clock string ("09:00",
- * "17:30"). Military time is the app-wide display format (prompts request it
- * too); parseTime still accepts legacy "9:00 AM" strings from saved plans.
- * v2 (backlog): a user setting to choose 12h/24h — this is the single place
- * the display format would branch.
+ * Format minutes-since-midnight per the user's time-format setting —
+ * "17:30" (default) or "5:30 PM". This is the single branch point the
+ * 2026-07-29 backlog note reserved: prompts still request HH:MM from the
+ * model, and parseTime accepts both forms forever, so plans saved under
+ * either setting stay readable.
  */
 export function formatTime(mins) {
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  const h24 = Math.floor(mins / 60);
+  const m = String(mins % 60).padStart(2, "0");
+  if (getTimeFormat() === "12h") {
+    const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+    return `${h12}:${m} ${h24 >= 12 ? "PM" : "AM"}`;
+  }
+  return `${String(h24).padStart(2, "0")}:${m}`;
+}
+
+/**
+ * Re-express a stored time string in the active display format. Stored plans
+ * keep whatever format they were written with ("17:30", legacy "5:30 PM") —
+ * this converts at render time only. Non-clock strings ("Morning") pass
+ * through untouched.
+ */
+export function displayTime(str) {
+  const min = parseTime(str);
+  return min === null ? str : formatTime(min);
 }
 
 /**

@@ -6,6 +6,7 @@ import { useIsWide } from "../hooks/useIsWide.js";
 import { fetchDestinationSuggestions } from "../lib/places.js";
 import WandrLogo from "./WandrLogo.jsx";
 import ProfileSheet from "./ProfileSheet.jsx";
+import SettingsSheet from "./SettingsSheet.jsx";
 import StardustBurst from "./StardustBurst.jsx";
 import Glyph from "./Glyphs.jsx";
 
@@ -34,6 +35,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [placeholderFade, setPlaceholderFade] = useState(true);
   const [showAbout, setShowAbout]           = useState(false);
+  const [showSettings, setShowSettings]     = useState(false);
   const [showProfile, setShowProfile]       = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [suggestions, setSuggestions]       = useState([]);
@@ -172,6 +174,12 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           .wshim { animation: none; background: none; color: ${T.hint}; }
         }
       `}</style>
+
+      {/* Settings — device-bound app settings; future account-page home */}
+      <button onClick={() => setShowSettings(true)} aria-label="Settings"
+        style={{ position: "fixed", top: 16, right: (isWide ? 332 : 16) + 40, width: 32, height: 32, borderRadius: "50%", background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, fontSize: T.fs.ui, fontWeight: 700, cursor: "pointer", fontFamily: T.font, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
+        ⚙
+      </button>
 
       {/* Help affordance — unambiguous "?" that opens an About panel */}
       <button onClick={() => setShowAbout(true)} aria-label="About Wandr"
@@ -362,6 +370,8 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
       )}
 
       {/* Traveler profile editor (design pick 6A) */}
+      <SettingsSheet open={showSettings} onClose={() => setShowSettings(false)} tripCount={trips.length} />
+
       <ProfileSheet
         open={showProfile}
         profile={profile}

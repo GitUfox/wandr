@@ -13,7 +13,7 @@ import { useState } from "react";
 import { Reorder, useDragControls } from "framer-motion";
 import { T } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
-import { BUCKETS, bucketOf, timeSortKey, formatTime } from "../lib/utils.js";
+import { BUCKETS, bucketOf, timeSortKey, formatTime, displayTime } from "../lib/utils.js";
 
 const clean = s => (s || "").replace(/\*\*/g, "").trim();
 
@@ -144,7 +144,7 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
           {/* Drag handle — the only drag trigger, so taps elsewhere stay clickable */}
           <span onPointerDown={e => controls.start(e)} title="Drag to reorder"
             style={{ cursor: "grab", touchAction: "none", color: T.hint, fontSize: T.fs.ui, padding: "2px 4px", flexShrink: 0, userSelect: "none", lineHeight: 1.2 }}>⠿</span>
-          <div style={{ width: 58, flexShrink: 0, fontSize: T.fs.meta, color: T.accent, fontWeight: 700, paddingTop: 2 }}>{clean(a.time)}</div>
+          <div style={{ width: 58, flexShrink: 0, fontSize: T.fs.meta, color: T.accent, fontWeight: 700, paddingTop: 2 }}>{displayTime(clean(a.time))}</div>
           <div style={{ flex: 1, minWidth: 0, paddingRight: 60, paddingTop: 1 }}>
             <div style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.35, marginBottom: 2 }}>{clean(a.title)}</div>
             {a.details && <div style={{ fontSize: T.fs.meta, color: T.muted, lineHeight: 1.55 }}>{clean(a.details)}</div>}
@@ -226,7 +226,7 @@ function BucketCard({ a, dayIdx, bucket, onMoveToBucket }) {
   return (
     <div style={{ background: T.bg1, border: `1px solid ${T.border}`, borderRadius: T.r.md, padding: "8px 10px", marginBottom: 6 }}>
       <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-        <span style={{ fontSize: T.fs.label, color: T.accent, fontWeight: 700, flexShrink: 0, width: 54 }}>{clean(a.time)}</span>
+        <span style={{ fontSize: T.fs.label, color: T.accent, fontWeight: 700, flexShrink: 0, width: 54 }}>{displayTime(clean(a.time))}</span>
         <span style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.3 }}>{clean(a.title)}</span>
       </div>
       {a.details && <div style={{ fontSize: T.fs.meta, color: T.muted, lineHeight: 1.5, marginTop: 3, marginLeft: 62 }}>{clean(a.details)}</div>}
