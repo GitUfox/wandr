@@ -4,6 +4,7 @@ import { buildPlanPrompt, buildEditDayPrompt, buildTweakActivityPrompt } from ".
 import { spliceDayInPlan, resequenceTimes, bucketOf, retimeIntoBucket, sortDayByTime } from "../lib/utils.js";
 import { parsePlan, serializePlan } from "../lib/planModel.js";
 import { planKeyFor, deletePlan, mirrorLegacyPlan } from "../lib/tripStore.js";
+import { scheduleSyncPush } from "../lib/sync.js";
 
 export function useGenerate() {
   const [planText, setPlanText]       = useState("");
@@ -34,6 +35,7 @@ export function useGenerate() {
     const payload = JSON.stringify({ planText, planMode, generatedAt });
     try { localStorage.setItem(planKeyFor(planOwnerRef.current), payload); } catch { /* quota — ignore */ }
     mirrorLegacyPlan(payload); // rollback path — see tripStore.js
+    scheduleSyncPush();        // no-op unless signed in
   }, [planModel, planText, planMode, planLoading, generatedAt]);
 
   // Adopt a freshly-built plan string as the editable model (and keep planText

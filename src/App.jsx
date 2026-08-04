@@ -1,8 +1,10 @@
 // Wandr v3.1 — framer-motion screen + step transitions
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { STEPS, T } from "./lib/constants.js";
 import { loadTripStore, persistTrip, getActiveTrip, listTrips, activateTripId, deleteTrip } from "./lib/tripStore.js";
+import { useAccount } from "./hooks/useAccount.js";
+import { recordDeletion, scheduleSyncPush } from "./lib/sync.js";
 import { useBuildTrip } from "./hooks/useBuildTrip.js";
 import { useGenerate } from "./hooks/useGenerate.js";
 import { useFileUpload } from "./hooks/useFileUpload.js";
@@ -133,6 +135,17 @@ export default function Wandr() {
   const fileInputRef = useRef(null);
   const S = STEPS[step];
 
+  // Accounts: no-op until Supabase env vars exist. After any completed sync,
+  // re-read the store and profile so downloads from another device show up
+  // without a reload. (Sync never touches the trip currently open on screen —
+  // it only rewrites localStorage — so adopting here is race-free.)
+  const account = useAccount();
+  useEffect(() => {
+    if (!account.lastSync) return;
+    setTripStore(loadTripStore());
+    setSavedProfile(loadProfile());
+  }, [account.lastSync]);
+
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const { buildTrip: doBuildTrip, loadMsg, error: buildError } = useBuildTrip();
   const { planText, planModel, planMode, planLoading, patchError, tweakingId, generatedAt, generate: doGenerate, patchDay: doPatchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity } = useGenerate();
@@ -258,6 +271,7 @@ export default function Wandr() {
       clearSavedPlan(opts.replaceId || undefined);
       const store = persistTrip(result, { replaceId: opts.replaceId || null });
       setTripStore(store);
+      scheduleSyncPush();
       // Carry the assigned id back onto the in-memory trip, so a plan generated
       // now is written under the right key.
       saved = getActiveTrip(store) || result;
@@ -265,6 +279,7 @@ export default function Wandr() {
       if (opts.fromInterview && interviewMode === "edit") {
         const p = saveProfile(a);
         if (p) setSavedProfile(p);
+        scheduleSyncPush();
       }
     }
     setTrip(saved);
@@ -275,12 +290,14 @@ export default function Wandr() {
   function handleSaveProfile() {
     const p = saveProfile(trip?.answers || answers);
     if (p) setSavedProfile(p);
+    scheduleSyncPush();
   }
 
   /** Persist a profile edited directly in the ProfileSheet (design pick 6A). */
   function handleUpdateProfile(profile) {
     try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch { /* quota — keep in-memory copy anyway */ }
     setSavedProfile(profile);
+    scheduleSyncPush();
   }
 
   // Decline it — persist so it doesn't nag on future trips.
@@ -360,8 +377,10 @@ export default function Wandr() {
 
   /** Delete a saved trip (and its itinerary). */
   function handleDeleteTrip(tripId) {
+    recordDeletion(tripId); // tombstone BEFORE the local delete — survives offline
     const next = deleteTrip(tripId);
     setTripStore(next);
+    scheduleSyncPush();
     // If the open trip was the one deleted, leave the dashboard rather than
     // rendering a trip that no longer exists.
     if (trip?.id === tripId) {
