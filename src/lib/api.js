@@ -67,26 +67,48 @@ export async function stream(messages, maxTokens = 16000, signal) {
   return res;
 }
 
+/** Emit one complete SSE line's delta text. Split out so the read loop and the
+ *  end-of-stream flush can never drift apart. */
+function emitSSELine(line, onChunk) {
+  if (!line.startsWith("data: ")) return;
+  const raw = line.slice(6).trim();
+  if (raw === "[DONE]") return;
+  try {
+    const j = JSON.parse(raw);
+    if (j.type === "content_block_delta" && j.delta?.text) {
+      onChunk(j.delta.text);
+    }
+  } catch { /* malformed SSE line — skip */ }
+}
+
 /**
  * Consume a streaming response and call onChunk(text) for each delta.
+ *
+ * Network chunks do NOT align with SSE line boundaries — a single
+ * `data: {...}` event routinely arrives split across two reads. Both halves
+ * then fail JSON.parse and get swallowed by the catch above, silently dropping
+ * text from the middle of the plan. That shipped: a Baltimore itinerary printed
+ * "sculpture17:00" where "garden. Open Wed–Sun 10:00–" had been eaten
+ * (PHASE2_PLANNING §15.3). So `carry` holds the trailing partial line until the
+ * next read completes it, and the decoder runs in streaming mode so multi-byte
+ * UTF-8 (— … é, everywhere in this app's output) can straddle a chunk too.
+ *
+ * This is a fix INSIDE the streaming pattern, not a replacement for it.
  */
 export async function consumeStream(response, onChunk, signal) {
   const reader  = response.body.getReader();
   const decoder = new TextDecoder();
+  let carry = ""; // trailing partial SSE line, completed by the next chunk
   while (true) {
     if (signal?.aborted) { reader.cancel(); break; }
     const { done, value } = await reader.read();
     if (done) break;
-    for (const line of decoder.decode(value).split("\n")) {
-      if (!line.startsWith("data: ")) continue;
-      const raw = line.slice(6).trim();
-      if (raw === "[DONE]") continue;
-      try {
-        const j = JSON.parse(raw);
-        if (j.type === "content_block_delta" && j.delta?.text) {
-          onChunk(j.delta.text);
-        }
-      } catch { /* malformed SSE line — skip */ }
-    }
+    const lines = (carry + decoder.decode(value, { stream: true })).split("\n");
+    carry = lines.pop() ?? ""; // last element is incomplete until a "\n" arrives
+    for (const line of lines) emitSSELine(line, onChunk);
   }
+  // A well-formed stream ends with "\n\n", but a truncated one can leave a
+  // complete event in the carry with no terminator. Flush rather than lose it.
+  const tail = carry + decoder.decode();
+  if (tail) emitSSELine(tail, onChunk);
 }
