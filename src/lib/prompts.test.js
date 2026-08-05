@@ -6,6 +6,7 @@ import {
   buildPlanPrompt,
   buildEditDayPrompt,
   buildTweakActivityPrompt,
+  buildEventsBlock,
 } from "./prompts.js";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -609,5 +610,131 @@ describe("nightlife category gating", () => {
       const schema = out.slice(out.indexOf('{"categories"'));
       expect(() => JSON.parse(schema.replace(/\|/g, ""))).not.toThrow();
     }
+  });
+});
+
+// ── Verified local events (§15.2 C) ──────────────────────────────────────────
+//
+// The Baltimore regression: Wandr scheduled an Orioles home game at 15:30 on
+// Sunday Aug 16 2026. The live MLB schedule says the Orioles were away at
+// Tropicana Field that day; their only home games in range were Aug 18-20 vs
+// the Yankees. The app already had that data on the dashboard and never told
+// the model. These lock the block that closes it.
+
+const ORIOLES_GAMES = [
+  { date: "2026-08-18", home: "Baltimore Orioles", away: "New York Yankees", venue: "Oriole Park at Camden Yards" },
+  { date: "2026-08-19", home: "Baltimore Orioles", away: "New York Yankees", venue: "Oriole Park at Camden Yards" },
+  { date: "2026-08-20", home: "Baltimore Orioles", away: "New York Yankees", venue: "Oriole Park at Camden Yards" },
+];
+const RESOLVED = { teams: ["Baltimore Orioles"], games: ORIOLES_GAMES, interested: false, resolved: true };
+
+describe("buildEventsBlock", () => {
+  it("returns nothing when there are no events at all", () => {
+    expect(buildEventsBlock(null)).toBe("");
+    expect(buildEventsBlock(undefined)).toBe("");
+    expect(buildEventsBlock({})).toBe("");
+  });
+
+  it("returns nothing for a destination with no league team", () => {
+    expect(buildEventsBlock({ teams: [], games: [], resolved: true })).toBe("");
+  });
+
+  it("stays silent while the fetch is still in flight", () => {
+    // The important guard: an empty games array from an UNFINISHED fetch would
+    // assert "no home games" — a false negative that is worse than saying
+    // nothing, because the model would trust it.
+    expect(buildEventsBlock({ ...RESOLVED, games: [], resolved: false })).toBe("");
+    expect(buildEventsBlock({ ...RESOLVED, resolved: false })).toBe("");
+  });
+
+  it("states the negative explicitly when the team has no home games", () => {
+    const out = buildEventsBlock({ teams: ["Baltimore Orioles"], games: [], interested: false, resolved: true });
+    expect(out).toContain("NO home games at any point during this trip");
+    expect(out).toContain("Baltimore Orioles");
+  });
+
+  it("lists every real game with date, opponent and venue", () => {
+    const out = buildEventsBlock(RESOLVED);
+    expect(out).toContain("Tuesday, August 18");
+    expect(out).toContain("Wednesday, August 19");
+    expect(out).toContain("Thursday, August 20");
+    expect(out).toContain("vs New York Yankees");
+    expect(out).toContain("Oriole Park at Camden Yards");
+  });
+
+  it("closes the door on every unlisted date — the Baltimore defect", () => {
+    const out = buildEventsBlock(RESOLVED);
+    // Aug 16 (the invented game) must not appear...
+    expect(out).not.toContain("August 16");
+    // ...and the prompt must say so, not merely omit it.
+    expect(out).toContain("NO home game on ANY other date");
+    expect(out).toContain("Never schedule, mention, or hedge about a game on a date not listed");
+  });
+
+  it("bans the hedge-that-still-books-a-slot", () => {
+    // "Check schedule: Baltimore Orioles" occupied a 15:30 slot in the export.
+    expect(buildEventsBlock(RESOLVED)).toContain("check the schedule");
+  });
+
+  it("permits scheduling only when the traveler follows the sport", () => {
+    expect(buildEventsBlock({ ...RESOLVED, interested: true })).toContain("you MAY schedule a listed game");
+    const uninterested = buildEventsBlock({ ...RESOLVED, interested: false });
+    expect(uninterested).toContain("do NOT add a game");
+    expect(uninterested).toContain("so you cannot invent one");
+  });
+
+  it("caps a long list rather than flooding the prompt", () => {
+    const many = Array.from({ length: 25 }, (_, i) => ({
+      date: `2026-08-${String(i + 1).padStart(2, "0")}`, home: "Baltimore Orioles", away: "Boston Red Sox", venue: "Oriole Park at Camden Yards",
+    }));
+    const lines = buildEventsBlock({ teams: ["Baltimore Orioles"], games: many, interested: true, resolved: true })
+      .split("\n").filter(l => l.trim().startsWith("·"));
+    expect(lines).toHaveLength(10);
+  });
+
+  it("tolerates a malformed game row without throwing", () => {
+    const out = buildEventsBlock({ teams: ["Baltimore Orioles"], games: [{}, { date: "nonsense" }], interested: true, resolved: true });
+    expect(typeof out).toBe("string");
+    expect(out).toContain("Baltimore Orioles");
+  });
+});
+
+describe("buildPlanPrompt — events integration", () => {
+  // The ACCURACY RULES text names the block ("unless it appears in a VERIFIED
+  // LOCAL EVENTS block below"), so presence is asserted on the block's own
+  // header line, not on the bare phrase.
+  const BLOCK_HEADER = "VERIFIED LOCAL EVENTS — checked against the live league schedule";
+
+  it("carries no events block when none is supplied", () => {
+    const out = buildPlanPrompt("full", BASE_TRIP);
+    expect(out).not.toContain(BLOCK_HEADER);
+  });
+
+  it("embeds the verified block when events are supplied", () => {
+    const out = buildPlanPrompt("full", BASE_TRIP, null, null, RESOLVED);
+    expect(out).toContain(BLOCK_HEADER);
+    expect(out).toContain("Oriole Park at Camden Yards");
+    expect(out).toContain("It overrides the LIVE EVENTS rule above");
+  });
+
+  it("tells the model to omit, not hedge, when nothing is verified", () => {
+    const out = buildPlanPrompt("full", BASE_TRIP);
+    expect(out).toContain("OMIT the event entirely");
+    expect(out).toContain("a hedge that still occupies a slot");
+  });
+
+  it("requires the details to agree with the assigned time", () => {
+    // Brewer's Art was scheduled 10:30 with details reading "Opens at 11:30".
+    const out = buildPlanPrompt("full", BASE_TRIP);
+    expect(out).toContain("SELF-CONSISTENCY");
+    expect(out).toContain("never ship a row that argues with itself");
+  });
+
+  it("requires a repeated venue to be replaced in the Activity column", () => {
+    // The export left "Checkerspot Brewing Company" in Activity and buried the
+    // substitute in Details.
+    const out = buildPlanPrompt("full", BASE_TRIP);
+    expect(out).toContain("REPLACE THE ROW");
+    expect(out).toContain("that ships the traveler a duplicate");
   });
 });

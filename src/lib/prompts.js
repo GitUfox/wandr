@@ -443,12 +443,73 @@ TABLE:
 ENDTABLE`;
 }
 
+// ── Verified local events (§15.2 C) ─────────────────────────────────────────
+//
+// The app has always fetched the real MLB schedule (useLocalEvents) and shown
+// it on the dashboard — but it never reached the prompt, so the model filled the
+// silence with a guess. A Baltimore itinerary scheduled a Camden Yards home game
+// at 15:30 on a Sunday the Orioles were away in Tampa.
+//
+// The NEGATIVE matters as much as the positive: "the Orioles have no home games
+// on these dates" is the sentence that stops the invention. A block listing only
+// real games still leaves the untouched dates ambiguous.
+
+const MAX_LISTED_GAMES = 10;
+
+/** "Tuesday, August 18" — short label for an event date. */
+function eventDateLabel(iso) {
+  const d = parseISODate(iso);
+  return d
+    ? d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
+    : iso;
+}
+
+/**
+ * Render the verified-events block, or "" when there is nothing trustworthy to
+ * say. Returning "" is the fail-safe: no block means the prompt behaves exactly
+ * as it did before this existed.
+ *
+ * events — { teams: string[], games: [{date, home, away, venue}], interested: bool }
+ *          Omit entirely (or pass resolved:false) while the fetch is still in
+ *          flight — an empty games array from an unfinished fetch would assert a
+ *          false negative, which is worse than saying nothing.
+ */
+export function buildEventsBlock(events) {
+  const teams = Array.isArray(events?.teams) ? events.teams.filter(Boolean) : [];
+  if (!events || events.resolved === false || !teams.length) return "";
+
+  const games = (Array.isArray(events.games) ? events.games : []).slice(0, MAX_LISTED_GAMES);
+  const teamList = teams.join(" / ");
+  const lines = [];
+
+  if (games.length) {
+    lines.push(`- ${teamList} home games during this trip:`);
+    for (const g of games) {
+      const vs = g.away ? ` vs ${g.away}` : "";
+      const at = g.venue ? ` — ${g.venue}` : "";
+      lines.push(`    · ${eventDateLabel(g.date)}${vs}${at}`);
+    }
+    lines.push(`- There is NO home game on ANY other date of this trip. The stadium is dark on those dates.`);
+  } else {
+    lines.push(`- ${teamList}: NO home games at any point during this trip. The stadium is dark for the entire stay.`);
+  }
+
+  lines.push(`- The list above is complete. Never schedule, mention, or hedge about a game on a date not listed.`);
+  lines.push(`- Never put a "check the schedule" placeholder in a time slot. A slot holds a real verified activity or nothing.`);
+  lines.push(events.interested
+    ? `- The traveler follows baseball — you MAY schedule a listed game, at its real date.`
+    : `- The traveler did not list sports as an interest, so do NOT add a game. This block exists so you cannot invent one.`);
+
+  return `VERIFIED LOCAL EVENTS — checked against the live league schedule for these exact dates. This is fact, not inference. It overrides the LIVE EVENTS rule above:\n${lines.join("\n")}`;
+}
+
 /**
  * Build the plan generation prompt for a given mode.
  * editInstruction — optional free-text change instruction (for Full Itinerary / Specific Activities edits)
  * editType        — "activities" | null  (controls how the instruction is framed)
+ * events          — verified local events (see buildEventsBlock); omit when unresolved
  */
-export function buildPlanPrompt(mode, trip, editInstruction = null, editType = null) {
+export function buildPlanPrompt(mode, trip, editInstruction = null, editType = null, events = null) {
   const a = trip.answers;
 
   const c = travelerContext(a);
@@ -467,6 +528,8 @@ export function buildPlanPrompt(mode, trip, editInstruction = null, editType = n
     : "";
 
   const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [HH:MM] | **Place** | facts only, duration |\nENDTABLE`;
+
+  const eventsBlock = buildEventsBlock(events);
 
   const modeInstructions = {
     full:   `Create a ${trip.nights}-night itinerary. Use the DAY HEADERS list for exact day labels. For each day:\n\n## Day N — [exact label from DAY HEADERS]\n\n${TABLE_BLOCK}\n\nTIPS: [practical tip] | [logistics tip]\n\nRules: ${lo}\u2013${hi} activities per day. Times realistic for ${a.destination}, in 24-hour HH:MM format (e.g. 09:00, 17:30).`,
@@ -499,9 +562,10 @@ TEMPORAL GROUNDING: Today is ${today}. Trip dates: ${safeStart} → ${safeEnd}.$
 
 ACCURACY RULES:
 - OPERATING HOURS: Before placing a venue in a time slot, verify it is open on that specific day of week and at that time. Museums are often closed Mondays or Tuesdays; some attractions have seasonal or day-specific hours. If a venue's hours make a slot implausible, substitute a different option from the same category.
-- LIVE EVENTS: Never assert that a specific sports game, concert, or ticketed event is scheduled on a particular date — team schedules, touring dates, and event lineups change. Instead write: "Check schedule: [venue or team name]" as an optional add-on.
+- LIVE EVENTS: Never assert that a specific sports game, concert, or ticketed event is scheduled on a particular date unless it appears in a VERIFIED LOCAL EVENTS block below — team schedules, touring dates, and event lineups change. With no verified listing, OMIT the event entirely. Do not write "Check schedule: [team]" into a time slot: a hedge that still occupies a slot is the same error as a wrong booking, because the traveler has now lost that hour.
 - CLOSED VENUES: Do not recommend any bike-share program or transit app you cannot confidently confirm is currently operating. Omit uncertain venues entirely rather than risk sending the traveler somewhere that no longer exists.
-
+- SELF-CONSISTENCY: The Details you write must agree with the Time you assigned. If the details say a venue opens at 11:30, do not schedule it at 10:30; if they name a best window of 11:00–13:00, schedule it inside that window. Fix the time or pick a different venue — never ship a row that argues with itself.
+${eventsBlock ? `\n${eventsBlock}\n` : ""}
 BUDGET: ${c.budgetText}
 
 AVOID: Never suggest anything related to: ${c.avoidLine}.
@@ -514,7 +578,7 @@ ${allItems || `Use your knowledge of ${a.destination}`}
 STRICT OUTPUT RULES:
 - Tables exactly as shown with TABLE/ENDTABLE markers
 - ${lo} to ${hi} activities per day — match this to the stated pace, do not average it with any other number
-- Never schedule the same venue twice across the itinerary. Each activity must be a distinct place.
+- Never schedule the same venue twice across the itinerary. Each activity must be a distinct place. If you catch yourself repeating one, REPLACE THE ROW — put the new venue's name in the Activity column. Never leave the repeated name in Activity and describe a substitute in Details ("already visited Day 1 — substitute: ..."); that ships the traveler a duplicate.
 - Bold place names inside table cells using **Name**
 - TIPS line format: TIPS: tip one | tip two${editInstruction ? `
 

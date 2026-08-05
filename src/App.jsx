@@ -149,7 +149,7 @@ export default function Wandr() {
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const { buildTrip: doBuildTrip, loadMsg, error: buildError } = useBuildTrip();
   const { planText, planModel, planMode, planLoading, patchError, tweakingId, generatedAt, generate: doGenerate, patchDay: doPatchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity } = useGenerate();
-  const { games: tripGames } = useLocalEvents(trip);
+  const { games: tripGames, forPrompt: eventsForPrompt } = useLocalEvents(trip);
   const { uploadedFiles, uploadError, handleFiles, removeFile, resetFiles } = useFileUpload();
 
   // ── Interview helpers ─────────────────────────────────────────────────────
@@ -307,7 +307,9 @@ export default function Wandr() {
   }
 
   function handleGenerate(mode) {
-    doGenerate(mode, trip);
+    // eventsForPrompt carries the VERIFIED league schedule so the model can't
+    // invent a game (§15.2 C). Unresolved fetch => no block, not a false "none".
+    doGenerate(mode, trip, null, null, eventsForPrompt);
   }
 
   /**
@@ -324,7 +326,7 @@ export default function Wandr() {
       // "activities" → re-generate current mode with targeted instruction
       // "full"       → re-generate current mode with vibe overlay
       const editType = type === "activities" ? "activities" : null;
-      doGenerate(planMode || "full", trip, instruction, editType);
+      doGenerate(planMode || "full", trip, instruction, editType, eventsForPrompt);
     }
   }
 

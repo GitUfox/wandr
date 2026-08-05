@@ -183,8 +183,10 @@ export function useGenerate() {
    * Generate (or re-generate) a plan in the given mode.
    * editInstruction — optional free-text instruction for Full Itinerary / Specific Activities edits.
    * editType        — "activities" | null — controls prompt framing.
+   * events          — verified local events (useLocalEvents().forPrompt); omitted
+   *                   or unresolved means the prompt simply carries no events block.
    */
-  async function generate(mode, trip, editInstruction = null, editType = null) {
+  async function generate(mode, trip, editInstruction = null, editType = null, events = null) {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -198,7 +200,7 @@ export function useGenerate() {
     setPatchError("");
     streamRef.current = "";
 
-    const prompt = buildPlanPrompt(mode, trip, editInstruction, editType);
+    const prompt = buildPlanPrompt(mode, trip, editInstruction, editType, events);
 
     try {
       const res = await stream([{ role: "user", content: prompt }], 8000, controller.signal);
