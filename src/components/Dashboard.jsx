@@ -21,6 +21,7 @@ export default function Dashboard({
   trips = [],
   onSwitchTrip,
   tripGames,
+  planIssues = [],
   planText, planModel, planLoading, planMode, generatedAt,
   patchError,
   debugMsg,
@@ -506,6 +507,31 @@ export default function Dashboard({
                 <div style={{ display:"flex", alignItems:"center", gap:9, padding:"10px 14px", background:"rgba(180,60,40,.12)", border:"1px solid rgba(180,60,40,.3)", borderRadius:T.r.md, marginBottom:10, fontSize:T.fs.body, color:"#f08070" }}>
                   <Glyph name="warning" size={14} color="#f08070" />
                   <span>{patchError}</span>
+                </div>
+              )}
+              {/* Plan check (§15 #13/#14) — only unambiguous, actionable defects.
+                  Accent, not the red error treatment: the plan is usable, these
+                  are things to look at. Hidden while streaming, when the day
+                  count is legitimately mid-flight. */}
+              {FEATURES.planCheck && !planLoading && planIssues.length > 0 && (
+                <div style={{ padding:"11px 14px", background:"rgba(201,100,66,.09)", border:`1px solid rgba(201,100,66,.32)`, borderRadius:T.r.md, marginBottom:10 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                    <Glyph name="warning" size={13} color={T.accent} />
+                    <span style={{ fontSize:T.fs.label, fontWeight:700, color:T.accent, letterSpacing:".06em", textTransform:"uppercase" }}>
+                      {planIssues.length === 1 ? "One thing to check" : `${planIssues.length} things to check`}
+                    </span>
+                  </div>
+                  <ul style={{ margin:0, paddingLeft:17, display:"flex", flexDirection:"column", gap:3 }}>
+                    {planIssues.map((p, i) => (
+                      <li key={`${p.code}-${i}`} style={{ fontSize:T.fs.body, color:T.ink, lineHeight:1.5 }}>{p.message}</li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => { if (online && !planLoading) { setEditSheetStage("full-itinerary"); setEditSheetOpen(true); } }}
+                    disabled={!online || planLoading}
+                    style={{ marginTop:9, fontSize:T.fs.meta, fontWeight:600, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:online&&!planLoading?"pointer":"not-allowed", opacity:online&&!planLoading?1:.45, fontFamily:T.font }}>
+                    Rebuild this itinerary
+                  </button>
                 </div>
               )}
               {/* Loading spinner */}

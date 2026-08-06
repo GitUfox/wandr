@@ -3,6 +3,7 @@
 export const FEATURES = {
   editableItinerary: true, // render the Full itinerary as editable blocks (else read-only Md)
   venueGrounding:    true, // verify venues via /api/places after build (no-op until the server key exists)
+  planCheck:         true, // show the traveler-facing plan check strip (§15 #13/#14)
 };
 
 // ── Activities per day, by pace ──────────────────────────────────────────────

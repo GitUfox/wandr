@@ -190,3 +190,88 @@ export function scorePlan(model, planText, answers = {}) {
     },
   };
 }
+
+// ── Traveler-facing check (§15 #13/#14) ─────────────────────────────────────
+//
+// scorePlan() above is a DEV instrument — it runs in scripts/quality-check.mjs
+// and grades prose quality, pace and rhythm. None of that belongs in front of a
+// traveler: a "72/100" on their trip is demoralising and tells them nothing they
+// can do something about.
+//
+// checkPlan() is the shipping half. It reports only defects that are
+// unambiguously wrong AND actionable, in plain English. The Baltimore export
+// had two of them and the app said nothing: a day count short of the trip
+// length, and Checkerspot Brewing Company scheduled twice — with the model's own
+// "already visited Day 1 — substitute: ..." note buried in the details cell.
+//
+// Deliberately EXCLUDED, and why: filler prose and generic titles are our
+// problem, not the traveler's; off-pace and off-rhythm are preference
+// violations that fire often enough to erode trust in the warnings that matter.
+// A check the user learns to ignore is worse than no check.
+
+/** "Day 3" out of "Day 3 — Saturday, August 15, 2026"; falls back to position. */
+function dayName(day, idx) {
+  const m = String(day?.label || "").match(/^(Day\s+\d+)/i);
+  return m ? m[1] : `Day ${idx + 1}`;
+}
+
+/**
+ * Check a parsed plan for defects worth showing the traveler.
+ *
+ * model        — parsePlan() output
+ * expectedDays — how many days this trip should cover, or null to skip that
+ *                check (day/combo/hidden modes aren't day-counted, and a
+ *                restored plan may not know its trip length)
+ *
+ * Returns { problems: [{ code, message }] } — empty when the plan is clean.
+ */
+export function checkPlan(model, expectedDays = null) {
+  const problems = [];
+  const days = model?.days || [];
+  if (!days.length) return { problems };
+
+  // 1. Short plan. A 7-night Baltimore trip shipped 6 days and said nothing.
+  if (Number.isInteger(expectedDays) && expectedDays > 0 && days.length < expectedDays) {
+    const missing = expectedDays - days.length;
+    problems.push({
+      code: "incomplete",
+      message: `This plan covers ${days.length} ${days.length === 1 ? "day" : "days"}, but your trip is ${expectedDays} days long. ${missing === 1 ? "The last day is" : `The last ${missing} days are`} missing.`,
+    });
+  }
+
+  // 2. A day header with nothing under it.
+  const empty = days.map((d, i) => [d, i]).filter(([d]) => !(d.activities || []).length);
+  for (const [d, i] of empty) {
+    problems.push({ code: "empty-day", message: `${dayName(d, i)} has no activities yet.` });
+  }
+
+  // 3. The same venue scheduled more than once.
+  const seen = new Map();
+  for (const d of days) {
+    for (const a of d.activities || []) {
+      const key = String(a.title || "").replace(/\*\*/g, "").trim();
+      if (!key) continue;
+      const k = key.toLowerCase();
+      if (!seen.has(k)) seen.set(k, { name: key, count: 0 });
+      seen.get(k).count++;
+    }
+  }
+  for (const { name, count } of seen.values()) {
+    if (count > 1) {
+      problems.push({
+        code: "duplicate-venue",
+        message: `${name} is scheduled ${count === 2 ? "twice" : `${count} times`}.`,
+      });
+    }
+  }
+
+  // 4. Times that run backwards inside a day.
+  days.forEach((d, i) => {
+    const mins = (d.activities || []).map(a => parseTime(a.time)).filter(m => m !== null);
+    if (mins.some((m, j) => j > 0 && m < mins[j - 1])) {
+      problems.push({ code: "times-out-of-order", message: `${dayName(d, i)} has activities listed out of order.` });
+    }
+  });
+
+  return { problems };
+}

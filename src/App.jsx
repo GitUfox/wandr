@@ -1,5 +1,5 @@
 // Wandr v3.1 — framer-motion screen + step transitions
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { STEPS, T } from "./lib/constants.js";
 import { loadTripStore, persistTrip, getActiveTrip, listTrips, activateTripId, deleteTrip } from "./lib/tripStore.js";
@@ -9,6 +9,7 @@ import { useBuildTrip } from "./hooks/useBuildTrip.js";
 import { useGenerate } from "./hooks/useGenerate.js";
 import { useFileUpload } from "./hooks/useFileUpload.js";
 import { useLocalEvents } from "./hooks/useLocalEvents.js";
+import { checkPlan } from "./lib/planQuality.js";
 import WelcomeScreen from "./components/WelcomeScreen.jsx";
 import LoadingScreen from "./components/LoadingScreen.jsx";
 import InterviewFlow from "./components/InterviewFlow.jsx";
@@ -150,6 +151,17 @@ export default function Wandr() {
   const { buildTrip: doBuildTrip, loadMsg, error: buildError } = useBuildTrip();
   const { planText, planModel, planMode, planLoading, patchError, tweakingId, generatedAt, generate: doGenerate, patchDay: doPatchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity } = useGenerate();
   const { games: tripGames, forPrompt: eventsForPrompt } = useLocalEvents(trip);
+
+  // Traveler-facing plan check (§15 #13/#14). DERIVED, never stored: a cached
+  // result could outlive the plan it describes, and a stale "2 of 7 days" on a
+  // freshly fixed itinerary is worse than no check at all. Recomputing covers
+  // generate, day-patch, manual edit and restore through one path.
+  // expectedDays is only meaningful for the full itinerary — the other modes
+  // aren't day-counted, so they pass null and skip that check.
+  const planIssues = useMemo(
+    () => checkPlan(planModel, planMode === "full" ? trip?.nights ?? null : null).problems,
+    [planModel, planMode, trip?.nights],
+  );
   const { uploadedFiles, uploadError, handleFiles, removeFile, resetFiles } = useFileUpload();
 
   // ── Interview helpers ─────────────────────────────────────────────────────
@@ -500,6 +512,7 @@ export default function Wandr() {
                   trips={allTrips}
                   onSwitchTrip={handleResume}
                   tripGames={tripGames}
+                  planIssues={planIssues}
                   planText={planText} planModel={planModel} planLoading={planLoading} planMode={planMode} generatedAt={generatedAt}
                   patchError={patchError}
                   debugMsg={buildError}
