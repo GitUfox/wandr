@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { complete } from "../lib/api.js";
-import { buildTripCategoriesPrompt, buildTripMetaPrompt } from "../lib/prompts.js";
-import { recoverJSON } from "../lib/utils.js";
+import { buildTripCategoriesPrompt } from "../lib/prompts.js";
+import { recoverJSON, seasonShort } from "../lib/utils.js";
 import { LOAD_MSGS } from "../lib/constants.js";
 import { verifyTripVenues } from "../lib/places.js";
 
@@ -22,13 +22,13 @@ export function useBuildTrip() {
       setLoadMsg(LOAD_MSGS[msgIdx]);
     }, 1600);
 
-    // The trip database is built in two parallel calls. A single combined call
-    // generates >60s of JSON and is killed by Vercel's function timeout. Each
-    // half finishes comfortably under the limit; we run them concurrently and
-    // merge. (Each call counts against the per-IP trip rate limit — see
-    // LIMIT_TRIPS in api/shared.js, sized for 2 calls per trip.)
+    // ONE slim call (2026-08-05 speed pass). The old meta half (tagline/
+    // highlights/normalized destination/season) is gone: the dashboard no
+    // longer renders tagline or highlights, destination is the traveler's own
+    // input (Places autocomplete normalizes it once 5A is active), and season
+    // is derived locally below. One call per build also means LIMIT_TRIPS now
+    // counts whole trips, not halves — see api/shared.js.
     const { messageContent: catsMsg, n } = buildTripCategoriesPrompt(answers, uploadedFiles);
-    const { messageContent: metaMsg }     = buildTripMetaPrompt(answers, uploadedFiles);
 
     // Dev-only: inspect the assembled prompt (interests weighting, conflict rule,
     // etc.). Gated behind import.meta.env.DEV so it never ships to production.
@@ -37,23 +37,14 @@ export function useBuildTrip() {
       console.log("[Wandr] trip prompt →", catsMsg);
     }
 
-    const oneCall = async (content, maxTokens) => {
-      const data = await complete([{ role: "user", content }], maxTokens);
+    // Slim schema is ~4 short fields × 3 items × ≤5 categories (~1k tokens of
+    // JSON); 4000 is a runaway backstop, not a target — see the Bangkok 500s
+    // for why an unpinned cap matters.
+    const tryBuild = async () => {
+      const data = await complete([{ role: "user", content: catsMsg }], 4000);
       const raw  = data.content?.find(b => b.type === "text")?.text || "";
       if (!raw) throw new Error("No response from AI. Please try again.");
       return recoverJSON(raw);
-    };
-
-    const tryBuild = async () => {
-      const [cats, meta] = await Promise.all([
-        oneCall(catsMsg, 6000),
-        // Meta output is ~100 tokens; the low cap also backstops runaway
-        // generation so this half can never crawl toward the 60s ceiling.
-        oneCall(metaMsg, 600),
-      ]);
-      // meta provides destination/tagline/season/highlights;
-      // cats provides categories. Merge into the single trip object the app expects.
-      return { ...meta, categories: cats?.categories || {} };
     };
 
     try {
@@ -73,18 +64,27 @@ export function useBuildTrip() {
           parsed = await tryBuild();
         } else throw e;
       }
+      let trip = {
+        destination: answers.destination,
+        nights:      n,
+        // Short derived label ("Early June") — replaces the old AI-written
+        // season sentence in buildPlanPrompt's "- Season:" line.
+        season:      seasonShort(answers.dates?.start),
+        categories:  parsed?.categories || {},
+        answers,
+      };
       // Venue grounding (phase 1) — verify GROUNDING.categories against real
       // places data and merge additive fields. Blocking on purpose: sub-second
       // for one category (hard timeout inside), and it means the trip is
       // written to state/localStorage once, complete — no post-save patching
       // race with navigation. Fail-open twice over: verifyTripVenues never
       // throws, and .catch here guarantees a grounding bug can't fail a build.
-      const grounded = await verifyTripVenues({ ...parsed, answers }).catch(() => null);
-      if (grounded) parsed = { ...parsed, categories: grounded.categories };
+      const grounded = await verifyTripVenues(trip).catch(() => null);
+      if (grounded) trip = { ...trip, categories: grounded.categories };
 
       clearInterval(loadRef.current);
       setLoading(false);
-      return { ...parsed, answers, nights: n };
+      return trip;
     } catch (e) {
       clearInterval(loadRef.current);
       setError(e.message);
@@ -92,9 +92,7 @@ export function useBuildTrip() {
       // Return a skeleton trip so the dashboard still renders
       return {
         destination: answers.destination,
-        tagline: "Your trip",
         nights: n,
-        highlights: [],
         categories: {},
         answers,
         _error: true,

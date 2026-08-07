@@ -214,11 +214,15 @@ function buildDayLabels(startISO, nights) {
 
 // ── Schema fragments ────────────────────────────────────────────────────────
 //
-// The trip database is built in two parallel calls so each finishes well under
-// Vercel's 60s function limit (the single combined call generates >60s of JSON
-// and gets killed mid-stream). CATEGORIES_SCHEMA is the heavy half (~44s);
-// META_SCHEMA is the lighter half (~23s). useBuildTrip runs both concurrently
-// and merges. FULL_SCHEMA is kept for buildTripPrompt (tests / single-call use).
+// The trip database is ONE slim call (2026-08-05 speed pass). History: a full
+// combined call generated >60s of JSON and was killed by Vercel's 60s limit,
+// so it was split into parallel categories+meta calls. The meta half (tagline/
+// highlights) was then cut entirely — the dashboard no longer shows either,
+// destination comes from the traveler's own input, season is derived locally —
+// and the categories schema was slimmed to only the fields the plan prompts
+// actually read (name/description/proTip/priority; grounding needs just name).
+// Net: one call per build, well under the 60s ceiling. Do NOT re-add fields
+// here without a consumer — every extra field is paid-for latency.
 
 // Nightlife is INTEREST-GATED (§8). The generic "omit categories with no match"
 // instruction was too soft to rely on: a Scottsdale traveler who picked
@@ -234,24 +238,25 @@ export function wantsNightlife(a) {
   return chips.some(c => NIGHTLIFE_TAGS.includes(c));
 }
 
+// One item shape for every category. The plan prompts read exactly these four
+// fields (formatActivityItems) and venue grounding matches on name alone —
+// the old per-category extras (duration/difficulty/admission/bestTime/price/
+// bookAhead) were generated on every build and read by nothing.
+const ITEM = `{"name":"","description":"","proTip":"","priority":"essential|recommended|optional"}`;
+
 const NIGHTLIFE_LINE =
-`"nightlife":[{"name":"","description":"","vibe":"","proTip":"","priority":"essential|recommended|optional"}],
+`"nightlife":[${ITEM}],
 `;
 
 const categoriesBody = (nightlife) =>
 `"categories":{
-"nature":[{"name":"","description":"","duration":"","difficulty":"","proTip":"","priority":"essential|recommended|optional"}],
-"culture":[{"name":"","description":"","duration":"","admission":"","proTip":"","priority":"essential|recommended|optional"}],
-${nightlife ? NIGHTLIFE_LINE : ""}"exploration":[{"name":"","description":"","bestTime":"","proTip":"","priority":"essential|recommended|optional"}],
-"experiences":[{"name":"","description":"","duration":"","price":"","bookAhead":true,"proTip":"","priority":"essential|recommended|optional"}]
+"nature":[${ITEM}],
+"culture":[${ITEM}],
+${nightlife ? NIGHTLIFE_LINE : ""}"exploration":[${ITEM}],
+"experiences":[${ITEM}]
 }`;
 
-const META_BODY = (n) =>
-`"destination":"City, Country","tagline":"8-word trip description","nights":${n},"season":"one sentence","highlights":["h1","h2","h3"]`;
-
 const CATEGORIES_SCHEMA      = (nl) => `{${categoriesBody(nl)}}`;
-const META_SCHEMA            = (n) => `{${META_BODY(n)}}`;
-const FULL_SCHEMA            = (n, nl) => `{${META_BODY(n)},\n${categoriesBody(nl)}}`;
 
 /**
  * Build the shared instruction context (everything except the JSON schema)
@@ -327,35 +332,12 @@ function assembleTripMessage(contextText, schema, imageBlocks) {
 }
 
 /**
- * Single-call trip prompt (full schema). Kept for tests and any non-split use.
+ * THE trip-build prompt — the activity categories, slim schema.
  * Returns { messageContent, n, safeStart, safeEnd }.
  */
-export function buildTripPrompt(answers, uploadedFiles) {
-  const { contextText, imageBlocks, n, safeStart, safeEnd } = tripContext(answers, uploadedFiles);
-  return { messageContent: assembleTripMessage(contextText, FULL_SCHEMA(n, wantsNightlife(answers)), imageBlocks), n, safeStart, safeEnd };
-}
-
-/**
- * Heavy half of the split build — the 5 activity categories.
- * Returns { messageContent, n }.
- */
 export function buildTripCategoriesPrompt(answers, uploadedFiles) {
-  const { contextText, imageBlocks, n } = tripContext(answers, uploadedFiles);
-  return { messageContent: assembleTripMessage(contextText, CATEGORIES_SCHEMA(wantsNightlife(answers)), imageBlocks), n };
-}
-
-/**
- * Light half of the split build — destination, tagline, nights, season, highlights.
- * Returns { messageContent, n }.
- */
-export function buildTripMetaPrompt(answers, uploadedFiles) {
-  const { contextText, imageBlocks, n } = tripContext(answers, uploadedFiles);
-  // The shared context is full of day-planning instructions, and without an
-  // explicit pin the model volunteers a day-by-day "itinerary" this schema
-  // never asked for — output that grows with trip length and pushed 6-night
-  // builds past Vercel's 60s ceiling (the 2026-07-28 Bangkok 500s).
-  const schema = `${META_SCHEMA(n)}\n\nReturn ONLY the fields in this schema. Do NOT include categories, itinerary, days, activities, or any other keys.`;
-  return { messageContent: assembleTripMessage(contextText, schema, imageBlocks), n };
+  const { contextText, imageBlocks, n, safeStart, safeEnd } = tripContext(answers, uploadedFiles);
+  return { messageContent: assembleTripMessage(contextText, CATEGORIES_SCHEMA(wantsNightlife(answers)), imageBlocks), n, safeStart, safeEnd };
 }
 
 // ── Plan generation prompt ─────────────────────────────────────────────────────

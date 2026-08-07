@@ -1,7 +1,8 @@
 // Wandr v3.1 — framer-motion screen + step transitions
 import { useState, useRef, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { STEPS, T } from "./lib/constants.js";
+import { STEPS, MODES, T } from "./lib/constants.js";
+import { calcNights } from "./lib/utils.js";
 import { loadTripStore, persistTrip, getActiveTrip, listTrips, activateTripId, deleteTrip } from "./lib/tripStore.js";
 import { useAccount } from "./hooks/useAccount.js";
 import { recordDeletion, scheduleSyncPush } from "./lib/sync.js";
@@ -11,7 +12,6 @@ import { useFileUpload } from "./hooks/useFileUpload.js";
 import { useLocalEvents } from "./hooks/useLocalEvents.js";
 import { checkPlan } from "./lib/planQuality.js";
 import WelcomeScreen from "./components/WelcomeScreen.jsx";
-import LoadingScreen from "./components/LoadingScreen.jsx";
 import InterviewFlow from "./components/InterviewFlow.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
@@ -152,6 +152,15 @@ export default function Wandr() {
   const { planText, planModel, planMode, planLoading, patchError, tweakingId, generatedAt, generate: doGenerate, patchDay: doPatchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity } = useGenerate();
   const { games: tripGames, forPrompt: eventsForPrompt } = useLocalEvents(trip);
 
+  // The auto-generate below fires from an async completion, where a captured
+  // eventsForPrompt would be the stale unresolved value from build-start time.
+  // The ref always holds the CURRENT fetch state — and because the skeleton
+  // trip is set the moment the build begins, the MLB lookup gets the whole
+  // build (~12–25s vs a ~1–2s fetch) to resolve before generation reads it.
+  // buildEventsBlock still fail-safes to "no block" if it somehow hasn't.
+  const eventsRef = useRef(eventsForPrompt);
+  useEffect(() => { eventsRef.current = eventsForPrompt; });
+
   // Traveler-facing plan check (§15 #13/#14). DERIVED, never stored: a cached
   // result could outlive the plan it describes, and a stale "2 of 7 days" on a
   // freshly fixed itinerary is worse than no check at all. Recomputing covers
@@ -267,14 +276,40 @@ export default function Wandr() {
   }
 
   // ── API actions ───────────────────────────────────────────────────────────
+
+  // Monotonic token for the in-flight build. Navigating away mid-build
+  // (resetAll, activateTrip) bumps it, so a completing build still persists
+  // its result — the traveler's answers are never lost — but no longer yanks
+  // the screen back, replaces the on-screen trip, or starts streaming a plan
+  // the user didn't stay for.
+  const buildRunRef = useRef(0);
+
   /**
-   * Build (or rebuild) a trip and persist it.
+   * Build (or rebuild) a trip and persist it — straight-to-dashboard flow.
+   *
+   * The ticket needs zero AI: every field on it derives from the interview
+   * answers. So the dashboard renders immediately with a `_building` skeleton
+   * while the curation call runs, and on success the full itinerary starts
+   * generating on its own (no Generate tap — the tap was a leftover from the
+   * 5-mode era). On build failure the manual Generate button is the fallback,
+   * exactly as before.
+   *
    *   opts.fromInterview — came from the 6-step interview (may update the profile)
    *   opts.replaceId     — rebuild THIS trip in place instead of adding a new one
    *                        (Trip Details rebuild); its stale plan is dropped.
    */
   async function handleBuildTrip(a, opts = {}) {
-    setScreen("loading");
+    const run = ++buildRunRef.current;
+    setTrip({
+      id: opts.replaceId || undefined,
+      destination: a.destination,
+      nights: calcNights(a.dates?.start, a.dates?.end),
+      categories: {},
+      answers: a,
+      _building: true, // memory-only flag — never persisted
+    });
+    setScreen("dashboard");
+
     const result = await doBuildTrip(a, uploadedFiles);
     let saved = result;
     if (!result._error) {
@@ -294,8 +329,14 @@ export default function Wandr() {
         scheduleSyncPush();
       }
     }
+    if (buildRunRef.current !== run) return; // user moved on — result is saved, stop here
     setTrip(saved);
-    setScreen("dashboard");
+    // Auto-start the itinerary. Only on a successful build: with empty
+    // categories the plan would be generic model guesswork, so the failure
+    // path keeps the traveler in control (banner + manual Generate).
+    if (!result._error) {
+      doGenerate(MODES[0].id, saved, null, null, eventsRef.current);
+    }
   }
 
   // Accept the one-time "save these as your defaults?" prompt (first-time users).
@@ -354,6 +395,7 @@ export default function Wandr() {
 
   // ── Reset / resume ────────────────────────────────────────────────────────
   function resetAll() {
+    buildRunRef.current++; // orphan any in-flight build (it still persists itself)
     setScreen("welcome"); setStep(0); setAnswers({}); setDir(1);
     setCur(""); setChips([]); setPriorityChips([]); setTeams([]); setKids(""); setAvoidText("");
     setBudget(120); setD1(""); setD2(""); setLogStay(""); setLogTransport(""); setLogPace(""); setLogFocus(""); setLogRhythm("");
@@ -378,6 +420,7 @@ export default function Wandr() {
    */
   function activateTrip(t) {
     if (!t) return;
+    buildRunRef.current++; // orphan any in-flight build (it still persists itself)
     setTrip(t);
     setAnswers(t.answers || {});   // keep App's answers coherent with the trip on screen
     restorePlan(t.id);             // that trip's own itinerary + edits, if any
@@ -498,12 +541,6 @@ export default function Wandr() {
             </Page>
           )}
 
-          {screen === "loading" && (
-            <Page key="loading">
-              <LoadingScreen message={loadMsg} destination={answers.destination} />
-            </Page>
-          )}
-
           {screen === "dashboard" && trip && (
             <Page key="dashboard">
               <ErrorBoundary>
@@ -511,6 +548,8 @@ export default function Wandr() {
                   trip={trip}
                   trips={allTrips}
                   onSwitchTrip={handleResume}
+                  building={!!trip._building}
+                  buildingMsg={loadMsg}
                   tripGames={tripGames}
                   planIssues={planIssues}
                   planText={planText} planModel={planModel} planLoading={planLoading} planMode={planMode} generatedAt={generatedAt}
@@ -527,7 +566,7 @@ export default function Wandr() {
                   onTweakActivity={(dayIdx, actId, instruction) => tweakActivity(dayIdx, actId, instruction, trip)}
                   tweakingId={tweakingId}
                   onReset={resetAll}
-                  showProfilePrompt={!!trip && !trip._error && !savedProfile && !profilePromptDismissed}
+                  showProfilePrompt={!!trip && !trip._error && !trip._building && !savedProfile && !profilePromptDismissed}
                   onSaveProfile={handleSaveProfile}
                   onDismissProfilePrompt={handleDismissProfilePrompt}
                 />

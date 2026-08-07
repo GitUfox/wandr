@@ -124,14 +124,18 @@ export default function InterviewFlow({
           </div>
         )}
 
+        {/* Same dev-only escape as App's Page wrapper: automation harnesses
+            throttle rAF, freezing framer's step slide mid-exit (question stays
+            on the old step while the counter advances). Vite inlines the env
+            var, so the branch is absent from the production bundle. */}
         <AnimatePresence mode="wait" custom={direction}>
         <motion.div
           key={step}
           custom={direction}
-          variants={STEP_VARIANTS}
-          initial="enter"
+          variants={import.meta.env.VITE_NO_MOTION ? undefined : STEP_VARIANTS}
+          initial={import.meta.env.VITE_NO_MOTION ? false : "enter"}
           animate="center"
-          exit="exit"
+          exit={import.meta.env.VITE_NO_MOTION ? undefined : "exit"}
           transition={STEP_TRANSITION}
         >
 

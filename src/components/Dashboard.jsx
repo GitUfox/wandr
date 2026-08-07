@@ -20,6 +20,8 @@ export default function Dashboard({
   trip,
   trips = [],
   onSwitchTrip,
+  building = false,   // trip is a skeleton; activity curation still running
+  buildingMsg = "",   // rotating status line from useBuildTrip
   tripGames,
   planIssues = [],
   planText, planModel, planLoading, planMode, generatedAt,
@@ -234,7 +236,6 @@ export default function Dashboard({
       <div class="p-label" style="color:#c96442;margin-bottom:4px">My trip</div>
       <div style="font-size:26px;font-weight:800;letter-spacing:-.015em;line-height:1.1">${htmlEscape(destMain)}${destRegion ? ` <span style="font-size:12px;color:#9a938c;font-weight:700">${htmlEscape(destRegion)}</span>` : ""}</div>
       ${ticketHtml}
-      ${trip.tagline ? `<div style="font-size:11.5px;color:#8a847e;font-style:italic;margin:10px 2px 0">${htmlEscape(trip.tagline)}</div>` : ""}
       <div style="margin-top:6px">${bodyHtml}</div>
       <div class="foot">
         <span class="wm">wandr<span class="dot">.</span></span>
@@ -321,10 +322,10 @@ export default function Dashboard({
                 </div>
               )}
               <button
-                onClick={() => { if (online) { setEditSheetStage(null); setEditSheetOpen(true); } }}
-                disabled={!online}
-                title={online ? undefined : "Editing needs a connection"}
-                style={{ fontSize:T.fs.meta, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:online?"pointer":"not-allowed", opacity:online?1:.45, fontFamily:T.font, fontWeight:600 }}
+                onClick={() => { if (online && !building) { setEditSheetStage(null); setEditSheetOpen(true); } }}
+                disabled={!online || building}
+                title={!online ? "Editing needs a connection" : building ? "One sec — still curating this trip" : undefined}
+                style={{ fontSize:T.fs.meta, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:online&&!building?"pointer":"not-allowed", opacity:online&&!building?1:.45, fontFamily:T.font, fontWeight:600 }}
               >
                 Edit trip
               </button>
@@ -374,18 +375,9 @@ export default function Dashboard({
               </div>
             );
           })()}
-          {trip.tagline && (
-            <div style={{ fontSize:T.fs.body, color:T.muted, fontStyle:"italic", margin:"12px 2px 0" }}>{trip.tagline}</div>
-          )}
-          {Array.isArray(trip.highlights) && trip.highlights.length > 0 && (
-            <div style={{ display:"flex", flexDirection:"column", gap:7, marginTop:12 }}>
-              {trip.highlights.map((h, i) => (
-                <div key={i} style={{ display:"flex", gap:9, fontSize:T.fs.meta, color:T.muted, lineHeight:1.5 }}>
-                  <span style={{ color:T.accent, fontWeight:800, flexShrink:0 }}>✓</span>{h}
-                </div>
-              ))}
-            </div>
-          )}
+          {/* Tagline + highlights removed 2026-08-05 (design pick 3A): they
+              restated what the itinerary shows, and cutting them let the whole
+              meta build call die. Ticket → itinerary, nothing in between. */}
           {debugMsg && (
             <div style={{ marginTop:10, padding:"6px 10px", background:"rgba(200,80,60,.12)", border:"1px solid rgba(200,80,60,.3)", borderRadius:T.r.sm, fontSize:T.fs.meta, color:"#f08070" }}>
               {"Couldn't load full trip data — some sections may be missing. You can still generate your itinerary below."}
@@ -450,11 +442,17 @@ export default function Dashboard({
 
           {/* Itinerary */}
           <div>
-              {/* Generate CTA (no plan yet) vs status row (design pick 2A) —
-                  once a plan exists the card stops selling and a slim toolbar
-                  confirms state; Remix opens the edit sheet's Full Itinerary
-                  pane. No blind regeneration path. */}
-              {!planText && !planLoading ? (() => {
+              {/* Curating row (build in flight) vs Generate CTA (no plan yet —
+                  the manual fallback after a failed build, or a resumed trip
+                  without a plan) vs status row (design pick 2A). On a normal
+                  build the itinerary auto-starts, so the CTA is never seen. */}
+              {building ? (
+                <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:10, rowGap:8, padding:"4px 2px 12px", borderBottom:`1px solid ${T.border}`, marginBottom:12 }}>
+                  <span style={{ width:7, height:7, borderRadius:"50%", background:T.accent, boxShadow:"0 0 0 3px rgba(201,100,66,.14)", flexShrink:0, animation:"pulse 1.2s ease-in-out infinite" }} />
+                  <span style={{ fontSize:T.fs.body, fontWeight:800, color:T.ink }}>Curating your trip</span>
+                  <span style={{ fontSize:T.fs.meta, color:T.hint }}>{buildingMsg || "finding the good stuff…"}</span>
+                </div>
+              ) : !planText && !planLoading ? (() => {
                 const hero = MODES[0];
                 return (
                   <button onClick={() => online && onGenerate(hero.id)} disabled={!online}

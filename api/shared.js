@@ -48,8 +48,9 @@ export function setCorsHeaders(res, origin) {
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 
-// A trip build is now two parallel non-stream calls (categories + meta), so
-// each logical trip consumes two against this counter. 6 ⇒ ~3 trips per IP/day.
+// A trip build is ONE non-stream call since the 2026-08-05 speed pass (the
+// meta half was cut with the tagline/highlights UI), so this counter now
+// counts whole trips. 6 ⇒ 6 trips per IP/day — headroom doubled for free.
 const LIMIT_TRIPS = 6;
 const LIMIT_PLANS = 10;
 // Venue-grounding lookups (api/places). One call per trip build normally;

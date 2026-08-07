@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  buildTripPrompt,
   buildTripCategoriesPrompt,
-  buildTripMetaPrompt,
   buildPlanPrompt,
   buildEditDayPrompt,
   buildTweakActivityPrompt,
@@ -35,11 +33,11 @@ const BASE_TRIP = {
   answers: BASE_ANSWERS,
 };
 
-// ── buildTripPrompt ───────────────────────────────────────────────────────────
+// ── buildTripCategoriesPrompt (THE trip-build call) ───────────────────────────
 
-describe("buildTripPrompt", () => {
+describe("buildTripCategoriesPrompt", () => {
   it("returns expected shape", () => {
-    const result = buildTripPrompt(BASE_ANSWERS, []);
+    const result = buildTripCategoriesPrompt(BASE_ANSWERS, []);
     expect(result).toHaveProperty("messageContent");
     expect(result).toHaveProperty("n");
     expect(result).toHaveProperty("safeStart");
@@ -47,122 +45,102 @@ describe("buildTripPrompt", () => {
   });
 
   it("calculates nights correctly", () => {
-    const { n } = buildTripPrompt(BASE_ANSWERS, []);
+    const { n } = buildTripCategoriesPrompt(BASE_ANSWERS, []);
     expect(n).toBe(6);
   });
 
   it("messageContent is a string when no files uploaded", () => {
-    const { messageContent } = buildTripPrompt(BASE_ANSWERS, []);
+    const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []);
     expect(typeof messageContent).toBe("string");
   });
 
   it("messageContent is an array when images are uploaded", () => {
     const files = [{ isImage: true, type: "image/jpeg", content: "base64data" }];
-    const { messageContent } = buildTripPrompt(BASE_ANSWERS, files);
+    const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, files);
     expect(Array.isArray(messageContent)).toBe(true);
     expect(messageContent[0].type).toBe("image");
     expect(messageContent[messageContent.length - 1].type).toBe("text");
   });
 
   it("includes destination in prompt", () => {
-    const { messageContent } = buildTripPrompt(BASE_ANSWERS, []);
+    const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []);
     expect(messageContent).toContain("Tokyo, Japan");
   });
 
   it("uses budget line for paid stay", () => {
-    const { messageContent } = buildTripPrompt(BASE_ANSWERS, []);
+    const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []);
     expect(messageContent).toContain("120");
   });
 
   it("uses hosted line when budget is 0", () => {
     const hostedAnswers = { ...BASE_ANSWERS, budget: 0 };
-    const { messageContent } = buildTripPrompt(hostedAnswers, []);
+    const { messageContent } = buildTripCategoriesPrompt(hostedAnswers, []);
     expect(messageContent).toContain("family/friends");
     expect(messageContent).not.toContain("USD 0/day");
   });
 
   it("includes stay and transport info", () => {
-    const { messageContent } = buildTripPrompt(BASE_ANSWERS, []);
+    const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []);
     expect(messageContent).toContain("Hotel in Shinjuku");
     expect(messageContent).toContain("Public transit");
   });
 
   it("includes notes in prompt", () => {
-    const { messageContent } = buildTripPrompt(BASE_ANSWERS, []);
+    const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []);
     expect(messageContent).toContain("baseball game");
   });
 
   it("includes uploaded text file context", () => {
     const files = [{ isImage: false, name: "bookings.txt", content: "Flight: JL412" }];
-    const { messageContent } = buildTripPrompt(BASE_ANSWERS, files);
+    const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, files);
     expect(messageContent).toContain("Flight: JL412");
     expect(messageContent).toContain("bookings.txt");
   });
 
   it("includes avoidChips from interests", () => {
     const answers = { ...BASE_ANSWERS, interests: { ...BASE_ANSWERS.interests, avoidChips: ["Skip museums"] } };
-    const { messageContent } = buildTripPrompt(answers, []);
+    const { messageContent } = buildTripCategoriesPrompt(answers, []);
     expect(messageContent).toContain("Skip museums");
   });
 
   it("uses fallback nights when dates are missing", () => {
     const noDateAnswers = { ...BASE_ANSWERS, dates: {} };
-    const { n } = buildTripPrompt(noDateAnswers, []);
+    const { n } = buildTripCategoriesPrompt(noDateAnswers, []);
     expect(n).toBe(5); // calcNights default
   });
 });
 
-// ── Split build (parallel halves) ───────────────────────────────────────────────
+// ── Trip-build schema (slim, single call — 2026-08-05 speed pass) ─────────────
 
-describe("split trip build", () => {
-  it("categories half asks for categories but not the meta sections", () => {
+describe("trip build schema", () => {
+  it("asks for categories but none of the old meta sections", () => {
     const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []);
     expect(messageContent).toContain('"categories"');
     expect(messageContent).toContain('"nature"');
     expect(messageContent).not.toContain('"photoSpots"');
     expect(messageContent).not.toContain('"practical"');
+    // the meta half is dead — its fields must never creep back into the ask
+    expect(messageContent).not.toContain('"tagline"');
+    expect(messageContent).not.toContain('"highlights"');
+    expect(messageContent).not.toContain('"season"');
   });
 
-  it("categories half never asks for food categories", () => {
+  it("never asks for food categories", () => {
     const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []);
     expect(messageContent).not.toContain('"breakfast"');
     expect(messageContent).not.toContain('"lunch"');
     expect(messageContent).not.toContain('"dinner"');
   });
 
-  it("meta half asks for the header sections but not the category list", () => {
-    const { messageContent } = buildTripMetaPrompt(BASE_ANSWERS, []);
-    expect(messageContent).toContain('"destination"');
-    expect(messageContent).toContain('"highlights"');
-    expect(messageContent).not.toContain('"breakfast"');
-    // practical/photoSpots/avoidList were dropped when Activities + Tips were removed
-    expect(messageContent).not.toContain('"photoSpots"');
-    expect(messageContent).not.toContain('"practical"');
-  });
-
-  it("meta half pins the output to its schema so the model can't volunteer an itinerary", () => {
-    const { messageContent } = buildTripMetaPrompt(BASE_ANSWERS, []);
-    expect(messageContent).toContain("Do NOT include categories, itinerary");
-    // the categories half must not carry the pin — categories are its whole job
-    expect(buildTripCategoriesPrompt(BASE_ANSWERS, []).messageContent)
-      .not.toContain("Do NOT include categories");
-  });
-
-  it("both halves carry the same shared trip context", () => {
-    const cats = buildTripCategoriesPrompt(BASE_ANSWERS, []).messageContent;
-    const meta = buildTripMetaPrompt(BASE_ANSWERS, []).messageContent;
-    for (const part of [cats, meta]) {
-      expect(part).toContain("Tokyo, Japan");
-      expect(part).toContain("Hotel in Shinjuku");
+  it("asks only for the fields the prompts and grounding actually read", () => {
+    const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []);
+    for (const kept of ['"name"', '"description"', '"proTip"', '"priority"']) {
+      expect(messageContent).toContain(kept);
     }
-  });
-
-  it("both halves preserve image blocks when files are uploaded", () => {
-    const files = [{ isImage: true, type: "image/jpeg", content: "base64data" }];
-    for (const build of [buildTripCategoriesPrompt, buildTripMetaPrompt]) {
-      const { messageContent } = build(BASE_ANSWERS, files);
-      expect(Array.isArray(messageContent)).toBe(true);
-      expect(messageContent[0].type).toBe("image");
+    // Paid-for output nothing consumed — cut in the speed pass. If one of
+    // these gains a real consumer, add it back WITH the consumer.
+    for (const cut of ['"duration"', '"difficulty"', '"admission"', '"bestTime"', '"price"', '"bookAhead"', '"vibe"']) {
+      expect(messageContent).not.toContain(cut);
     }
   });
 });
@@ -326,7 +304,7 @@ describe("buildPlanPrompt — activity priority", () => {
 describe("avoid wiring", () => {
   it("free-text avoid populates the AVOID line in the trip build", () => {
     const answers = { ...BASE_ANSWERS, avoid: "seafood, crowds" };
-    const { messageContent } = buildTripPrompt(answers, []);
+    const { messageContent } = buildTripCategoriesPrompt(answers, []);
     expect(messageContent).toContain("seafood, crowds");
     expect(messageContent).not.toContain("related to: nothing");
   });
@@ -345,13 +323,13 @@ describe("avoid wiring", () => {
       avoid: "seafood",
       interests: { ...BASE_ANSWERS.interests, avoidChips: ["Skip museums"] },
     };
-    const { messageContent } = buildTripPrompt(answers, []);
+    const { messageContent } = buildTripCategoriesPrompt(answers, []);
     expect(messageContent).toContain("Skip museums");
     expect(messageContent).toContain("seafood");
   });
 
   it("falls back to 'nothing' when no avoid is set", () => {
-    const { messageContent } = buildTripPrompt(BASE_ANSWERS, []); // no avoid, empty avoidChips
+    const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []); // no avoid, empty avoidChips
     expect(messageContent).toContain("related to: nothing");
   });
 
@@ -367,7 +345,7 @@ describe("rhythm wiring", () => {
   const earlyAnswers = { ...BASE_ANSWERS, logistics: { ...BASE_ANSWERS.logistics, rhythm: "Early riser" } };
 
   it("early riser reaches the trip build prompt", () => {
-    const { messageContent } = buildTripPrompt(earlyAnswers, []);
+    const { messageContent } = buildTripCategoriesPrompt(earlyAnswers, []);
     expect(messageContent).toContain("RHYTHM:");
     expect(messageContent).toContain("early riser");
   });
@@ -391,7 +369,7 @@ describe("rhythm wiring", () => {
   });
 
   it("absent rhythm leaks nothing (backward compatible with older trips)", () => {
-    const { messageContent } = buildTripPrompt(BASE_ANSWERS, []); // no rhythm field
+    const { messageContent } = buildTripCategoriesPrompt(BASE_ANSWERS, []); // no rhythm field
     expect(messageContent).not.toContain("RHYTHM:");
     expect(messageContent).not.toContain("- Rhythm:");
   });
@@ -414,11 +392,6 @@ describe("priority interests", () => {
     const { messageContent } = buildTripCategoriesPrompt(prioAnswers, []);
     expect(messageContent).toContain("CONFLICTS:");
     expect(messageContent).toContain("prefer whichever matches a PRIORITY INTEREST");
-  });
-
-  it("meta half carries the same priority signal (shared context)", () => {
-    const { messageContent } = buildTripMetaPrompt(prioAnswers, []);
-    expect(messageContent).toMatch(/PRIORITY INTERESTS.*Architecture/);
   });
 
   it("reflects priority in the plan and edit-day traveler lines", () => {
@@ -496,9 +469,7 @@ describe("traveler context is consistent across every prompt builder", () => {
   const renderAll = (answers) => {
     const trip = { destination: answers.destination, answers, nights: 3, season: "mild", categories: {} };
     return [
-      ["tripPrompt",       buildTripPrompt(answers).messageContent],
       ["tripCategories",   buildTripCategoriesPrompt(answers).messageContent],
-      ["tripMeta",         buildTripMetaPrompt(answers).messageContent],
       ["planFull",         buildPlanPrompt("full", trip)],
       ["planDay",          buildPlanPrompt("day", trip)],
       ["editDay",          buildEditDayPrompt("Monday, July 1, 2024", "## old", "swap it", trip)],
@@ -550,7 +521,7 @@ describe("traveler context is consistent across every prompt builder", () => {
   });
 
   it("budget phrasing stays split by surface: verbose for trip build, compact for traveler blocks", () => {
-    const [, tripText] = renderAll(BASE_ANSWERS)[0];
+    const tripText = renderAll(BASE_ANSWERS).find(([l]) => l === "tripCategories")[1];
     const planText = renderAll(BASE_ANSWERS).find(([l]) => l === "planFull")[1];
     expect(tripText).toContain("approx. USD 120/day per person");
     expect(planText).toContain("~120 USD/day");
@@ -558,7 +529,7 @@ describe("traveler context is consistent across every prompt builder", () => {
 
   it("budget 0 reads as staying with family/friends in both phrasings", () => {
     const answers = { ...BASE_ANSWERS, budget: 0 };
-    const [, tripText] = renderAll(answers)[0];
+    const tripText = renderAll(answers).find(([l]) => l === "tripCategories")[1];
     const planText = renderAll(answers).find(([l]) => l === "planFull")[1];
     expect(tripText).toContain("Staying with family/friends — no accommodation cost");
     expect(planText).toContain("staying with family/friends");
