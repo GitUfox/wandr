@@ -7,7 +7,8 @@
 import { useState, useEffect, useRef } from "react";
 import { MODES, T, FEATURES, AI_DISCLAIMER } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
-import { arr, formatShortDate, ticketDate, seasonShort, timeAgo } from "../lib/utils.js";
+import { arr, formatShortDate, ticketDate, seasonShort, timeAgo, splitDetails, matchTipToActivity, displayTime } from "../lib/utils.js";
+import { parsePlan } from "../lib/planModel.js";
 import { TEAM_SHORT } from "../lib/mlbTeams.js";
 import Md from "./Md.jsx";
 import ItineraryEditor from "./ItineraryEditor.jsx";
@@ -161,50 +162,75 @@ export default function Dashboard({
         <div style="display:flex;gap:20px;padding:10px 34px 13px 16px">${stubsHtml}</div>
       </div>`;
 
-    // Build body HTML — properly open/close <table> only around actual table rows
-    const lines = planText.split("\n");
-    let bodyHtml = "";
-    let inTable  = false;
+    // ── Body: day cards (§15.6 picks 1B+2B+3B) ────────────────────────────
+    // Built from the SAME parsed model and the SAME chip engine as the screen
+    // (parsePlan + splitDetails) — the export can't drift from what the
+    // traveler edited. Every model-authored string passes through htmlEscape:
+    // this HTML lands in document.write, so LLM output is untrusted markup.
 
-    for (const line of lines) {
+    // Escape first, then translate **bold** — never the other way round.
+    const rich = (s) => htmlEscape(s).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+
+    // Prose renderer for intro / extras / legacy content outside tables.
+    const proseHtml = (text) => String(text || "").split("\n").map(line => {
       const t = line.trim();
-      const isTableRow = t.startsWith("|") && !t.match(/^\|[-| :]+\|$/);
+      if (!t) return "";
+      if (t.startsWith("### ")) return `<h3 class="h3">${rich(t.slice(4))}</h3>`;
+      return `<p class="prose">${rich(line)}</p>`;
+    }).join("");
 
-      if (isTableRow) {
-        if (!inTable) { bodyHtml += `<table style="width:100%;border-collapse:collapse;margin:8px 0 16px"><colgroup><col style="width:42px"/><col style="width:32%"/><col/></colgroup><tbody>`; inTable = true; }
-        const cells = t.replace(/^\||\|$/g, "").split("|").map(c => c.trim().replace(/\*\*/g, ""));
-        const isHeader = cells[0]?.toLowerCase() === "time";
-        if (isHeader) {
-          bodyHtml += `<tr style="border-bottom:2px solid #e8e8e8">${cells.map(c => `<th style="padding:5px 8px;text-align:left;font-size:9px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.06em">${c}</th>`).join("")}</tr>`;
-        } else {
-          bodyHtml += `<tr style="border-bottom:1px solid #eee">${cells.map((c, i) => `<td style="padding:7px 8px;font-size:${i===2?11:12}px;color:${i===0?"#c96442":i===1?"#0d0d0d":"#555"};font-weight:${i===1?700:i===0?700:400};vertical-align:top;line-height:1.5">${c}</td>`).join("")}</tr>`;
-        }
-        continue;
+    const cardHtml = (a) => {
+      const { desc, facts } = splitDetails(a.details);
+      // Duration reads as part of "when" — it lives under the time in the
+      // rail; every other fact becomes a chip. Booking keeps its hot accent.
+      const dur = facts.find(f => f.kind === "duration");
+      const chips = facts.filter(f => f !== dur);
+      const chipsHtml = chips.length
+        ? `<div class="chips">${chips.map(f => `<span class="chip${f.kind === "booking" ? " hot" : ""}">${htmlEscape(f.text)}</span>`).join("")}</div>`
+        : "";
+      return `<div class="card">
+        <div class="rail"><div class="tm">${htmlEscape(displayTime(a.time))}</div>${dur ? `<div class="du">${htmlEscape(dur.text)}</div>` : ""}</div>
+        <div>
+          <div class="c-ttl">${htmlEscape(String(a.title || "").replace(/\*\*/g, ""))}</div>
+          ${chipsHtml}
+          ${desc ? `<div class="c-desc">${rich(desc)}</div>` : ""}
+          ${(a._tips || []).map(tip => `<div class="c-tip"><span class="bang">!</span><span>${rich(tip)}</span></div>`).join("")}
+        </div>
+      </div>`;
+    };
+
+    const model = parsePlan(planText);
+    let bodyHtml = model.intro ? proseHtml(model.intro) : "";
+
+    for (const day of model.days) {
+      const dm = String(day.label).match(/^Day (\d+) — (.+)$/);
+      bodyHtml += dm
+        ? `<div class="dayhead"><span class="daychip">${String(dm[1]).padStart(2, "0")}</span><span>${htmlEscape(dm[2])}</span></div>`
+        : `<h2 class="h2">${htmlEscape(day.label)}</h2>`;
+
+      // 2B: attach each tip to the activity it names; the rest stay day-level.
+      const titles = day.activities.map(a => a.title);
+      const acts = day.activities.map(a => ({ ...a, _tips: [] }));
+      const dayTips = [];
+      for (const tip of day.tips || []) {
+        const i = matchTipToActivity(tip, titles);
+        if (i >= 0) acts[i]._tips.push(tip); else dayTips.push(tip);
       }
 
-      if (inTable) { bodyHtml += `</tbody></table>`; inTable = false; }
+      bodyHtml += acts.map(cardHtml).join("");
 
-      if (["TABLE:","ENDTABLE","FOOD:","ENDFOOD"].includes(t)) continue;
-      if (t.match(/^\|[-| :]+\|$/)) continue;
-      if (line.startsWith("## ")) {
-        const label = line.slice(3);
-        const dm = label.match(/^Day (\d+) — (.+)$/);
-        // Day headers get the 9B number chip; any other h2 stays typographic.
-        bodyHtml += dm
-          ? `<div class="dayhead"><span class="daychip">${String(dm[1]).padStart(2, "0")}</span><span>${htmlEscape(dm[2])}</span></div>`
-          : `<h2 style="font-size:16px;font-weight:800;color:#0d0d0d;margin:24px 0 8px;padding-bottom:5px;border-bottom:1px solid #e8e8e8">${htmlEscape(label)}</h2>`;
-        continue;
+      // Legacy FOOD rows (pre food-removal plans) — keep the data readable.
+      for (const f of day.food || []) {
+        const bits = [f.meal, f.name, f.order, f.price].filter(Boolean).map(htmlEscape);
+        if (bits.length) bodyHtml += `<p class="prose food">${bits.join(" — ")}</p>`;
       }
-      if (line.startsWith("### ")) { bodyHtml += `<h3 style="font-size:11px;font-weight:700;color:#c96442;text-transform:uppercase;letter-spacing:.08em;margin:14px 0 6px">${line.slice(4)}</h3>`; continue; }
-      if (t.startsWith("TIPS:")) {
-        const tips = t.replace("TIPS:","").split("|").map(s => s.trim()).filter(Boolean);
-        bodyHtml += `<div style="margin:8px 0 14px">${tips.map(tip => `<span style="display:inline-block;font-size:11px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:4px;padding:3px 8px;color:#555;margin:2px 4px 2px 0">${tip}</span>`).join("")}</div>`;
-        continue;
+
+      if (dayTips.length) {
+        bodyHtml += `<div class="prebox"><div class="p-label" style="color:#c96442;margin-bottom:3px">Before you go</div>${dayTips.map(t => `<div class="tipline">${rich(t)}</div>`).join("")}</div>`;
       }
-      if (!t) { bodyHtml += `<div style="height:6px"></div>`; continue; }
-      bodyHtml += `<p style="font-size:12.5px;color:#333;line-height:1.65;margin:0 0 4px">${line.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")}</p>`;
+
+      if (day.extras?.length) bodyHtml += proseHtml(day.extras.join("\n"));
     }
-    if (inTable) bodyHtml += `</tbody></table>`;
 
     const w = window.open("", "_blank");
     if (!w) {
@@ -218,10 +244,17 @@ export default function Dashboard({
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&display=swap" rel="stylesheet">
       <style>
+        /* 4A print hygiene: margin:0 removes the browser's own header/footer
+           (about:blank, timestamp, page counts) — Chrome renders those in the
+           page margin, so no margin means no chrome. The body padding below is
+           therefore the ONLY physical margin the sheet gets. */
+        @page { margin: 0; }
         /* Letter-width column: the on-screen preview matches what prints
            instead of stretching the ticket across a desktop monitor. */
-        body { font-family: 'Manrope', system-ui, sans-serif; margin: 0 auto; max-width: 720px; padding: 40px 40px 70px; background: #fff; color: #1a1a1a; box-sizing: border-box; }
-        @media print { body { padding: 20px 20px 58px; max-width: none; } }
+        body { font-family: 'Manrope', system-ui, sans-serif; margin: 0 auto; max-width: 720px; padding: 40px 40px 74px; background: #fff; color: #1a1a1a; box-sizing: border-box; }
+        /* Print bottom padding must clear the fixed footer (~34px) or the last
+           line of every page runs beneath it. */
+        @media print { body { padding: 34px 36px 68px; max-width: none; } }
         .wm { font-weight: 800; font-size: 16px; color: #111; letter-spacing: -.02em; }
         .wm .dot { color: #c96442; }
         .p-label { font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: #9a938c; font-weight: 700; }
@@ -231,12 +264,38 @@ export default function Dashboard({
                    background: repeating-linear-gradient(180deg, #d8d2cb 0 2px, transparent 2px 5px); }
         .perf { position: relative; border-top: 1.5px dashed #d8d2cb; margin: 0 22px; }
         .notch { position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 1px solid #e5e0da; top: -9px; }
-        .dayhead { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 800; margin: 26px 0 6px; break-after: avoid; }
+        .dayhead { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 800; margin: 24px 0 4px; break-after: avoid; }
         .daychip { background: #c96442; color: #fff; font-size: 10.5px; font-weight: 800; border-radius: 6px; padding: 3px 7px; font-variant-numeric: tabular-nums; }
-        tr { break-inside: avoid; }
+        .h2 { font-size: 16px; font-weight: 800; color: #0d0d0d; margin: 24px 0 8px; padding-bottom: 5px; border-bottom: 1px solid #e8e8e8; }
+        .h3 { font-size: 11px; font-weight: 700; color: #c96442; text-transform: uppercase; letter-spacing: .08em; margin: 14px 0 6px; }
+        .prose { font-size: 12.5px; color: #333; line-height: 1.65; margin: 0 0 4px; }
+        .prose.food { font-size: 10.5px; color: #555; }
+        /* 1B day cards: time rail | content. break-inside keeps a stop whole
+           across page breaks — the tip belongs to its card, not the next page. */
+        .card { display: grid; grid-template-columns: 62px 1fr; gap: 12px; padding: 10px 0 11px;
+                border-bottom: 1px solid #f0eeeb; break-inside: avoid; }
+        .rail { text-align: right; border-right: 2px solid #c96442; padding-right: 10px; }
+        .rail .tm { font-size: 13px; font-weight: 800; color: #0d0d0d; font-variant-numeric: tabular-nums; line-height: 1.2; }
+        .rail .du { font-size: 7.5px; font-weight: 700; color: #9a938c; letter-spacing: .05em; text-transform: uppercase; margin-top: 3px; }
+        .c-ttl { font-size: 12.5px; font-weight: 800; color: #0d0d0d; line-height: 1.3; letter-spacing: -.005em; }
+        /* 3B fact chips — same engine as the on-screen blocks (splitDetails). */
+        .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 5px 0 2px; }
+        .chip { font-size: 8.5px; font-weight: 700; padding: 2.5px 7px; border-radius: 4px;
+                border: 1px solid #e5e0da; color: #6b655f; background: #fbfaf9; white-space: nowrap; }
+        .chip.hot { border-color: #e8c4b4; color: #c96442; background: #fdf5f2; }
+        .c-desc { font-size: 10px; color: #555; line-height: 1.55; margin-top: 3px; }
+        /* 2B: a tip rendered with the stop it belongs to. */
+        .c-tip { display: flex; gap: 7px; margin-top: 6px; padding: 5px 9px; background: #fbf7f4;
+                 border-left: 2.5px solid #c96442; border-radius: 0 4px 4px 0; break-inside: avoid; }
+        .c-tip .bang { color: #c96442; font-weight: 800; font-size: 9px; line-height: 1.55; }
+        .c-tip span { font-size: 9px; color: #6b5f57; line-height: 1.55; }
+        /* Day-level tips that name no single venue. */
+        .prebox { border: 1px solid #e5e0da; border-left: 2.5px solid #c96442; border-radius: 0 5px 5px 0;
+                  padding: 8px 11px; margin: 10px 0 4px; background: #fdfbfa; break-inside: avoid; }
+        .prebox .tipline { font-size: 9px; color: #6b5f57; line-height: 1.55; margin-top: 2px; }
         .foot { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 720px;
                 box-sizing: border-box; display: flex; align-items: center; gap: 10px;
-                background: #fff; border-top: 1px solid #e8e4e0; padding: 8px 20px 10px; font-size: 8.5px; color: #9a938c; }
+                background: #fff; border-top: 1px solid #e8e4e0; padding: 8px 20px 12px; font-size: 8.5px; color: #9a938c; }
         @media print { .foot { max-width: none; } }
         .foot .wm { font-size: 10px; }
         .foot .spacer { flex: 1; }

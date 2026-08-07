@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles, splitDetails, classifyFact } from "./utils.js";
+import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles, splitDetails, classifyFact, matchTipToActivity } from "./utils.js";
 
 // ── arr ───────────────────────────────────────────────────────────────────────
 
@@ -496,5 +496,50 @@ describe("classifyFact — negated tokens stay quiet", () => {
     expect(classifyFact("no booking needed")).toBe("note");
     expect(classifyFact("No reservations required")).toBe("note");
     expect(classifyFact("book ahead")).toBe("booking");
+  });
+});
+
+// ── matchTipToActivity (§15.6, export redesign pick 2B) ─────────────────────
+//
+// Fixtures are verbatim TIPS lines and titles from the Baltimore export. Chip
+// extraction is NOT here — the export reuses splitDetails(), the same engine
+// as the on-screen blocks, so the two surfaces cannot drift.
+
+describe("matchTipToActivity", () => {
+  const DAY1 = ["Patapsco Valley State Park – Cascade Falls Trail", "Cylburn Arboretum", "Station North Arts District Street Art Walk", "Checkerspot Brewing Company"];
+
+  it("matches a tip to the venue it names", () => {
+    expect(matchTipToActivity("Arrive at Patapsco before 09:00 — the Ilchester lot fills fast", DAY1)).toBe(0);
+    expect(matchTipToActivity("Checkerspot’s bar seats are the best solo option", DAY1)).toBe(3);
+  });
+
+  it("tolerates word-form differences (kayak ↔ Kayaking)", () => {
+    const day3 = ["Kayaking the Inner Harbor / Middle Branch", "Fells Point Historic Waterfront", "Heavy Seas Alehouse"];
+    expect(matchTipToActivity("Weekend kayak slots fill quickly — book online", day3)).toBe(0);
+  });
+
+  it("survives possessives on the title side", () => {
+    const day6 = ["Fort McHenry National Monument & Historic Shrine", "Lexington Market", "13.5% Wine Bar"];
+    expect(matchTipToActivity("Fort McHenry’s star-shaped layout is best photographed from the ramparts", day6)).toBe(0);
+    expect(matchTipToActivity("Lexington Market’s rebuilt interior is clean and air-conditioned", day6)).toBe(1);
+  });
+
+  it("refuses to match on generic words alone", () => {
+    // "museum"/"park"/"trail" are stopworded — a generic tip attaches nowhere
+    // and falls back to the day-level block instead of guessing.
+    expect(matchTipToActivity("The museum is quieter on weekday mornings", ["Baltimore Museum of Art", "Federal Hill Park"])).toBe(-1);
+    expect(matchTipToActivity("a tip about nothing in particular", ["Peabody Library", "Federal Hill Park"])).toBe(-1);
+  });
+
+  it("handles empty inputs", () => {
+    expect(matchTipToActivity("", ["Peabody Library"])).toBe(-1);
+    expect(matchTipToActivity("Peabody is lovely", [])).toBe(-1);
+    expect(matchTipToActivity("Peabody is lovely", null)).toBe(-1);
+  });
+
+  it("picks the stronger match when two titles share a word", () => {
+    const day4 = ["North Point State Park & Beach", "Orioles Game at Camden Yards"];
+    expect(matchTipToActivity("North Point is genuinely uncrowded — arrive by 08:00 for the beach", day4)).toBe(0);
+    expect(matchTipToActivity("Camden Yards allows cameras with lenses up to a certain length", day4)).toBe(1);
   });
 });

@@ -359,3 +359,40 @@ export function splitDetails(details) {
   }
   return { desc: raw, facts };
 }
+
+// Words too generic to identify a venue — a tip saying "the museum" or "the
+// park" must not attach to whichever activity happens to contain that word.
+// City names can't be enumerated here; per-day scoping (a tip only competes
+// against ITS day's 3-6 titles) is what keeps those from cross-matching.
+const TIP_STOPWORDS = new Set([
+  "with", "this", "that", "from", "tour", "walk", "walking", "park", "parks",
+  "state", "street", "historic", "historical", "national", "district",
+  "neighborhood", "avenue", "museum", "market", "library", "trail", "trails",
+  "waterfront", "company", "brewing", "brewery", "point", "area", "game",
+]);
+
+const tokens = (s) =>
+  String(s || "").toLowerCase().replace(/\*\*/g, "").replace(/[’']s\b/g, "")
+    .split(/[^a-z0-9]+/).filter(w => w.length >= 4);
+
+/**
+ * Which of a day's activities does this tip belong to? (§15.6, design pick 2B)
+ * Scores each title by distinctive-token overlap with the tip — prefix-tolerant
+ * ("kayak" ↔ "Kayaking") — and returns the best index, or -1 when no title
+ * scores. -1 is a fine answer: unmatched tips render in the day-level
+ * "Before you go" block instead, so nothing is ever dropped.
+ */
+export function matchTipToActivity(tip, titles) {
+  const tipWords = tokens(tip);
+  if (!tipWords.length) return -1;
+  let best = -1, bestScore = 0;
+  (titles || []).forEach((title, i) => {
+    const titleToks = tokens(title).filter(t => !TIP_STOPWORDS.has(t));
+    let score = 0;
+    for (const t of titleToks) {
+      if (tipWords.some(w => w === t || w.startsWith(t) || t.startsWith(w))) score++;
+    }
+    if (score > bestScore) { bestScore = score; best = i; }
+  });
+  return bestScore >= 1 ? best : -1;
+}
