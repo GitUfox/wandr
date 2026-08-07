@@ -141,9 +141,19 @@ export default function Dashboard({
         ${dep && ret ? `
         <div style="display:flex;align-items:center;gap:14px;padding:13px 34px 11px 16px">
           <div><div class="p-label">Depart</div><div class="p-date">${htmlEscape(dep)}</div></div>
-          <svg viewBox="0 0 46 16" style="flex:1;height:14px;min-width:36px" aria-hidden="true">
-            <line x1="0" y1="8" x2="18" y2="8" stroke="#d8d2cb" stroke-dasharray="2 3"/>
-            <path d="M22 14L40 8 22 2l3 6z" fill="#c96442"/>
+          <svg viewBox="0 0 120 26" style="flex:1;height:22px;min-width:48px" aria-hidden="true">
+            <line x1="10" y1="13" x2="44" y2="13" stroke="#d8d2cb" stroke-width="1.2"/>
+            <line x1="76" y1="13" x2="110" y2="13" stroke="#d8d2cb" stroke-width="1.2"/>
+            <circle cx="8" cy="13" r="2.4" fill="none" stroke="#9a938c" stroke-width="1.3"/>
+            <circle cx="112" cy="13" r="2.4" fill="#c96442"/>
+            <circle cx="60" cy="13" r="10" fill="#c96442"/>
+            <g stroke="#faf8f6" stroke-width="1.1" fill="none" stroke-linecap="round">
+              <line x1="51.4" y1="13" x2="68.6" y2="13"/>
+              <line x1="53.6" y1="8.6" x2="66.4" y2="8.6"/>
+              <line x1="53.6" y1="17.4" x2="66.4" y2="17.4"/>
+              <line x1="60" y1="3.4" x2="60" y2="22.6"/>
+              <ellipse cx="60" cy="13" rx="4.4" ry="9.6"/>
+            </g>
           </svg>
           <div style="text-align:right"><div class="p-label">Return</div><div class="p-date">${htmlEscape(ret)}</div></div>
         </div>
@@ -349,9 +359,24 @@ export default function Dashboard({
                         <div style={stubLabel}>Depart</div>
                         <div style={{ fontSize:19 /* off-ramp: ticket DEPART/RETURN dates — hero-tier numerals, title(17) visibly demotes them */, fontWeight:800, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{dep}</div>
                       </div>
-                      <svg viewBox="0 0 46 16" style={{ flex:1, height:16, minWidth:36 }} aria-hidden="true">
-                        <line x1="0" y1="8" x2="18" y2="8" stroke={T.border2} strokeDasharray="2 3" />
-                        <path d="M22 14L40 8 22 2l3 6z" fill={T.accent} />
+                      {/* Ticket center (design pick 2D): the brand globe seated
+                          mid-journey — hollow ring at Depart, solid dot at
+                          Return. Same mark as the logo's period; the PDF
+                          export carries the light-stock twin. No arrow: the
+                          dates already read left-to-right. */}
+                      <svg viewBox="0 0 120 26" style={{ flex:1, height:26, minWidth:48 }} aria-hidden="true">
+                        <line x1="10" y1="13" x2="44" y2="13" stroke={T.border} strokeWidth="1.2" />
+                        <line x1="76" y1="13" x2="110" y2="13" stroke={T.border} strokeWidth="1.2" />
+                        <circle cx="8" cy="13" r="2.4" fill="none" stroke={T.muted} strokeWidth="1.3" />
+                        <circle cx="112" cy="13" r="2.4" fill={T.accent} />
+                        <circle cx="60" cy="13" r="10" fill={T.accent} />
+                        <g stroke={T.bg2} strokeWidth="1.1" fill="none" strokeLinecap="round">
+                          <line x1="51.4" y1="13" x2="68.6" y2="13" />
+                          <line x1="53.6" y1="8.6" x2="66.4" y2="8.6" />
+                          <line x1="53.6" y1="17.4" x2="66.4" y2="17.4" />
+                          <line x1="60" y1="3.4" x2="60" y2="22.6" />
+                          <ellipse cx="60" cy="13" rx="4.4" ry="9.6" />
+                        </g>
                       </svg>
                       <div style={{ textAlign:"right" }}>
                         <div style={stubLabel}>Return</div>
