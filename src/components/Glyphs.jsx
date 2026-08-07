@@ -29,8 +29,9 @@ export default function Glyph({ name, size = 16, color = "currentColor", style }
       return <svg {...p}><rect x="4" y="4" width="16" height="16" rx="4" /><path d="M9 9h.01M15 9h.01M12 12h.01M9 15h.01M15 15h.01" /></svg>;
     case "plane": // solid — the brand mark's plane
       return <svg {...p} fill={color} stroke="none"><path d="M2.5 11.2L21.5 3l-5.6 18-4.3-6.9L2.5 11.2z" /></svg>;
-    case "coin": // cost fact chip (4A)
-      return <svg {...p}><circle cx="12" cy="12" r="8" /><path d="M14.5 9.5a3.5 3.5 0 1 0 0 5" /></svg>;
+    case "coin": // cost fact chip (4A) — banknote, not a circled letter: the
+      // original circle + C-curve read as a copyright symbol at chip size.
+      return <svg {...p}><rect x="2.5" y="7" width="19" height="11" rx="2" /><circle cx="12" cy="12.5" r="2.6" /></svg>;
     case "clock": // duration fact chip (4A)
       return <svg {...p}><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></svg>;
     case "doors": // opening-hours fact chip (4A)
