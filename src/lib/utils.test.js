@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles } from "./utils.js";
+import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles, splitDetails, classifyFact } from "./utils.js";
 
 // ── arr ───────────────────────────────────────────────────────────────────────
 
@@ -408,5 +408,93 @@ describe("extractActivityTitles", () => {
   it("returns [] for empty input", () => {
     expect(extractActivityTitles("")).toEqual([]);
     expect(extractActivityTitles(null)).toEqual([]);
+  });
+});
+
+// ── splitDetails (4A grammar + 4C legacy bridge) ──────────────────────────────
+//
+// RENDER-TIME ONLY contract: splitDetails never mutates the stored string —
+// these tests treat the input as opaque and only assert on the split view.
+
+describe("splitDetails — 4A grammar plans", () => {
+  const CELL = "Moorish hilltop citadel with the best panorama over Alfama. · ~€15 · 2h · opens 09:00 · book ahead";
+
+  it("splits description from fact tokens on the middle-dot separator", () => {
+    const { desc, facts } = splitDetails(CELL);
+    expect(desc).toBe("Moorish hilltop citadel with the best panorama over Alfama.");
+    expect(facts.map(f => f.text)).toEqual(["~€15", "2h", "opens 09:00", "book ahead"]);
+  });
+
+  it("classifies each token into its chip family", () => {
+    const { facts } = splitDetails(CELL);
+    expect(facts.map(f => f.kind)).toEqual(["cost", "duration", "hours", "booking"]);
+  });
+
+  it("unknown tokens fall back to the generic note chip", () => {
+    const { facts } = splitDetails("A market hall. · cash only");
+    expect(facts).toEqual([{ kind: "note", text: "cash only" }]);
+  });
+
+  it("strips bold markers and tolerates missing tokens", () => {
+    const { desc, facts } = splitDetails("**Free viewpoint over the river.** · free");
+    expect(desc).toBe("Free viewpoint over the river.");
+    expect(facts).toEqual([{ kind: "cost", text: "free" }]);
+  });
+
+  it("caps the chip row at five facts", () => {
+    const { facts } = splitDetails("d. · a · b · c · d · e · f · g");
+    expect(facts).toHaveLength(5);
+  });
+
+  it("handles empty and nullish input", () => {
+    expect(splitDetails("")).toEqual({ desc: "", facts: [] });
+    expect(splitDetails(null)).toEqual({ desc: "", facts: [] });
+  });
+});
+
+describe("splitDetails — 4C bridge for legacy sentence blobs", () => {
+  const LEGACY = "Moorish hilltop citadel over Alfama. Entry ~€15, allow 2 hours; opens 09:00 — buy tickets online to skip the queue.";
+
+  it("keeps the full prose as the description (a regex can miss facts)", () => {
+    expect(splitDetails(LEGACY).desc).toBe(LEGACY);
+  });
+
+  it("derives cost, duration, hours and booking chips from the prose", () => {
+    const kinds = splitDetails(LEGACY).facts.map(f => f.kind);
+    expect(kinds).toContain("cost");
+    expect(kinds).toContain("duration");
+    expect(kinds).toContain("hours");
+    expect(kinds).toContain("booking");
+  });
+
+  it("derives nothing from a fact-free sentence", () => {
+    const { desc, facts } = splitDetails("Wander the old town at your own pace.");
+    expect(facts).toEqual([]);
+    expect(desc).toBe("Wander the old town at your own pace.");
+  });
+
+  it("never misreads a bare time range as a cost", () => {
+    const { facts } = splitDetails("Sunset spot, best 18:00–19:30.");
+    expect(facts.filter(f => f.kind === "cost")).toEqual([]);
+  });
+});
+
+describe("classifyFact", () => {
+  it("recognises currencies beyond the euro", () => {
+    expect(classifyFact("$25")).toBe("cost");
+    expect(classifyFact("¥1200")).toBe("cost");
+    expect(classifyFact("₺150")).toBe("cost");
+  });
+  it("recognises minute durations", () => {
+    expect(classifyFact("45 min")).toBe("duration");
+    expect(classifyFact("1.5h")).toBe("duration");
+  });
+});
+
+describe("classifyFact — negated tokens stay quiet", () => {
+  it("a padded negative never renders as a hot booking chip", () => {
+    expect(classifyFact("no booking needed")).toBe("note");
+    expect(classifyFact("No reservations required")).toBe("note");
+    expect(classifyFact("book ahead")).toBe("booking");
   });
 });

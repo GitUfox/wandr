@@ -709,3 +709,44 @@ describe("buildPlanPrompt — events integration", () => {
     expect(out).toContain("that ships the traveler a duplicate");
   });
 });
+
+// ── Details micro-grammar (design pick 4A) ────────────────────────────────────
+//
+// One grammar, three writers: full plan, day edit, activity tweak. A single
+// site missing it means one edit regresses a chip block into a sentence blob.
+
+describe("details micro-grammar reaches every row-writing prompt", () => {
+  const builders = () => ({
+    planFull: buildPlanPrompt("full", BASE_TRIP),
+    editDay:  buildEditDayPrompt("Day 1 — Mon", "## Day 1 — Mon", "refresh", BASE_TRIP),
+    tweak:    buildTweakActivityPrompt(BASE_TRIP, "Day 1 — Mon", { time: "09:00", title: "**T**", details: "d" }, "cheaper"),
+  });
+
+  it("every builder carries the DETAILS FORMAT rule", () => {
+    for (const [label, text] of Object.entries(builders())) {
+      expect(text, label).toContain("DETAILS FORMAT:");
+      expect(text, label).toContain('separated by " · "');
+    }
+  });
+
+  it("every builder bans the pipe character inside cells (it is the table delimiter)", () => {
+    for (const [label, text] of Object.entries(builders())) {
+      expect(text, label).toContain('NEVER use the "|" character inside a cell');
+    }
+  });
+
+  it("the row templates model the grammar, not the old sentence blob", () => {
+    for (const [label, text] of Object.entries(builders())) {
+      expect(text, label).toContain("what it is, one factual sentence · ~cost · duration");
+      expect(text, label).not.toContain("facts only, duration");
+    }
+  });
+
+  it("tokens are ordered cost → duration → hours → booking in the rule", () => {
+    const rule = buildPlanPrompt("full", BASE_TRIP);
+    const idx = s => rule.indexOf(s, rule.indexOf("DETAILS FORMAT:"));
+    expect(idx("cost,")).toBeLessThan(idx("duration,"));
+    expect(idx("duration,")).toBeLessThan(idx("opening-hours"));
+    expect(idx("opening-hours")).toBeLessThan(idx("booking note"));
+  });
+});

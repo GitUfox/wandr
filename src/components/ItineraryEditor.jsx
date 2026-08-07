@@ -13,9 +13,48 @@ import { useState } from "react";
 import { Reorder, useDragControls } from "framer-motion";
 import { T } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
-import { BUCKETS, bucketOf, timeSortKey, formatTime, displayTime } from "../lib/utils.js";
+import { BUCKETS, bucketOf, timeSortKey, formatTime, displayTime, splitDetails } from "../lib/utils.js";
+import Glyph from "./Glyphs.jsx";
 
 const clean = s => (s || "").replace(/\*\*/g, "").trim();
+
+/* ── Fact chips (design pick 4A, with the 4C legacy bridge) ──────────────────
+   splitDetails() turns the stored Details string into a description line plus
+   standardized fact tokens at RENDER TIME only — the string itself is never
+   rewritten, so edit/copy/PDF/sync all keep carrying the raw cell. Grammar
+   plans split on " · "; legacy sentence-blobs get chips derived from the
+   prose (which keeps the facts too — a regex can miss). */
+const FACT_GLYPH = { cost: "coin", duration: "clock", hours: "doors", booking: "bookmark", note: "info" };
+
+function DetailsBlock({ details, indent = 0 }) {
+  const { desc, facts } = splitDetails(details);
+  if (!desc && !facts.length) return null;
+  return (
+    <>
+      {desc && <div style={{ fontSize: T.fs.meta, color: T.muted, lineHeight: 1.55, marginLeft: indent }}>{desc}</div>}
+      {facts.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: indent }}>
+          {facts.map((f, i) => {
+            const hot = f.kind === "booking";
+            return (
+              <span key={i} style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                fontSize: T.fs.label, fontWeight: 700, lineHeight: 1.3, fontVariantNumeric: "tabular-nums",
+                color: hot ? T.accentHover : T.muted,
+                background: hot ? "rgba(201,100,66,.08)" : T.bg2,
+                border: `1px solid ${hot ? "rgba(201,100,66,.4)" : T.border}`,
+                borderRadius: T.r.sm, padding: "3px 8px",
+              }}>
+                <Glyph name={FACT_GLYPH[f.kind] || "info"} size={11} color="currentColor" />
+                {f.text}
+              </span>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}
 
 /* ── Slot-chip time picker (design pick 3A) ──────────────────────────────────
    Tap a slot instead of typing. 30-minute grain grouped by daypart — the
@@ -132,7 +171,7 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
           {pickerOpen && (
             <TimeSlotPicker value={clean(time)} onPick={t => { setTime(t); setPickerOpen(false); }} />
           )}
-          <textarea value={details} onChange={e => setDetails(e.target.value)} placeholder="Details — what it is, how long, how much" rows={3}
+          <textarea value={details} onChange={e => setDetails(e.target.value)} placeholder="Details — what it is · ~€15 · 2h · opens 09:00 · book ahead" rows={3}
             style={{ ...inputSt, lineHeight: 1.5, resize: "vertical", marginBottom: 8 }} />
           <div style={{ display: "flex", gap: 7, justifyContent: "flex-end" }}>
             <button onClick={cancel} style={{ ...iconBtn, fontSize: T.fs.body, color: T.muted, padding: "6px 12px", border: `1px solid ${T.border}` }}>Cancel</button>
@@ -147,7 +186,7 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
           <div style={{ width: 58, flexShrink: 0, fontSize: T.fs.meta, color: T.accent, fontWeight: 700, paddingTop: 2 }}>{displayTime(clean(a.time))}</div>
           <div style={{ flex: 1, minWidth: 0, paddingRight: 60, paddingTop: 1 }}>
             <div style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.35, marginBottom: 2 }}>{clean(a.title)}</div>
-            {a.details && <div style={{ fontSize: T.fs.meta, color: T.muted, lineHeight: 1.55 }}>{clean(a.details)}</div>}
+            {a.details && <DetailsBlock details={a.details} />}
             {/* Move picker — choose a destination day */}
             {moving && otherDays.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", marginTop: 8 }}>
@@ -229,7 +268,7 @@ function BucketCard({ a, dayIdx, bucket, onMoveToBucket }) {
         <span style={{ fontSize: T.fs.label, color: T.accent, fontWeight: 700, flexShrink: 0, width: 54 }}>{displayTime(clean(a.time))}</span>
         <span style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.3 }}>{clean(a.title)}</span>
       </div>
-      {a.details && <div style={{ fontSize: T.fs.meta, color: T.muted, lineHeight: 1.5, marginTop: 3, marginLeft: 62 }}>{clean(a.details)}</div>}
+      {a.details && <div style={{ marginTop: 3 }}><DetailsBlock details={a.details} indent={62} /></div>}
       <div style={{ display: "flex", gap: 5, marginTop: 6, marginLeft: 62, alignItems: "center" }}>
         <span style={{ fontSize: T.fs.label, color: T.hint }}>Move to:</span>
         {BUCKETS.filter(b => b !== bucket).map(b => (

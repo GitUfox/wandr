@@ -29,6 +29,16 @@ export default function Glyph({ name, size = 16, color = "currentColor", style }
       return <svg {...p}><rect x="4" y="4" width="16" height="16" rx="4" /><path d="M9 9h.01M15 9h.01M12 12h.01M9 15h.01M15 15h.01" /></svg>;
     case "plane": // solid — the brand mark's plane
       return <svg {...p} fill={color} stroke="none"><path d="M2.5 11.2L21.5 3l-5.6 18-4.3-6.9L2.5 11.2z" /></svg>;
+    case "coin": // cost fact chip (4A)
+      return <svg {...p}><circle cx="12" cy="12" r="8" /><path d="M14.5 9.5a3.5 3.5 0 1 0 0 5" /></svg>;
+    case "clock": // duration fact chip (4A)
+      return <svg {...p}><circle cx="12" cy="12" r="8" /><path d="M12 8v4l3 2" /></svg>;
+    case "doors": // opening-hours fact chip (4A)
+      return <svg {...p}><path d="M5 20V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14M4 20h16M14 12h.01" /></svg>;
+    case "bookmark": // book-ahead fact chip (4A)
+      return <svg {...p}><path d="M7 4h10v16l-5-4-5 4z" /></svg>;
+    case "info": // generic fact chip (4A fallback)
+      return <svg {...p}><circle cx="12" cy="12" r="8" /><path d="M12 11v4M12 8h.01" /></svg>;
     default:
       return null;
   }

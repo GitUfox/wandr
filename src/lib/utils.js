@@ -297,3 +297,65 @@ export function spliceDayInPlan(planText, dayIndex, newContent) {
   const end = dayIndex + 1 < positions.length ? positions[dayIndex + 1] : planText.length;
   return planText.slice(0, start) + newContent.trimEnd() + "\n\n" + planText.slice(end);
 }
+
+// ── Activity details micro-grammar (design pick 4A + 4C bridge) ──────────────
+//
+// Generated plans write the Details cell as one sentence followed by fact
+// tokens separated by " · ":  "Moorish citadel over Alfama. · ~€15 · 2h ·
+// opens 09:00 · book ahead".  splitDetails() is RENDER-TIME ONLY: the stored
+// string is the contract (parse↔serialize invariant, copy, PDF, sync all
+// carry it verbatim) and nothing here ever writes back.
+//
+// Legacy plans have no separator — the 4C bridge derives fact-looking
+// fragments from the prose instead. The prose keeps them too (redundancy
+// accepted): a regex can miss, so the sentence must stay complete.
+
+const FACT_KINDS = [
+  { kind: "cost",     re: /(?:[€$£¥₺]|\bUSD\b|\bEUR\b|\bkr\b)\s?\d|\bfree\b/i },
+  { kind: "duration", re: /^~?\s*\d+(?:[.,]\d+)?(?:\s?[–-]\s?\d+(?:[.,]\d+)?)?\s?(?:h(?:ours?|rs?)?|min(?:utes?|s)?)\b/i },
+  { kind: "hours",    re: /\b(?:opens?|closes?|closed|open|until|last entry|daily)\b/i },
+  { kind: "booking",  re: /\b(?:book|reserve|reservation|pre-?book|tickets? online)\b/i },
+];
+
+/** Which chip family a fact token belongs to — drives the glyph. */
+export function classifyFact(text) {
+  // Negated tokens ("no booking needed") must not light up as a hot booking
+  // chip — the prompt tells the model to omit them, but a model that pads
+  // anyway should degrade to a quiet note, not a false call-to-action.
+  if (/^no\b/i.test(String(text).trim())) return "note";
+  for (const { kind, re } of FACT_KINDS) if (re.test(text)) return kind;
+  return "note";
+}
+
+const MAX_FACTS = 5; // bound the chip row — anything past this stays prose-only
+
+/**
+ * Split a Details string into { desc, facts:[{kind,text}] } for rendering.
+ * Grammar plans split on " · "; legacy prose falls through to derivation.
+ */
+export function splitDetails(details) {
+  const raw = String(details || "").replace(/\*\*/g, "").trim();
+  if (!raw) return { desc: "", facts: [] };
+
+  if (raw.includes(" · ")) {
+    const parts = raw.split(" · ").map(s => s.trim()).filter(Boolean);
+    const desc = parts.shift() || "";
+    return {
+      desc,
+      facts: parts.slice(0, MAX_FACTS).map(t => ({ kind: classifyFact(t), text: t })),
+    };
+  }
+
+  // 4C bridge — derive chips from legacy prose; desc stays the full sentence.
+  const facts = [];
+  const cost = raw.match(/~?\s?(?:[€$£¥₺]\s?\d+(?:[.,]\d+)?(?:\s?[–-]\s?\d+(?:[.,]\d+)?)?)|\bfree entry\b/i);
+  if (cost) facts.push({ kind: "cost", text: cost[0].replace(/\s+/g, " ").trim() });
+  const dur = raw.match(/\b\d+(?:[.,]\d+)?(?:\s?[–-]\s?\d+(?:[.,]\d+)?)?\s?(?:hours?|hrs?|h\b|minutes?|mins?)\b/i);
+  if (dur) facts.push({ kind: "duration", text: dur[0].trim() });
+  const hrs = raw.match(/\b(?:opens?|closes?|open)\s(?:at\s|daily\s)?\d{1,2}[:h.]?\d{0,2}(?:\s?[–-]\s?\d{1,2}[:h.]?\d{0,2})?/i);
+  if (hrs) facts.push({ kind: "hours", text: hrs[0].trim() });
+  if (/\b(?:book(?:ing)?\s?(?:ahead|online|in advance)|pre-?book|tickets? online|reservations? (?:required|recommended|essential))\b/i.test(raw)) {
+    facts.push({ kind: "booking", text: "book ahead" });
+  }
+  return { desc: raw, facts };
+}

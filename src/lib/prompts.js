@@ -340,6 +340,22 @@ export function buildTripCategoriesPrompt(answers, uploadedFiles) {
   return { messageContent: assembleTripMessage(contextText, CATEGORIES_SCHEMA(wantsNightlife(answers)), imageBlocks), n, safeStart, safeEnd };
 }
 
+// ── Details micro-grammar (design pick 4A) ──────────────────────────────────
+//
+// Every Details cell = one factual sentence, then standardized fact tokens
+// separated by " · " (middle dot with spaces). The UI splits at render time
+// into a description line + fact chips (splitDetails in utils.js). ONE
+// definition shared by all three row-writing prompts — full plan, day edit,
+// activity tweak — because a single site drifting regresses edited blocks
+// back into sentence blobs. The "|" ban is load-bearing: pipe is the table
+// cell delimiter, one stray pipe shreds the row parse.
+
+const DETAILS_CELL = `what it is, one factual sentence · ~cost · duration · hours note · book ahead`;
+
+const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [HH:MM] | **Place** | ${DETAILS_CELL} |\nENDTABLE`;
+
+const DETAILS_RULE = `DETAILS FORMAT: each Details cell is one factual sentence, then fact tokens separated by " · " (space, middle dot, space) in this exact order: cost, duration, opening-hours note, booking note. Omit any token that doesn't apply — never pad, and never write negative or filler tokens ("no booking needed", "accessible all hours"): omit those entirely. "free" alone is a valid cost token. Keep tokens terse ("~€15", "2h", "opens 09:00", "book ahead"). NEVER use the "|" character inside a cell. Example cell: Moorish hilltop citadel with the best panorama over Alfama. · ~€15 · 2h · opens 09:00 · book ahead`;
+
 // ── Plan generation prompt ─────────────────────────────────────────────────────
 
 /**
@@ -352,8 +368,6 @@ export function buildEditDayPrompt(dayLabel, dayContent, instruction, trip) {
   const [lo, hi] = paceBand(c.pace);
 
   const allItems = formatActivityItems(trip.categories);
-
-  const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [HH:MM] | **Place** | facts only, duration |\nENDTABLE`;
 
   return `You are a travel planner. Regenerate ONE day of an itinerary for ${trip.destination}.
 
@@ -386,6 +400,7 @@ ${TABLE_BLOCK}
 TIPS: [practical tip] | [logistics tip]
 
 - ${lo} to ${hi} activities. No filler phrases. Facts only.
+- ${DETAILS_RULE}
 - Do not schedule a venue that already appears on another day of this trip.
 - Bold place names inside table cells using **Name**
 - ACCURACY: Only recommend venues you are confident are currently operating.`;
@@ -416,12 +431,13 @@ TRAVELER CONTEXT (respect these):
 Apply the change request. Keep the same time slot unless the request implies otherwise.
 Write for someone who wants facts, not atmosphere — what it is, where, how long, how much.
 Use local currency. Times in 24-hour HH:MM format (e.g. 09:00, 17:30). Only suggest venues you are confident are currently operating.
+${DETAILS_RULE}
 
 STRICT OUTPUT — return ONLY this block, nothing before or after:
 TABLE:
 | Time | Activity | Details |
 |------|----------|----------|
-| [HH:MM] | **Place** | facts only, duration, price |
+| [HH:MM] | **Place** | ${DETAILS_CELL} |
 ENDTABLE`;
 }
 
@@ -509,8 +525,6 @@ export function buildPlanPrompt(mode, trip, editInstruction = null, editType = n
     ? `DAY HEADERS — use these exact labels in order:\n${dayLabels.map((l, i) => `  Day ${i + 1}: ${l}`).join("\n")}`
     : "";
 
-  const TABLE_BLOCK = `TABLE:\n| Time | Activity | Details |\n|------|----------|----------|\n| [HH:MM] | **Place** | facts only, duration |\nENDTABLE`;
-
   const eventsBlock = buildEventsBlock(events);
 
   const modeInstructions = {
@@ -559,6 +573,7 @@ ${allItems || `Use your knowledge of ${a.destination}`}
 
 STRICT OUTPUT RULES:
 - Tables exactly as shown with TABLE/ENDTABLE markers
+- ${DETAILS_RULE}
 - ${lo} to ${hi} activities per day — match this to the stated pace, do not average it with any other number
 - Never schedule the same venue twice across the itinerary. Each activity must be a distinct place. If you catch yourself repeating one, REPLACE THE ROW — put the new venue's name in the Activity column. Never leave the repeated name in Activity and describe a substitute in Details ("already visited Day 1 — substitute: ..."); that ships the traveler a duplicate.
 - Bold place names inside table cells using **Name**
