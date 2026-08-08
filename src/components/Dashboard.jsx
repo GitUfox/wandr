@@ -17,6 +17,59 @@ import EditTripSheet from "./EditTripSheet.jsx";
 import StardustBurst from "./StardustBurst.jsx";
 import Glyph from "./Glyphs.jsx";
 
+/* ── Curating-state motion (2026-08-07, design picks 1A+2A+3A) ────────────────
+   RollingMsg — LOAD_MSGS rise in / lift out instead of hard-swapping (2A).
+   GhostDays  — skeleton day cards breathe where the itinerary will land (3A);
+   the 1A traveling spark lives inline in the ticket rail SVG. All pure CSS
+   keyframes (the wspark, wroll and wghost families in the Dashboard style
+   block), all silenced by the prefers-reduced-motion guard there. */
+function RollingMsg({ text }) {
+  const [prev, setPrev] = useState(null);
+  const lastRef = useRef(text);
+  useEffect(() => {
+    if (text === lastRef.current) return;
+    setPrev(lastRef.current);
+    lastRef.current = text;
+    const t = setTimeout(() => setPrev(null), 320);
+    return () => clearTimeout(t);
+  }, [text]);
+  const msgStyle = { fontSize:T.fs.meta, color:T.hint };
+  return (
+    <span style={{ position:"relative", display:"inline-block" }}>
+      {/* key remounts the span on every message change, re-firing the rise-in */}
+      <span key={text} className="wroll-in" style={{ ...msgStyle, display:"inline-block", animation:"wrollin .3s ease" }}>{text}</span>
+      {prev && (
+        <span className="wroll-out" style={{ ...msgStyle, position:"absolute", left:0, top:0, whiteSpace:"nowrap", animation:"wrollout .3s ease forwards" }}>{prev}</span>
+      )}
+    </span>
+  );
+}
+
+function GhostDays({ nights }) {
+  const count = Math.min(3, Math.max(2, Number(nights) || 2));
+  const shimGrey = `linear-gradient(90deg, ${T.bg2} 25%, ${T.bg3} 45%, ${T.bg2} 65%)`;
+  const shimAccent = "linear-gradient(90deg, rgba(201,100,66,.10) 25%, rgba(201,100,66,.22) 45%, rgba(201,100,66,.10) 65%)";
+  const barStyle = (extra) => ({ height:9, borderRadius:5, backgroundSize:"220% 100%", animation:"wghostshim 2.4s linear infinite", ...extra });
+  // Deliberately uneven widths — real itineraries are ragged, and identical
+  // skeletons read as a broken repeat rather than a preview.
+  const layouts = [["38%", ["62%","46%","57%"]], ["30%", ["52%","66%"]], ["34%", ["58%","44%","50%"]]];
+  return (
+    <div aria-hidden="true">
+      {layouts.slice(0, count).map(([titleW, lines], i) => (
+        <div key={i} className="wghost" style={{ background:T.bg1, border:`1px solid ${T.border}`, borderRadius:T.r.md, padding:"13px 15px", marginBottom:10, animation:"wghostbreathe 3.2s ease-in-out infinite", animationDelay:`${i * 0.5}s` }}>
+          <div className="wghost-bar" style={barStyle({ width:titleW, height:11, marginBottom:3, background:shimGrey })} />
+          {lines.map((w, j) => (
+            <div key={j} style={{ display:"flex", gap:9, alignItems:"center", marginTop:8 }}>
+              <div className="wghost-bar" style={barStyle({ width:44, flexShrink:0, background:shimAccent })} />
+              <div className="wghost-bar" style={barStyle({ width:w, background:shimGrey })} />
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Dashboard({
   trip,
   trips = [],
@@ -328,6 +381,12 @@ export default function Dashboard({
         @keyframes blink{50%{opacity:0}}
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes pulse{50%{box-shadow:0 0 0 6px rgba(201,100,66,.06)}}
+        @keyframes wspark{0%{transform:translateX(0);opacity:0}6%{opacity:1}46%{opacity:1}50%{transform:translateX(52px);opacity:0}62%{transform:translateX(52px);opacity:0}66%{transform:translateX(68px);opacity:1}92%{opacity:1}100%{transform:translateX(104px);opacity:0}}
+        @keyframes wrollin{from{opacity:0;transform:translateY(6px)}}
+        @keyframes wrollout{to{opacity:0;transform:translateY(-6px)}}
+        @keyframes wghostbreathe{0%,100%{opacity:.45}50%{opacity:.8}}
+        @keyframes wghostshim{to{background-position:-220% 0}}
+        @media (prefers-reduced-motion:reduce){.wspark,.wroll-in,.wroll-out,.wghost,.wghost-bar{animation:none!important}}
         *{box-sizing:border-box}
       `}</style>
 
@@ -428,6 +487,10 @@ export default function Dashboard({
                         <line x1="76" y1="13" x2="110" y2="13" stroke={T.border} strokeWidth="1.2" />
                         <circle cx="8" cy="13" r="2.4" fill="none" stroke={T.muted} strokeWidth="1.3" />
                         <circle cx="112" cy="13" r="2.4" fill={T.accent} />
+                        {/* 1A traveling spark (curating only): leaves the hollow
+                            ring, is swallowed by the globe (drawn after = on
+                            top), re-emerges, lands on Return. */}
+                        {building && <circle className="wspark" cx="8" cy="13" r="1.8" fill={T.accentHover} style={{ animation:"wspark 3.4s ease-in-out infinite" }} />}
                         <circle cx="60" cy="13" r="10" fill={T.accent} />
                         <g stroke={T.bg2} strokeWidth="1.1" fill="none" strokeLinecap="round">
                           <line x1="51.4" y1="13" x2="68.6" y2="13" />
@@ -531,11 +594,14 @@ export default function Dashboard({
                   without a plan) vs status row (design pick 2A). On a normal
                   build the itinerary auto-starts, so the CTA is never seen. */}
               {building ? (
-                <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:10, rowGap:8, padding:"4px 2px 12px", borderBottom:`1px solid ${T.border}`, marginBottom:12 }}>
-                  <span style={{ width:7, height:7, borderRadius:"50%", background:T.accent, boxShadow:"0 0 0 3px rgba(201,100,66,.14)", flexShrink:0, animation:"pulse 1.2s ease-in-out infinite" }} />
-                  <span style={{ fontSize:T.fs.body, fontWeight:800, color:T.ink }}>Curating your trip</span>
-                  <span style={{ fontSize:T.fs.meta, color:T.hint }}>{buildingMsg || "finding the good stuff…"}</span>
-                </div>
+                <>
+                  <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:10, rowGap:8, padding:"4px 2px 12px", borderBottom:`1px solid ${T.border}`, marginBottom:12 }}>
+                    <span style={{ width:7, height:7, borderRadius:"50%", background:T.accent, boxShadow:"0 0 0 3px rgba(201,100,66,.14)", flexShrink:0, animation:"pulse 1.2s ease-in-out infinite" }} />
+                    <span style={{ fontSize:T.fs.body, fontWeight:800, color:T.ink }}>Curating your trip</span>
+                    <RollingMsg text={buildingMsg || "finding the good stuff…"} />
+                  </div>
+                  <GhostDays nights={trip.nights} />
+                </>
               ) : !planText && !planLoading ? (() => {
                 const hero = MODES[0];
                 return (
