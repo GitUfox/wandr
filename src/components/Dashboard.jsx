@@ -4,7 +4,7 @@
  * Manages its own print-modal state (only relevant here).
  * Everything else — trip data, plan state — comes from App.jsx via props.
  */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { MODES, T, FEATURES, AI_DISCLAIMER } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { arr, formatShortDate, ticketDate, seasonShort, timeAgo, splitDetails, matchTipToActivity, displayTime } from "../lib/utils.js";
@@ -16,6 +16,33 @@ import WandrLogo from "./WandrLogo.jsx";
 import EditTripSheet from "./EditTripSheet.jsx";
 import StardustBurst from "./StardustBurst.jsx";
 import Glyph from "./Glyphs.jsx";
+
+// The ticket's real-earth canvas (design pick 4A) — same chunk the logo's
+// period already lazy-loads, so this adds zero new bytes to the bundle.
+const Globe = lazy(() => import("./Globe.jsx"));
+
+/* TiltedEarthMark — the static twin of the ticket emblem (design pick 4B
+   construction): 23.5°-tilted sphere, one meridian, CURVED latitude arcs
+   (straight chords are what read as a basketball), polar axis stubs. Used as
+   the Suspense fallback while the canvas chunk loads; the PDF export carries
+   the light-stock copy of this same construction (keep them in sync). */
+function TiltedEarthMark({ size = 22, tilt = -23.5 }) {
+  return (
+    <svg viewBox="0 0 28 28" width={size} height={size} aria-hidden="true" style={{ display:"block" }}>
+      <g transform={`translate(14,14) rotate(${tilt})`}>
+        <circle r="10" fill={T.accent} />
+        <g stroke={T.bg2} strokeWidth="1.05" fill="none" strokeLinecap="round">
+          <ellipse rx="4.5" ry="9.7" />
+          <path d="M -9,-4.6 Q 0,-6.8 9,-4.6" />
+          <path d="M -10,0 Q 0,1.9 10,0" />
+          <path d="M -9,4.6 Q 0,6.8 9,4.6" />
+        </g>
+        <line x1="0" y1="-13.4" x2="0" y2="-10.6" stroke={T.muted} strokeWidth="1.1" />
+        <line x1="0" y1="10.6" x2="0" y2="13.4" stroke={T.muted} strokeWidth="1.1" />
+      </g>
+    </svg>
+  );
+}
 
 /* ── Curating-state motion (2026-08-07, design picks 1A+2A+3A) ────────────────
    RollingMsg — LOAD_MSGS rise in / lift out instead of hard-swapping (2A).
@@ -195,18 +222,31 @@ export default function Dashboard({
         ${dep && ret ? `
         <div style="display:flex;align-items:center;gap:14px;padding:13px 34px 11px 16px">
           <div><div class="p-label">Depart</div><div class="p-date">${htmlEscape(dep)}</div></div>
-          <svg viewBox="0 0 120 26" style="flex:1;height:22px;min-width:48px" aria-hidden="true">
-            <line x1="10" y1="13" x2="44" y2="13" stroke="#d8d2cb" stroke-width="1.2"/>
-            <line x1="76" y1="13" x2="110" y2="13" stroke="#d8d2cb" stroke-width="1.2"/>
+          <svg viewBox="0 0 120 26" style="flex:1;height:22px;min-width:48px;overflow:visible" aria-hidden="true">
+            <line x1="10" y1="13" x2="40" y2="13" stroke="#d8d2cb" stroke-width="1.2"/>
+            <line x1="80" y1="13" x2="110" y2="13" stroke="#d8d2cb" stroke-width="1.2"/>
             <circle cx="8" cy="13" r="2.4" fill="none" stroke="#9a938c" stroke-width="1.3"/>
             <circle cx="112" cy="13" r="2.4" fill="#c96442"/>
-            <circle cx="60" cy="13" r="10" fill="#c96442"/>
-            <g stroke="#faf8f6" stroke-width="1.1" fill="none" stroke-linecap="round">
-              <line x1="51.4" y1="13" x2="68.6" y2="13"/>
-              <line x1="53.6" y1="8.6" x2="66.4" y2="8.6"/>
-              <line x1="53.6" y1="17.4" x2="66.4" y2="17.4"/>
-              <line x1="60" y1="3.4" x2="60" y2="22.6"/>
-              <ellipse cx="60" cy="13" rx="4.4" ry="9.6"/>
+            <!-- Light-stock twin of the ticket emblem (4A+5A): canvas can't
+                 print, so paper gets TiltedEarthMark's construction with the
+                 ring and ember frozen mid-front-pass. Keep in sync with
+                 TiltedEarthMark in this file. -->
+            <g transform="translate(60,13) rotate(-20)">
+              <ellipse rx="16" ry="5" fill="none" stroke="#c9c2ba" stroke-width=".9"/>
+            </g>
+            <g transform="translate(60,13) rotate(-23.5)">
+              <circle r="10" fill="#c96442"/>
+              <g stroke="#faf8f6" stroke-width="1.05" fill="none" stroke-linecap="round">
+                <ellipse rx="4.5" ry="9.7"/>
+                <path d="M -9,-4.6 Q 0,-6.8 9,-4.6"/>
+                <path d="M -10,0 Q 0,1.9 10,0"/>
+                <path d="M -9,4.6 Q 0,6.8 9,4.6"/>
+              </g>
+              <line x1="0" y1="-13.4" x2="0" y2="-10.6" stroke="#9a938c" stroke-width="1.1"/>
+              <line x1="0" y1="10.6" x2="0" y2="13.4" stroke="#9a938c" stroke-width="1.1"/>
+            </g>
+            <g transform="translate(60,13) rotate(-20) scale(1,0.3125)">
+              <ellipse cx="8" cy="13.9" rx="1.7" ry="5.4" fill="#c96442"/>
             </g>
           </svg>
           <div style="text-align:right"><div class="p-label">Return</div><div class="p-date">${htmlEscape(ret)}</div></div>
@@ -386,7 +426,9 @@ export default function Dashboard({
         @keyframes wrollout{to{opacity:0;transform:translateY(-6px)}}
         @keyframes wghostbreathe{0%,100%{opacity:.45}50%{opacity:.8}}
         @keyframes wghostshim{to{background-position:-220% 0}}
-        @media (prefers-reduced-motion:reduce){.wspark,.wroll-in,.wroll-out,.wghost,.wghost-bar{animation:none!important}}
+        @keyframes worbit{to{transform:rotate(-360deg)}}
+        @keyframes worbitfade{0%{opacity:.9}8%{opacity:.15}42%{opacity:.15}52%{opacity:1}94%{opacity:1}100%{opacity:.9}}
+        @media (prefers-reduced-motion:reduce){.wspark,.wroll-in,.wroll-out,.wghost,.wghost-bar,.worbit,.worbit-spark{animation:none!important}}
         *{box-sizing:border-box}
       `}</style>
 
@@ -477,29 +519,47 @@ export default function Dashboard({
                         <div style={stubLabel}>Depart</div>
                         <div style={{ fontSize:19 /* off-ramp: ticket DEPART/RETURN dates — hero-tier numerals, title(17) visibly demotes them */, fontWeight:800, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{dep}</div>
                       </div>
-                      {/* Ticket center (design pick 2D): the brand globe seated
-                          mid-journey — hollow ring at Depart, solid dot at
-                          Return. Same mark as the logo's period; the PDF
-                          export carries the light-stock twin. No arrow: the
-                          dates already read left-to-right. */}
-                      <svg viewBox="0 0 120 26" style={{ flex:1, height:26, minWidth:48 }} aria-hidden="true">
-                        <line x1="10" y1="13" x2="44" y2="13" stroke={T.border} strokeWidth="1.2" />
-                        <line x1="76" y1="13" x2="110" y2="13" stroke={T.border} strokeWidth="1.2" />
-                        <circle cx="8" cy="13" r="2.4" fill="none" stroke={T.muted} strokeWidth="1.3" />
-                        <circle cx="112" cy="13" r="2.4" fill={T.accent} />
-                        {/* 1A traveling spark (curating only): leaves the hollow
-                            ring, is swallowed by the globe (drawn after = on
-                            top), re-emerges, lands on Return. */}
-                        {building && <circle className="wspark" cx="8" cy="13" r="1.8" fill={T.accentHover} style={{ animation:"wspark 3.4s ease-in-out infinite" }} />}
-                        <circle cx="60" cy="13" r="10" fill={T.accent} />
-                        <g stroke={T.bg2} strokeWidth="1.1" fill="none" strokeLinecap="round">
-                          <line x1="51.4" y1="13" x2="68.6" y2="13" />
-                          <line x1="53.6" y1="8.6" x2="66.4" y2="8.6" />
-                          <line x1="53.6" y1="17.4" x2="66.4" y2="17.4" />
-                          <line x1="60" y1="3.4" x2="60" y2="22.6" />
-                          <ellipse cx="60" cy="13" rx="4.4" ry="9.6" />
-                        </g>
-                      </svg>
+                      {/* Ticket center (design picks 4A+5A, 2026-08-07): the
+                          REAL earth — the same lazy d3-geo canvas as the logo's
+                          period — seated mid-journey on a 23.5°-tilted axis,
+                          one thin orbital ring, an ember streaming around it
+                          (dim behind, bright left-to-right across the front).
+                          Layers: base SVG (rail, ring, axis stubs, 1A spark)
+                          → Globe canvas → overlay SVG (ember on top so the
+                          front pass crosses the planet). Suspense fallback and
+                          the PDF light-stock twin are TiltedEarthMark, the
+                          static version of this emblem. */}
+                      <div style={{ position:"relative", flex:1, height:26, minWidth:48 }}>
+                        <svg viewBox="0 0 120 26" style={{ display:"block", width:"100%", height:26, overflow:"visible" }} aria-hidden="true">
+                          <line x1="10" y1="13" x2="40" y2="13" stroke={T.border} strokeWidth="1.2" />
+                          <line x1="80" y1="13" x2="110" y2="13" stroke={T.border} strokeWidth="1.2" />
+                          <circle cx="8" cy="13" r="2.4" fill="none" stroke={T.muted} strokeWidth="1.3" />
+                          <circle cx="112" cy="13" r="2.4" fill={T.accent} />
+                          {/* 1A traveling spark (curating only): leaves the
+                              hollow ring, dives into the planet system, lands
+                              on Return. */}
+                          {building && <circle className="wspark" cx="8" cy="13" r="1.8" fill={T.accentHover} style={{ animation:"wspark 3.4s ease-in-out infinite" }} />}
+                          <g transform="translate(60,13) rotate(-20)">
+                            <ellipse rx="16" ry="5" fill="none" stroke="rgba(160,160,160,.4)" strokeWidth=".9" />
+                          </g>
+                          <g transform="translate(60,13) rotate(-23.5)" stroke={T.muted} strokeWidth="1.1">
+                            <line x1="0" y1="-13.4" x2="0" y2="-10.6" />
+                            <line x1="0" y1="10.6" x2="0" y2="13.4" />
+                          </g>
+                        </svg>
+                        <div style={{ position:"absolute", left:"50%", top:"50%", transform:"translate(-50%,-50%) rotate(-23.5deg)", lineHeight:0 }}>
+                          <Suspense fallback={<TiltedEarthMark size={22} tilt={0} />}>
+                            <Globe size={22} />
+                          </Suspense>
+                        </div>
+                        <svg viewBox="0 0 120 26" style={{ position:"absolute", inset:0, width:"100%", height:26, overflow:"visible", pointerEvents:"none" }} aria-hidden="true">
+                          <g transform="translate(60,13) rotate(-20) scale(1,0.3125)">
+                            <g className="worbit" style={{ animation:"worbit 3.6s linear infinite" }}>
+                              <ellipse className="worbit-spark" cx="16" cy="0" rx="1.7" ry="5.4" fill={T.accentHover} style={{ animation:"worbitfade 3.6s linear infinite" }} />
+                            </g>
+                          </g>
+                        </svg>
+                      </div>
                       <div style={{ textAlign:"right" }}>
                         <div style={stubLabel}>Return</div>
                         <div style={{ fontSize:19 /* off-ramp: ticket DEPART/RETURN dates — hero-tier numerals, title(17) visibly demotes them */, fontWeight:800, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{ret}</div>
