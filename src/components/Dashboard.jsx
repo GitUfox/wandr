@@ -4,7 +4,7 @@
  * Manages its own print-modal state (only relevant here).
  * Everything else — trip data, plan state — comes from App.jsx via props.
  */
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MODES, T, FEATURES, AI_DISCLAIMER } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime } from "../lib/utils.js";
@@ -17,15 +17,14 @@ import EditTripSheet from "./EditTripSheet.jsx";
 import StardustBurst from "./StardustBurst.jsx";
 import Glyph from "./Glyphs.jsx";
 
-// The ticket's real-earth canvas (design pick 4A) — same chunk the logo's
-// period already lazy-loads, so this adds zero new bytes to the bundle.
-const Globe = lazy(() => import("./Globe.jsx"));
-
-/* TiltedEarthMark — the static twin of the ticket emblem (design pick 4B
-   construction): 23.5°-tilted sphere, one meridian, CURVED latitude arcs
-   (straight chords are what read as a basketball), polar axis stubs. Used as
-   the Suspense fallback while the canvas chunk loads; the PDF export carries
-   the light-stock copy of this same construction (keep them in sync). */
+/* TiltedEarthMark — the static tilted-earth construction: 23.5° sphere, one
+   meridian, CURVED latitude arcs (straight chords are what read as a
+   basketball), polar axis stubs. The SCREEN ticket no longer seats an earth
+   (2A ember rail, 2026-08-11), but the PDF export still carries the
+   light-stock copy of this exact construction — this component stays as its
+   on-screen twin / sync reference. Currently unrendered; do not delete
+   without also redesigning the PDF ticket center. */
+// eslint-disable-next-line no-unused-vars
 function TiltedEarthMark({ size = 22, tilt = -23.5 }) {
   return (
     <svg viewBox="0 0 28 28" width={size} height={size} aria-hidden="true" style={{ display:"block" }}>
@@ -48,7 +47,7 @@ function TiltedEarthMark({ size = 22, tilt = -23.5 }) {
    RollingMsg — LOAD_MSGS rise in / lift out instead of hard-swapping (2A).
    GhostDays  — skeleton day cards breathe where the itinerary will land (3A);
    the 1A traveling spark lives inline in the ticket rail SVG. All pure CSS
-   keyframes (the wspark, wroll and wghost families in the Dashboard style
+   keyframes (the wroll and wghost families in the Dashboard style
    block), all silenced by the prefers-reduced-motion guard there. */
 function RollingMsg({ text }) {
   const [prev, setPrev] = useState(null);
@@ -420,14 +419,13 @@ export default function Dashboard({
         @keyframes blink{50%{opacity:0}}
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes pulse{50%{box-shadow:0 0 0 6px rgba(201,100,66,.06)}}
-        @keyframes wspark{0%{transform:translateX(0);opacity:0}6%{opacity:1}46%{opacity:1}50%{transform:translateX(52px);opacity:0}62%{transform:translateX(52px);opacity:0}66%{transform:translateX(68px);opacity:1}92%{opacity:1}100%{transform:translateX(104px);opacity:0}}
         @keyframes wrollin{from{opacity:0;transform:translateY(6px)}}
         @keyframes wrollout{to{opacity:0;transform:translateY(-6px)}}
         @keyframes wghostbreathe{0%,100%{opacity:.45}50%{opacity:.8}}
         @keyframes wghostshim{to{background-position:-220% 0}}
-        @keyframes worbit{to{transform:rotate(-360deg)}}
-        @keyframes worbitfade{0%{opacity:.9}8%{opacity:.15}42%{opacity:.15}52%{opacity:1}94%{opacity:1}100%{opacity:.9}}
-        @media (prefers-reduced-motion:reduce){.wspark,.wroll-in,.wroll-out,.wghost,.wghost-bar,.worbit,.worbit-spark{animation:none!important}}
+        @keyframes wtravel{0%{transform:translateX(-52px);opacity:0}8%{opacity:1}72%{transform:translateX(52px);opacity:1}82%{transform:translateX(52px);opacity:0}100%{transform:translateX(52px);opacity:0}}
+        @keyframes warrive{0%,66%{transform:scale(.35);opacity:0}74%{transform:scale(1);opacity:.8}92%{transform:scale(2.1);opacity:0}100%{transform:scale(2.1);opacity:0}}
+        @media (prefers-reduced-motion:reduce){.wroll-in,.wroll-out,.wghost,.wghost-bar,.wtravel,.warrive{animation:none!important}.wtravel{opacity:1!important}}
         *{box-sizing:border-box}
       `}</style>
 
@@ -518,44 +516,32 @@ export default function Dashboard({
                         <div style={stubLabel}>Depart</div>
                         <div style={{ fontSize:19 /* off-ramp: ticket DEPART/RETURN dates — hero-tier numerals, title(17) visibly demotes them */, fontWeight:800, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{dep}</div>
                       </div>
-                      {/* Ticket center (design picks 4A+5A, 2026-08-07): the
-                          REAL earth — the same lazy d3-geo canvas as the logo's
-                          period — seated mid-journey on a 23.5°-tilted axis,
-                          one thin orbital ring, an ember streaming around it
-                          (dim behind, bright left-to-right across the front).
-                          Layers: base SVG (rail, ring, axis stubs, 1A spark)
-                          → Globe canvas → overlay SVG (ember on top so the
-                          front pass crosses the planet). Suspense fallback and
-                          the PDF light-stock twin are TiltedEarthMark, the
-                          static version of this emblem. */}
+                      {/* Ticket center (design pick 2A, 2026-08-11): the
+                          journey itself. The ticket's earth retired — Kraig's
+                          2026-08-08 note called two earths on one screen
+                          overload; the logo keeps the real globe and the PDF
+                          keeps its static light-stock twin. An ember departs
+                          the hollow Depart ring, streams the dotted rail, and
+                          arrives on Return with a soft pulse. It runs ALWAYS:
+                          one traveler on the rail in every state (it also
+                          replaces the curating-only 1A wspark — progress while
+                          building, the trip afterwards). Pulse pivot is baked
+                          into an attribute translate() group — CSS
+                          transform-origin on SVG children drifts. */}
                       <div style={{ position:"relative", flex:1, height:26, minWidth:48 }}>
                         <svg viewBox="0 0 120 26" style={{ display:"block", width:"100%", height:26, overflow:"visible" }} aria-hidden="true">
-                          <line x1="10" y1="13" x2="40" y2="13" stroke={T.border} strokeWidth="1.2" />
-                          <line x1="80" y1="13" x2="110" y2="13" stroke={T.border} strokeWidth="1.2" />
+                          <line x1="14" y1="13" x2="106" y2="13" stroke={T.border2} strokeWidth="1.6" strokeDasharray="0.1 5" strokeLinecap="round" />
                           <circle cx="8" cy="13" r="2.4" fill="none" stroke={T.muted} strokeWidth="1.3" />
                           <circle cx="112" cy="13" r="2.4" fill={T.accent} />
-                          {/* 1A traveling spark (curating only): leaves the
-                              hollow ring, dives into the planet system, lands
-                              on Return. */}
-                          {building && <circle className="wspark" cx="8" cy="13" r="1.8" fill={T.accentHover} style={{ animation:"wspark 3.4s ease-in-out infinite" }} />}
-                          <g transform="translate(60,13) rotate(-20)">
-                            <ellipse rx="16" ry="5" fill="none" stroke="rgba(160,160,160,.4)" strokeWidth=".9" />
+                          <g transform="translate(112,13)">
+                            <circle className="warrive" r="3" fill="none" stroke={T.accent} strokeWidth="1.2" opacity="0" style={{ animation:"warrive 3.4s ease-out infinite" }} />
                           </g>
-                          <g transform="translate(60,13) rotate(-23.5)" stroke={T.muted} strokeWidth="1.1">
-                            <line x1="0" y1="-13.4" x2="0" y2="-10.6" />
-                            <line x1="0" y1="10.6" x2="0" y2="13.4" />
-                          </g>
-                        </svg>
-                        <div style={{ position:"absolute", left:"50%", top:"50%", transform:"translate(-50%,-50%) rotate(-23.5deg)", lineHeight:0 }}>
-                          <Suspense fallback={<TiltedEarthMark size={22} tilt={0} />}>
-                            <Globe size={22} />
-                          </Suspense>
-                        </div>
-                        <svg viewBox="0 0 120 26" style={{ position:"absolute", inset:0, width:"100%", height:26, overflow:"visible", pointerEvents:"none" }} aria-hidden="true">
-                          <g transform="translate(60,13) rotate(-20) scale(1,0.3125)">
-                            <g className="worbit" style={{ animation:"worbit 3.6s linear infinite" }}>
-                              <ellipse className="worbit-spark" cx="16" cy="0" rx="1.7" ry="5.4" fill={T.accentHover} style={{ animation:"worbitfade 3.6s linear infinite" }} />
-                            </g>
+                          {/* Ember rests mid-rail when animation is off
+                              (reduced motion / VITE_NO_MOTION harness). */}
+                          <g className="wtravel" style={{ animation:"wtravel 3.4s ease-in-out infinite" }}>
+                            <line x1="49" y1="13" x2="56.5" y2="13" stroke={T.accentHover} strokeWidth="1.5" strokeLinecap="round" opacity=".45" />
+                            <circle cx="60" cy="13" r="4.5" fill={T.accentHover} opacity=".18" />
+                            <circle cx="60" cy="13" r="2.4" fill={T.accentHover} />
                           </g>
                         </svg>
                       </div>

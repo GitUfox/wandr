@@ -6,11 +6,15 @@
  * doesn't fight the tap controls), and a "Move" picker to send an activity to
  * another day. Food renders read-only; tips attach to the activity they name
  * (matchTipToActivity, same as the PDF) with the rest day-level read-only.
+ * Phase 3 (design pick 3B, 2026-08-11): actions moved off the cramped corner
+ * overlay — tap a card to select it and a labeled action bar (Tweak / Move /
+ * Edit / Remove, 44px targets) reveals at its foot. One card selected at a
+ * time; reading mode stays clean. Plain CSS transitions, no framer.
  *
  * All mutations lift to useGenerate, which re-serializes planText and persists,
  * so copy / PDF export / reload all stay in sync.
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Reorder, useDragControls } from "framer-motion";
 import { T } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
@@ -107,6 +111,26 @@ const iconBtn = {
   fontFamily: T.font, fontSize: T.fs.body, padding: "3px 6px", borderRadius: T.r.sm, lineHeight: 1,
 };
 
+/* 3B action-bar button: big labeled target — Kraig described the old overlay
+   icons by shape ("the diamond, the arrow"), which means they never read as
+   functions. Labels + 44px minimum height fix both complaints at once. */
+function ActionBtn({ glyph, label, onClick, danger, active, disabled, title }) {
+  const tone = danger ? "#f08070" : active ? T.accent : T.muted;
+  return (
+    <button onClick={onClick} disabled={disabled} title={title || label}
+      style={{
+        flex: 1, minHeight: 44, display: "flex", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", gap: 3, padding: "6px 4px",
+        background: active ? "rgba(201,100,66,.08)" : T.bg2,
+        border: `1px solid ${active ? T.accent : T.border}`, borderRadius: T.r.sm,
+        cursor: disabled ? "not-allowed" : "pointer", fontFamily: T.font, opacity: disabled ? .4 : 1,
+      }}>
+      <Glyph name={glyph} size={15} color={tone} />
+      <span style={{ fontSize: T.fs.micro, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", color: danger ? "#f08070" : T.hint }}>{label}</span>
+    </button>
+  );
+}
+
 /* Attached tip line — a tip that names this activity renders inside its card
    (same matcher as the PDF's 2B day cards, so the two surfaces agree). */
 function TipLines({ tips, indent = 0 }) {
@@ -119,7 +143,7 @@ function TipLines({ tips, indent = 0 }) {
   ));
 }
 
-function ActivityBlock({ a, tips, dayIdx, days, isTweaking, onEditActivity, onDeleteActivity, onMoveActivity, onTweakActivity }) {
+function ActivityBlock({ a, tips, dayIdx, days, isTweaking, selected, onToggleSelect, onEditActivity, onDeleteActivity, onMoveActivity, onTweakActivity }) {
   // The ✦ tweak is the only per-activity action that calls the AI; inline edit,
   // move and delete are all local, so they stay available offline.
   const online = useOnline();
@@ -133,6 +157,12 @@ function ActivityBlock({ a, tips, dayIdx, days, isTweaking, onEditActivity, onDe
   const [moving, setMoving]         = useState(false);
   const [tweakOpen, setTweakOpen]   = useState(false);
   const [tweakText, setTweakText]   = useState("");
+
+  // Deselecting collapses the bar — any half-open sub-state (a pending delete
+  // confirm, an open move picker) must not survive into the next selection.
+  useEffect(() => {
+    if (!selected) { setConfirmDel(false); setMoving(false); setTweakOpen(false); }
+  }, [selected]);
 
   function submitTweak() {
     const t = tweakText.trim();
@@ -167,7 +197,7 @@ function ActivityBlock({ a, tips, dayIdx, days, isTweaking, onEditActivity, onDe
 
   return (
     <Reorder.Item value={a} as="div" dragListener={false} dragControls={controls}
-      style={{ position: "relative", background: T.bg1, border: `1px solid ${editing ? T.accent : T.border}`, borderRadius: T.r.md, padding: editing ? "11px 12px" : "10px 10px 10px 4px", marginBottom: 8, listStyle: "none" }}>
+      style={{ position: "relative", background: T.bg1, border: `1px solid ${editing || selected ? T.accent : T.border}`, borderRadius: T.r.md, padding: editing ? "11px 12px" : "10px 10px 10px 4px", marginBottom: 8, listStyle: "none", transition: "border-color .2s ease" }}>
 
       {editing ? (
         <>
@@ -192,73 +222,82 @@ function ActivityBlock({ a, tips, dayIdx, days, isTweaking, onEditActivity, onDe
           </div>
         </>
       ) : (
-        <div style={{ display: "flex", gap: 6, alignItems: "flex-start" }}>
-          {/* Drag handle — the only drag trigger, so taps elsewhere stay clickable */}
-          <span onPointerDown={e => controls.start(e)} title="Drag to reorder"
-            style={{ cursor: "grab", touchAction: "none", color: T.hint, fontSize: T.fs.ui, padding: "2px 4px", flexShrink: 0, userSelect: "none", lineHeight: 1.2 }}>⠿</span>
-          <div style={{ width: 58, flexShrink: 0, fontSize: T.fs.meta, color: T.accent, fontWeight: 700, paddingTop: 2 }}>{displayTime(clean(a.time))}</div>
-          <div style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
-            {/* Title clears the absolute action row (4 icons ≈ 110px) — only the
-                first line shares its height, so the reserve lives here, not on
-                the whole column (fonts bumped 2026-08-10 made 60px overlap). */}
-            <div style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.35, marginBottom: 2, paddingRight: 106 }}>{clean(a.title)}</div>
-            {a.details && <DetailsBlock details={a.details} />}
-            <TipLines tips={tips} />
-            {/* Move picker — choose a destination day */}
-            {moving && otherDays.length > 0 && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", marginTop: 8 }}>
-                <span style={{ fontSize: T.fs.label, color: T.hint }}>Move to:</span>
-                {otherDays.map(d => (
-                  <button key={d.idx} onClick={() => { onMoveActivity(dayIdx, a.id, d.idx); setMoving(false); }}
-                    style={{ ...iconBtn, fontSize: T.fs.meta, color: T.accent, border: `1px solid ${T.accent}`, padding: "3px 9px" }}>
-                    Day {d.idx + 1}
-                  </button>
-                ))}
-                <button onClick={() => setMoving(false)} style={{ ...iconBtn, fontSize: T.fs.meta, color: T.muted }}>Cancel</button>
+        <>
+          {/* Tap anywhere on the card to select it (3B) — inner controls stop
+              propagation so acting never re-toggles the selection. */}
+          <div onClick={() => onToggleSelect(a.id)} role="button" tabIndex={0} aria-expanded={selected}
+            onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleSelect(a.id); } }}
+            style={{ display: "flex", gap: 6, alignItems: "flex-start", cursor: "pointer", outline: "none" }}>
+            {/* Drag handle — the only drag trigger, so taps elsewhere stay clickable */}
+            <span onPointerDown={e => controls.start(e)} onClick={e => e.stopPropagation()} title="Drag to reorder"
+              style={{ cursor: "grab", touchAction: "none", color: T.hint, fontSize: T.fs.ui, padding: "2px 4px", flexShrink: 0, userSelect: "none", lineHeight: 1.2 }}>⠿</span>
+            <div style={{ width: 58, flexShrink: 0, fontSize: T.fs.meta, color: T.accent, fontWeight: 700, paddingTop: 2 }}>{displayTime(clean(a.time))}</div>
+            <div style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
+              <div style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.35, marginBottom: 2 }}>{clean(a.title)}</div>
+              {a.details && <DetailsBlock details={a.details} />}
+              <TipLines tips={tips} />
+              {/* Move picker — choose a destination day */}
+              {moving && otherDays.length > 0 && (
+                <div onClick={e => e.stopPropagation()} style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", marginTop: 8 }}>
+                  <span style={{ fontSize: T.fs.label, color: T.hint }}>Move to:</span>
+                  {otherDays.map(d => (
+                    <button key={d.idx} onClick={() => { onMoveActivity(dayIdx, a.id, d.idx); setMoving(false); }}
+                      style={{ ...iconBtn, fontSize: T.fs.meta, color: T.accent, border: `1px solid ${T.accent}`, padding: "3px 9px" }}>
+                      Day {d.idx + 1}
+                    </button>
+                  ))}
+                  <button onClick={() => setMoving(false)} style={{ ...iconBtn, fontSize: T.fs.meta, color: T.muted }}>Cancel</button>
+                </div>
+              )}
+              {/* AI tweak — free-text instruction for just this activity */}
+              {isTweaking ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 8, fontSize: T.fs.meta, color: T.accent }}>
+                  <span style={{ width: 12, height: 12, border: `1.5px solid ${T.border}`, borderTopColor: T.accent, borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
+                  Tweaking this activity…
+                </div>
+              ) : tweakOpen && (
+                <div onClick={e => e.stopPropagation()} style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8 }}>
+                  <input value={tweakText} onChange={e => setTweakText(e.target.value)} autoFocus
+                    onKeyDown={e => e.key === "Enter" && submitTweak()}
+                    placeholder="e.g. make it more relaxed · something cheaper nearby"
+                    style={{ flex: 1, minWidth: 0, padding: "6px 9px", border: `1px solid ${T.accent}`, borderRadius: T.r.sm, background: T.bg2, color: T.ink, outline: "none", fontSize: T.fs.meta, fontFamily: T.font }} />
+                  <button onClick={submitTweak} style={{ ...iconBtn, fontSize: T.fs.meta, fontWeight: 700, color: T.white, background: T.accent, padding: "5px 11px" }}>Ask AI</button>
+                  <button onClick={() => setTweakOpen(false)} style={{ ...iconBtn, fontSize: T.fs.meta, color: T.muted }}>✕</button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 3B action bar — reveals under the selected card; hidden while an
+              AI tweak is in flight. max-height + opacity so the collapse is a
+              plain CSS transition (no framer, works under VITE_NO_MOTION). */}
+          <div onClick={e => e.stopPropagation()}
+            style={{ maxHeight: selected && !isTweaking ? 96 : 0, opacity: selected && !isTweaking ? 1 : 0, overflow: "hidden", transition: "max-height .28s ease, opacity .22s ease" }}>
+            {confirmDel ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, borderTop: `1px solid ${T.border}`, marginTop: 10, marginLeft: 6, paddingTop: 10 }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: T.fs.body, color: T.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  Remove <strong style={{ color: T.ink }}>{clean(a.title)}</strong>?
+                </span>
+                <button onClick={() => onDeleteActivity(dayIdx, a.id)}
+                  style={{ ...iconBtn, fontSize: T.fs.meta, fontWeight: 700, color: T.white, background: T.accent, padding: "7px 14px" }}>Remove</button>
+                <button onClick={() => setConfirmDel(false)}
+                  style={{ ...iconBtn, fontSize: T.fs.meta, color: T.muted, border: `1px solid ${T.border}`, padding: "7px 12px" }}>Keep</button>
               </div>
-            )}
-            {/* AI tweak — free-text instruction for just this activity */}
-            {isTweaking ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 8, fontSize: T.fs.meta, color: T.accent }}>
-                <span style={{ width: 12, height: 12, border: `1.5px solid ${T.border}`, borderTopColor: T.accent, borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
-                Tweaking this activity…
-              </div>
-            ) : tweakOpen && (
-              <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8 }}>
-                <input value={tweakText} onChange={e => setTweakText(e.target.value)} autoFocus
-                  onKeyDown={e => e.key === "Enter" && submitTweak()}
-                  placeholder="e.g. make it more relaxed · something cheaper nearby"
-                  style={{ flex: 1, minWidth: 0, padding: "6px 9px", border: `1px solid ${T.accent}`, borderRadius: T.r.sm, background: T.bg2, color: T.ink, outline: "none", fontSize: T.fs.meta, fontFamily: T.font }} />
-                <button onClick={submitTweak} style={{ ...iconBtn, fontSize: T.fs.meta, fontWeight: 700, color: T.white, background: T.accent, padding: "5px 11px" }}>Ask AI</button>
-                <button onClick={() => setTweakOpen(false)} style={{ ...iconBtn, fontSize: T.fs.meta, color: T.muted }}>✕</button>
+            ) : (
+              <div style={{ display: "flex", gap: 6, borderTop: `1px solid ${T.border}`, marginTop: 10, marginLeft: 6, paddingTop: 10 }}>
+                <ActionBtn glyph="sparkle" label="Tweak" active={tweakOpen} disabled={!online}
+                  title={online ? "Ask AI to tweak this" : "Tweaking needs a connection"}
+                  onClick={() => setTweakOpen(o => !o)} />
+                {otherDays.length > 0 && (
+                  <ActionBtn glyph="move" label="Move" active={moving} title="Move to another day"
+                    onClick={() => setMoving(m => !m)} />
+                )}
+                <ActionBtn glyph="pencil" label="Edit" title="Edit time and details" onClick={() => setEditing(true)} />
+                <ActionBtn glyph="x" label="Remove" danger title="Remove from this day" onClick={() => setConfirmDel(true)} />
               </div>
             )}
           </div>
-
-          {/* Actions (hidden while an AI tweak is in flight) */}
-          {!isTweaking && (
-            <div style={{ position: "absolute", top: 8, right: 8, display: "flex", gap: 2 }}>
-              {confirmDel ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 4, background: T.bg3, borderRadius: T.r.sm, padding: "2px 4px" }}>
-                  <span style={{ fontSize: T.fs.label, color: T.muted, paddingLeft: 4 }}>Delete?</span>
-                  <button onClick={() => onDeleteActivity(dayIdx, a.id)} title="Confirm delete" style={{ ...iconBtn, color: "#f08070", fontWeight: 700 }}>Yes</button>
-                  <button onClick={() => setConfirmDel(false)} title="Keep" style={{ ...iconBtn, color: T.muted }}>No</button>
-                </div>
-              ) : (
-                <>
-                  <button onClick={() => online && setTweakOpen(o => !o)} disabled={!online}
-                    title={online ? "Ask AI to tweak this" : "Tweaking needs a connection"}
-                    style={{ ...iconBtn, color: tweakOpen ? T.accent : T.muted, opacity: online ? 1 : .35, cursor: online ? "pointer" : "not-allowed" }}>✦</button>
-                  {otherDays.length > 0 && (
-                    <button onClick={() => setMoving(m => !m)} title="Move to another day" style={{ ...iconBtn, color: moving ? T.accent : T.muted }}>⤴</button>
-                  )}
-                  <button onClick={() => setEditing(true)} title="Edit" style={{ ...iconBtn, color: T.muted }}>✎</button>
-                  <button onClick={() => setConfirmDel(true)} title="Delete" style={{ ...iconBtn, color: T.hint }}>✕</button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+        </>
       )}
     </Reorder.Item>
   );
@@ -326,7 +365,7 @@ export function BucketView({ day, dayIdx, tipsFor, onMoveToBucket }) {
   );
 }
 
-function DayCard({ day, dayIdx, days, viewMode, tweakingId, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onMoveToBucket, onTweakActivity }) {
+function DayCard({ day, dayIdx, days, viewMode, tweakingId, selectedId, onToggleSelect, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onMoveToBucket, onTweakActivity }) {
   // Tips attach to the activity they name (same matcher as the PDF's 2B day
   // cards); the rest stay day-level under "Before you go". Render-time only.
   const titles = day.activities.map(x => clean(x.title));
@@ -356,6 +395,7 @@ function DayCard({ day, dayIdx, days, viewMode, tweakingId, onEditActivity, onDe
         <Reorder.Group axis="y" as="div" values={day.activities} onReorder={next => onReorderDay(dayIdx, next)}>
           {day.activities.map(a => (
             <ActivityBlock key={a.id} a={a} tips={tipsFor.get(a.id)} dayIdx={dayIdx} days={days} isTweaking={tweakingId === a.id}
+              selected={selectedId === a.id} onToggleSelect={onToggleSelect}
               onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity} onMoveActivity={onMoveActivity} onTweakActivity={onTweakActivity} />
           ))}
         </Reorder.Group>
@@ -394,6 +434,10 @@ const viewTab = active => ({
 
 export default function ItineraryEditor({ model, tweakingId, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onMoveToBucket, onTweakActivity }) {
   const [viewMode, setViewMode] = useState("timeline"); // "timeline" | "buckets" — presentation only
+  // 3B: one selected card at a time — tap to open its action bar, tap again
+  // (or tap another card) to close. Presentation state only, never persisted.
+  const [selectedId, setSelectedId] = useState(null);
+  const toggleSelect = id => setSelectedId(s => (s === id ? null : id));
   if (!model?.days?.length) return null;
   const days = model.days.map((d, idx) => ({ idx, label: d.label }));
   return (
@@ -410,6 +454,7 @@ export default function ItineraryEditor({ model, tweakingId, onEditActivity, onD
       )}
       {model.days.map((day, i) => (
         <DayCard key={i} day={day} dayIdx={i} days={days} viewMode={viewMode} tweakingId={tweakingId}
+          selectedId={selectedId} onToggleSelect={toggleSelect}
           onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity}
           onReorderDay={onReorderDay} onMoveActivity={onMoveActivity} onMoveToBucket={onMoveToBucket} onTweakActivity={onTweakActivity} />
       ))}

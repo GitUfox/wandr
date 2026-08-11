@@ -40,6 +40,14 @@ export default function Glyph({ name, size = 16, color = "currentColor", style }
       return <svg {...p}><path d="M7 4h10v16l-5-4-5 4z" /></svg>;
     case "info": // generic fact chip (4A fallback)
       return <svg {...p}><circle cx="12" cy="12" r="8" /><path d="M12 11v4M12 8h.01" /></svg>;
+    case "sparkle": // AI tweak (3B action bar) — the ✦ diamond, drawn
+      return <svg {...p}><path d="M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3z" /></svg>;
+    case "move": // send to another day (3B action bar)
+      return <svg {...p}><path d="M7 17V7M7 7L4 10M7 7l3 3M17 7v10M17 17l3-3M17 17l-3-3" /></svg>;
+    case "pencil": // inline edit (3B action bar)
+      return <svg {...p}><path d="M4 20l4.2-1.1L20 7.1 16.9 4 5.1 15.8 4 20zM14.5 6.4l3.1 3.1" /></svg>;
+    case "x": // remove (3B action bar)
+      return <svg {...p}><path d="M6 6l12 12M18 6L6 18" /></svg>;
     default:
       return null;
   }

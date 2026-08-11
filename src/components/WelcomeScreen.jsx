@@ -30,6 +30,17 @@ function stubDate(iso) {
   return { mon: months[d.getMonth()], day: String(d.getDate()) };
 }
 
+/** "departs in 31 days" / "departs tomorrow" / "departs today" — empty once past. */
+function departsIn(iso) {
+  const d = parseISODate(iso);
+  if (!d) return "";
+  const days = Math.round((d - new Date().setHours(0, 0, 0, 0)) / 86400000);
+  if (days > 1)  return `departs in ${days} days`;
+  if (days === 1) return "departs tomorrow";
+  if (days === 0) return "departs today";
+  return "";
+}
+
 export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdateProfile, savedTrip, onResume, trips = [], onDeleteTrip }) {
   const [dest, setDest]                     = useState("");
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
@@ -90,16 +101,22 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
 
   // One card renderer for BOTH the mobile shelf and the desktop departures
   // rail (12B binding constraint: arrangements may arrange, never rebuild).
-  // One card renderer for BOTH the mobile shelf and the desktop departures
-  // rail (12B binding constraint: arrangements may arrange, never rebuild).
+  // 1A ticket stubs (2026-08-11 feedback pick): a trip renders as a small
+  // boarding pass — main panel, dashed perforation with notch punches, and a
+  // nights tail — so it can never be mistaken for the Where-to input again
+  // (the 2026-08-08 note: "the pill looks almost identical to the box").
+  // The notch punches match the surface behind the card: bg0 page on mobile,
+  // bg1 departures rail on desktop.
   const renderTripCard = (t) => {
     const isActive   = t.id === savedTrip?.id;
     const confirming = confirmDeleteId === t.id;
-    const stub  = stubDate(t.answers?.dates?.start);
+    const start  = t.answers?.dates?.start;
+    const stub   = stubDate(start);
     const broken = !!t._error;
+    const punchBg = isWide ? T.bg1 : T.bg0;
     const sub = broken
       ? "build didn't finish — tap to rebuild"
-      : t.nights ? `${t.nights} ${t.nights === 1 ? "night" : "nights"}` : "";
+      : [stub && `${stub.mon} ${stub.day}`, departsIn(start)].filter(Boolean).join(" · ") || "planning";
     if (confirming) {
       return (
         <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, border: `1px solid ${T.border2}`, borderRadius: T.r.md, background: T.bg1, padding: "12px 14px", marginBottom: 8 }}>
@@ -119,31 +136,33 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
     }
     return (
       <div key={t.id}
-        style={{ display: "flex", alignItems: "stretch", border: `1px solid ${isActive ? T.border2 : T.border}`, borderRadius: T.r.md, background: T.bg1, overflow: "hidden", marginBottom: 8, opacity: broken ? .9 : 1 }}>
-        <div style={{ background: T.bg2, borderRight: `1px dashed ${T.border2}`, padding: "9px 12px", textAlign: "center", alignSelf: "stretch", display: "flex", flexDirection: "column", justifyContent: "center", minWidth: 46 }}>
-          {stub ? (
-            <>
-              <div style={{ fontSize: T.fs.micro, fontWeight: 800, color: T.accent, letterSpacing: ".08em" }}>{stub.mon}</div>
-              <div style={{ fontSize: T.fs.title, fontWeight: 800, color: T.ink, fontVariantNumeric: "tabular-nums" }}>{stub.day}</div>
-            </>
-          ) : (
-            <Glyph name="plane" size={14} color={T.hint} style={{ margin: "0 auto" }} />
-          )}
-        </div>
+        style={{ position: "relative", display: "flex", alignItems: "stretch", border: `1px solid ${isActive ? T.border2 : T.border}`, borderRadius: T.r.md, background: T.bg1, marginBottom: 8, opacity: broken ? .9 : 1 }}>
         <button onClick={() => onResume(t.id)}
-          style={{ flex: 1, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "9px 13px", minWidth: 0 }}>
-          <div style={{ fontSize: T.fs.body, fontWeight: 800, color: T.ink, display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.destination}</span>
+          style={{ flex: 1, minWidth: 0, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "11px 6px 11px 14px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
+            <span style={{ fontSize: T.fs.ui, fontWeight: 800, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.destination}</span>
             {isActive && <span style={{ fontSize: T.fs.micro, fontWeight: 700, color: T.accent, border: `1px solid ${T.accent}`, borderRadius: T.r.pill, padding: "1px 6px", letterSpacing: ".06em", flexShrink: 0 }}>CURRENT</span>}
           </div>
-          <div style={{ fontSize: T.fs.label, color: broken ? "#f08070" : T.hint, marginTop: 2 }}>{sub}</div>
+          <div style={{ fontSize: T.fs.label, color: broken ? "#f08070" : T.muted, marginTop: 3 }}>{sub}</div>
         </button>
-        <div style={{ display: "flex", alignItems: "center", gap: 2, paddingRight: 10 }}>
-          <span style={{ color: broken ? T.hint : T.accent, fontWeight: 800, fontSize: T.fs.body }}>{broken ? "↻" : "↩"}</span>
-          <button onClick={() => setConfirmDeleteId(t.id)} aria-label={`Delete ${t.destination}`}
-            style={{ fontSize: T.fs.ui, lineHeight: 1, color: T.hint, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "4px 4px" }}>
-            ×
-          </button>
+        <button onClick={() => setConfirmDeleteId(t.id)} aria-label={`Delete ${t.destination}`}
+          style={{ width: 30, alignSelf: "stretch", fontSize: T.fs.ui, lineHeight: 1, color: T.hint, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, flexShrink: 0 }}>
+          ×
+        </button>
+        {/* Perforation + nights tail — the part that says "ticket". */}
+        <div style={{ position: "relative", width: 56, flexShrink: 0, borderLeft: `1.5px dashed ${T.border2}`, background: T.bg2, borderRadius: `0 ${T.r.md - 1}px ${T.r.md - 1}px 0`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
+          <span aria-hidden="true" style={{ position: "absolute", left: -6.5, top: -6.5, width: 11, height: 11, borderRadius: "50%", background: punchBg, border: `1px solid ${isActive ? T.border2 : T.border}` }} />
+          <span aria-hidden="true" style={{ position: "absolute", left: -6.5, bottom: -6.5, width: 11, height: 11, borderRadius: "50%", background: punchBg, border: `1px solid ${isActive ? T.border2 : T.border}` }} />
+          {broken ? (
+            <span style={{ color: T.accent, fontWeight: 800, fontSize: T.fs.title }}>↻</span>
+          ) : t.nights ? (
+            <>
+              <span style={{ fontSize: T.fs.title, fontWeight: 800, color: T.accent, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{t.nights}</span>
+              <span style={{ fontSize: T.fs.micro, fontWeight: 800, letterSpacing: ".14em", color: T.hint, textTransform: "uppercase" }}>{t.nights === 1 ? "night" : "nights"}</span>
+            </>
+          ) : (
+            <Glyph name="plane" size={14} color={T.hint} />
+          )}
         </div>
       </div>
     );
