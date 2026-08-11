@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { MODES, T, FEATURES, AI_DISCLAIMER } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
-import { arr, formatShortDate, ticketDate, seasonShort, timeAgo, splitDetails, matchTipToActivity, displayTime } from "../lib/utils.js";
+import { arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime } from "../lib/utils.js";
 import { parsePlan } from "../lib/planModel.js";
 import { TEAM_SHORT } from "../lib/mlbTeams.js";
 import Md from "./Md.jsx";
@@ -190,7 +190,6 @@ export default function Dashboard({
     ["Nights", trip.nights ? `${trip.nights}` : ""],
     ["Budget", a.budget === 0 ? "With friends" : a.budget ? `$${a.budget}/day` : ""],
     ["Party",  arr(a.party).split(",")[0]],
-    ["Season", seasonShort(a.dates?.start) ? `☀ ${seasonShort(a.dates.start)}` : ""],
   ].filter(([, v]) => v);
 
   /** Convert ISO date "2026-06-08" → "6/8/2026" */
@@ -705,7 +704,7 @@ export default function Dashboard({
                       disabled={!online || planLoading}
                       title={online ? "Rework this itinerary — with your direction" : "Needs a connection"}
                       style={{ fontSize:T.fs.meta, fontWeight:600, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:online&&!planLoading?"pointer":"not-allowed", opacity:online&&!planLoading?1:.45, fontFamily:T.font }}>
-                      ↻ Remix
+                      ↻ Regenerate
                     </button>
                   </div>
                 </div>

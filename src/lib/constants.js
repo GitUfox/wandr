@@ -54,7 +54,9 @@ export const T = {
   //   ui     — buttons, card titles
   //   title  — screen/section titles
   //   hero   — the destination reveal
-  fs: { micro:9, label:10.5, meta:11.5, body:12.5, ui:14, title:17, hero:28 },
+  // 2026-08-10 readability pass (Kraig: "the font is so small… bring it up"):
+  // whole ramp stepped +1, hero untouched. Bump here, never per-component.
+  fs: { micro:10, label:11.5, meta:12.5, body:13.5, ui:15, title:18, hero:28 },
 
   // Radius tokens (S2): control 6 · card/input 12 · sheet/ticket 16 · pill 100.
   r: { sm:6, md:12, lg:16, pill:100 },

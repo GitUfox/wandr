@@ -4,7 +4,8 @@
  * Phase 1: inline-edit (time / title / details) + delete per activity.
  * Phase 2: drag to reorder within a day (framer Reorder + a drag handle so it
  * doesn't fight the tap controls), and a "Move" picker to send an activity to
- * another day. Food and tips render read-only.
+ * another day. Food renders read-only; tips attach to the activity they name
+ * (matchTipToActivity, same as the PDF) with the rest day-level read-only.
  *
  * All mutations lift to useGenerate, which re-serializes planText and persists,
  * so copy / PDF export / reload all stay in sync.
@@ -13,7 +14,7 @@ import { useState } from "react";
 import { Reorder, useDragControls } from "framer-motion";
 import { T } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
-import { BUCKETS, bucketOf, timeSortKey, formatTime, displayTime, splitDetails } from "../lib/utils.js";
+import { BUCKETS, bucketOf, timeSortKey, formatTime, displayTime, splitDetails, matchTipToActivity } from "../lib/utils.js";
 import Glyph from "./Glyphs.jsx";
 
 const clean = s => (s || "").replace(/\*\*/g, "").trim();
@@ -106,7 +107,19 @@ const iconBtn = {
   fontFamily: T.font, fontSize: T.fs.body, padding: "3px 6px", borderRadius: T.r.sm, lineHeight: 1,
 };
 
-function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteActivity, onMoveActivity, onTweakActivity }) {
+/* Attached tip line — a tip that names this activity renders inside its card
+   (same matcher as the PDF's 2B day cards, so the two surfaces agree). */
+function TipLines({ tips, indent = 0 }) {
+  if (!tips?.length) return null;
+  return tips.map((tip, i) => (
+    <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start", marginTop: 6, marginLeft: indent, fontSize: T.fs.label, color: T.muted, lineHeight: 1.5 }}>
+      <span style={{ flexShrink: 0, marginTop: 1 }}><Glyph name="info" size={11} color={T.accent} /></span>
+      <span>{tip}</span>
+    </div>
+  ));
+}
+
+function ActivityBlock({ a, tips, dayIdx, days, isTweaking, onEditActivity, onDeleteActivity, onMoveActivity, onTweakActivity }) {
   // The ✦ tweak is the only per-activity action that calls the AI; inline edit,
   // move and delete are all local, so they stay available offline.
   const online = useOnline();
@@ -184,9 +197,13 @@ function ActivityBlock({ a, dayIdx, days, isTweaking, onEditActivity, onDeleteAc
           <span onPointerDown={e => controls.start(e)} title="Drag to reorder"
             style={{ cursor: "grab", touchAction: "none", color: T.hint, fontSize: T.fs.ui, padding: "2px 4px", flexShrink: 0, userSelect: "none", lineHeight: 1.2 }}>⠿</span>
           <div style={{ width: 58, flexShrink: 0, fontSize: T.fs.meta, color: T.accent, fontWeight: 700, paddingTop: 2 }}>{displayTime(clean(a.time))}</div>
-          <div style={{ flex: 1, minWidth: 0, paddingRight: 60, paddingTop: 1 }}>
-            <div style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.35, marginBottom: 2 }}>{clean(a.title)}</div>
+          <div style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
+            {/* Title clears the absolute action row (4 icons ≈ 110px) — only the
+                first line shares its height, so the reserve lives here, not on
+                the whole column (fonts bumped 2026-08-10 made 60px overlap). */}
+            <div style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.35, marginBottom: 2, paddingRight: 106 }}>{clean(a.title)}</div>
             {a.details && <DetailsBlock details={a.details} />}
+            <TipLines tips={tips} />
             {/* Move picker — choose a destination day */}
             {moving && otherDays.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", marginTop: 8 }}>
@@ -261,7 +278,7 @@ function FoodRow({ f }) {
 /* ── Buckets view ─────────────────────────────────────────────────────────
    Compact, read-only cards grouped by time-of-day. Tap a "→ Bucket" chip to
    re-time an activity into another bucket. Detailed edits live in Timeline. */
-function BucketCard({ a, dayIdx, bucket, onMoveToBucket }) {
+function BucketCard({ a, tips, dayIdx, bucket, onMoveToBucket }) {
   return (
     <div style={{ background: T.bg1, border: `1px solid ${T.border}`, borderRadius: T.r.md, padding: "8px 10px", marginBottom: 6 }}>
       <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
@@ -269,6 +286,7 @@ function BucketCard({ a, dayIdx, bucket, onMoveToBucket }) {
         <span style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.3 }}>{clean(a.title)}</span>
       </div>
       {a.details && <div style={{ marginTop: 3 }}><DetailsBlock details={a.details} indent={62} /></div>}
+      <TipLines tips={tips} indent={62} />
       <div style={{ display: "flex", gap: 5, marginTop: 6, marginLeft: 62, alignItems: "center" }}>
         <span style={{ fontSize: T.fs.label, color: T.hint }}>Move to:</span>
         {BUCKETS.filter(b => b !== bucket).map(b => (
@@ -282,7 +300,7 @@ function BucketCard({ a, dayIdx, bucket, onMoveToBucket }) {
   );
 }
 
-export function BucketView({ day, dayIdx, onMoveToBucket }) {
+export function BucketView({ day, dayIdx, tipsFor, onMoveToBucket }) {
   return (
     <div>
       {BUCKETS.map(bucket => {
@@ -299,7 +317,7 @@ export function BucketView({ day, dayIdx, onMoveToBucket }) {
             {items.length === 0 ? (
               <div style={{ fontSize: T.fs.meta, color: T.hint, fontStyle: "italic", paddingLeft: 2, marginBottom: 4 }}>Nothing planned.</div>
             ) : (
-              items.map(a => <BucketCard key={a.id} a={a} dayIdx={dayIdx} bucket={bucket} onMoveToBucket={onMoveToBucket} />)
+              items.map(a => <BucketCard key={a.id} a={a} tips={tipsFor?.get(a.id)} dayIdx={dayIdx} bucket={bucket} onMoveToBucket={onMoveToBucket} />)
             )}
           </div>
         );
@@ -309,6 +327,19 @@ export function BucketView({ day, dayIdx, onMoveToBucket }) {
 }
 
 function DayCard({ day, dayIdx, days, viewMode, tweakingId, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onMoveToBucket, onTweakActivity }) {
+  // Tips attach to the activity they name (same matcher as the PDF's 2B day
+  // cards); the rest stay day-level under "Before you go". Render-time only.
+  const titles = day.activities.map(x => clean(x.title));
+  const tipsFor = new Map();
+  const dayTips = [];
+  for (const tip of day.tips) {
+    const ti = matchTipToActivity(tip, titles);
+    if (ti >= 0) {
+      const id = day.activities[ti].id;
+      tipsFor.set(id, [...(tipsFor.get(id) || []), tip]);
+    } else dayTips.push(tip);
+  }
+
   return (
     <div style={{ marginBottom: 22 }}>
       <div style={{ fontSize: T.fs.ui, fontWeight: 800, color: T.ink, margin: "0 0 12px", paddingBottom: 6, borderBottom: `1px solid ${T.border}` }}>
@@ -320,11 +351,11 @@ function DayCard({ day, dayIdx, days, viewMode, tweakingId, onEditActivity, onDe
           No activities left for this day.
         </div>
       ) : viewMode === "buckets" ? (
-        <BucketView day={day} dayIdx={dayIdx} onMoveToBucket={onMoveToBucket} />
+        <BucketView day={day} dayIdx={dayIdx} tipsFor={tipsFor} onMoveToBucket={onMoveToBucket} />
       ) : (
         <Reorder.Group axis="y" as="div" values={day.activities} onReorder={next => onReorderDay(dayIdx, next)}>
           {day.activities.map(a => (
-            <ActivityBlock key={a.id} a={a} dayIdx={dayIdx} days={days} isTweaking={tweakingId === a.id}
+            <ActivityBlock key={a.id} a={a} tips={tipsFor.get(a.id)} dayIdx={dayIdx} days={days} isTweaking={tweakingId === a.id}
               onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity} onMoveActivity={onMoveActivity} onTweakActivity={onTweakActivity} />
           ))}
         </Reorder.Group>
@@ -340,13 +371,16 @@ function DayCard({ day, dayIdx, days, viewMode, tweakingId, onEditActivity, onDe
         </div>
       )}
 
-      {day.tips.length > 0 && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-          {day.tips.map((tip, ti) => (
-            <div key={ti} style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "5px 10px", fontSize: T.fs.meta, color: T.muted, display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ width: 4, height: 4, borderRadius: "50%", background: T.accent, display: "inline-block", flexShrink: 0 }} /> {tip}
-            </div>
-          ))}
+      {dayTips.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: T.fs.micro, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: T.accent, marginBottom: 6 }}>Before you go</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {dayTips.map((tip, ti) => (
+              <div key={ti} style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "5px 10px", fontSize: T.fs.meta, color: T.muted, display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 4, height: 4, borderRadius: "50%", background: T.accent, display: "inline-block", flexShrink: 0 }} /> {tip}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -307,8 +307,11 @@ export function spliceDayInPlan(planText, dayIndex, newContent) {
 // carry it verbatim) and nothing here ever writes back.
 //
 // Legacy plans have no separator — the 4C bridge derives fact-looking
-// fragments from the prose instead. The prose keeps them too (redundancy
-// accepted): a regex can miss, so the sentence must stay complete.
+// fragments from the prose instead. The first sentence always survives
+// untouched; later sentences drop only when they are short, provable
+// restatements of a fact a chip was just derived from (re-reported as
+// "sloppy" 2026-08-08 — the old keep-everything rule read as duplication).
+// The stored string is never rewritten, so Edit still shows the full prose.
 
 const FACT_KINDS = [
   { kind: "cost",     re: /(?:[€$£¥₺]|\bUSD\b|\bEUR\b|\bkr\b)\s?\d|\bfree\b/i },
@@ -329,6 +332,13 @@ export function classifyFact(text) {
 
 const MAX_FACTS = 5; // bound the chip row — anything past this stays prose-only
 
+// One source for the bridge's cost + booking patterns — the redundancy trim
+// must drop exactly what the chip derivation matched, so they share literally.
+// Cost allows a currency symbol on both ends of a range ("$10–$25") and
+// "free admission" alongside "free entry" (both chipped nothing before).
+const LEGACY_COST_RE = /~?\s?(?:[€$£¥₺]\s?\d+(?:[.,]\d+)?(?:\s?[–-]\s?[€$£¥₺]?\s?\d+(?:[.,]\d+)?)?)|\bfree (?:entry|admission)\b/i;
+const LEGACY_BOOKING_RE = /\b(?:book(?:ing)?\s?(?:ahead|online|in advance)|pre-?book|tickets? online|reservations? (?:required|recommended|essential))\b/i;
+
 /**
  * Split a Details string into { desc, facts:[{kind,text}] } for rendering.
  * Grammar plans split on " · "; legacy prose falls through to derivation.
@@ -346,18 +356,37 @@ export function splitDetails(details) {
     };
   }
 
-  // 4C bridge — derive chips from legacy prose; desc stays the full sentence.
+  // 4C bridge — derive chips from legacy prose.
   const facts = [];
-  const cost = raw.match(/~?\s?(?:[€$£¥₺]\s?\d+(?:[.,]\d+)?(?:\s?[–-]\s?\d+(?:[.,]\d+)?)?)|\bfree entry\b/i);
+  const cost = raw.match(LEGACY_COST_RE);
   if (cost) facts.push({ kind: "cost", text: cost[0].replace(/\s+/g, " ").trim() });
   const dur = raw.match(/\b\d+(?:[.,]\d+)?(?:\s?[–-]\s?\d+(?:[.,]\d+)?)?\s?(?:hours?|hrs?|h\b|minutes?|mins?)\b/i);
   if (dur) facts.push({ kind: "duration", text: dur[0].trim() });
   const hrs = raw.match(/\b(?:opens?|closes?|open)\s(?:at\s|daily\s)?\d{1,2}[:h.]?\d{0,2}(?:\s?[–-]\s?\d{1,2}[:h.]?\d{0,2})?/i);
   if (hrs) facts.push({ kind: "hours", text: hrs[0].trim() });
-  if (/\b(?:book(?:ing)?\s?(?:ahead|online|in advance)|pre-?book|tickets? online|reservations? (?:required|recommended|essential))\b/i.test(raw)) {
+  if (LEGACY_BOOKING_RE.test(raw)) {
     facts.push({ kind: "booking", text: "book ahead" });
   }
-  return { desc: raw, facts };
+
+  // Redundancy trim: a non-first sentence that restates facts we just chipped
+  // is duplication, not information — drop it from the rendered desc. The
+  // first sentence always survives, a genuinely long sentence always survives
+  // (prose that *mentions* a price is not a price restated), and a regex miss
+  // keeps its sentence, so nothing a chip doesn't carry can disappear. The
+  // stored string is untouched — Edit still shows the full prose.
+  const factTexts = facts.filter(f => f.kind !== "booking").map(f => f.text);
+  const sentences = raw.match(/[^.!?]*[.!?]+["')\]]*\s*|[^.!?]+$/g) || [raw];
+  const desc = sentences.filter((s, i) => {
+    if (i === 0) return true;
+    const t = s.trim();
+    let hits = factTexts.filter(f => t.includes(f)).length;
+    if (LEGACY_BOOKING_RE.test(t)) hits++;
+    // One fact in a short sentence, or two-plus in a mid-length one, is a
+    // restatement ("Upper deck seats typically $10–$25."). Longer = prose.
+    return !((hits >= 1 && t.length <= 70) || (hits >= 2 && t.length <= 110));
+  }).join("").trim();
+
+  return { desc, facts };
 }
 
 // Words too generic to identify a venue — a tip saying "the museum" or "the

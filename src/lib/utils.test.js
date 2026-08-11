@@ -455,16 +455,41 @@ describe("splitDetails — 4A grammar plans", () => {
 describe("splitDetails — 4C bridge for legacy sentence blobs", () => {
   const LEGACY = "Moorish hilltop citadel over Alfama. Entry ~€15, allow 2 hours; opens 09:00 — buy tickets online to skip the queue.";
 
-  it("keeps the full prose as the description (a regex can miss facts)", () => {
-    expect(splitDetails(LEGACY).desc).toBe(LEGACY);
-  });
-
   it("derives cost, duration, hours and booking chips from the prose", () => {
     const kinds = splitDetails(LEGACY).facts.map(f => f.kind);
     expect(kinds).toContain("cost");
     expect(kinds).toContain("duration");
     expect(kinds).toContain("hours");
     expect(kinds).toContain("booking");
+  });
+
+  it("drops a trailing fact-dump sentence once its facts are chipped", () => {
+    // The whole second sentence restates the four chips — duplication on
+    // screen (re-reported 2026-08-08), so the rendered desc trims to the
+    // first sentence. The stored string is untouched (render-time only).
+    expect(splitDetails(LEGACY).desc).toBe("Moorish hilltop citadel over Alfama.");
+  });
+
+  it("drops a short single-fact restatement (the Chase Field case)", () => {
+    const { desc, facts } = splitDetails("Catch a Diamondbacks game under the retractable roof. Upper deck seats typically $10–$25.");
+    expect(desc).toBe("Catch a Diamondbacks game under the retractable roof.");
+    expect(facts.map(f => f.text)).toContain("$10–$25");
+  });
+
+  it("never drops the first sentence, even when it carries the fact", () => {
+    const { desc } = splitDetails("Entry ~€15 for the rooftop terrace.");
+    expect(desc).toBe("Entry ~€15 for the rooftop terrace.");
+  });
+
+  it("keeps a long sentence that mentions a fact but carries real prose", () => {
+    const KEEP = "Historic market hall in the old town. Entry €5 includes a guided tasting of six regional cheeses and a glass of vinho verde.";
+    expect(splitDetails(KEEP).desc).toBe(KEEP);
+  });
+
+  it("keeps a sentence whose facts no chip carries (a regex miss loses nothing)", () => {
+    const { desc, facts } = splitDetails("Quiet cloister garden. Donations welcome at the gate.");
+    expect(facts).toEqual([]);
+    expect(desc).toBe("Quiet cloister garden. Donations welcome at the gate.");
   });
 
   it("derives nothing from a fact-free sentence", () => {
@@ -476,6 +501,13 @@ describe("splitDetails — 4C bridge for legacy sentence blobs", () => {
   it("never misreads a bare time range as a cost", () => {
     const { facts } = splitDetails("Sunset spot, best 18:00–19:30.");
     expect(facts.filter(f => f.kind === "cost")).toEqual([]);
+  });
+
+  it("chips a full price range and 'free admission' (widened 2026-08-10)", () => {
+    expect(splitDetails("Ballpark tour. Seats $10–$25.").facts.map(f => f.text)).toContain("$10–$25");
+    const free = splitDetails("City museum of ceramics. Free admission.");
+    expect(free.facts).toEqual([{ kind: "cost", text: "Free admission" }]);
+    expect(free.desc).toBe("City museum of ceramics.");
   });
 });
 
