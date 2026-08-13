@@ -54,11 +54,17 @@ export function normalizeVenueName(name) {
 }
 
 /**
- * Similarity between two venue names, 0..1. Token-set Jaccard, plus a
- * containment boost: when every token of the shorter name appears in the
- * longer, treat it as a strong match — Google often returns the fuller
- * official name ("Camelback Mountain Echo Canyon Trailhead" for "Camelback
- * Mountain"), which plain Jaccard would under-score.
+ * Similarity between a generated venue name (query) and a Google candidate,
+ * 0..1. Token-set Jaccard, plus a ONE-DIRECTIONAL containment boost: only
+ * when every query token appears in the candidate — Google often returns the
+ * fuller official name ("Camelback Mountain Echo Canyon Trailhead" for
+ * "Camelback Mountain"), which plain Jaccard would under-score.
+ *
+ * The reverse direction gets NO boost, deliberately: a candidate that is a
+ * mere fragment of the query ("The Coffee" for the hallucinated "Futile
+ * Coffee Emporium") is Google matching one generic word, and boosting it
+ * verified a fake venue with a real-but-different venue's address
+ * (caught live 2026-08-13). Asymmetric on purpose — args are (query, candidate).
  */
 export function venueMatchScore(a, b) {
   const ta = normalizeVenueName(a).split(" ").filter(Boolean);
@@ -67,9 +73,8 @@ export function venueMatchScore(a, b) {
   const sa = new Set(ta), sb = new Set(tb);
   const inter = [...sa].filter(t => sb.has(t)).length;
   const jaccard = inter / (sa.size + sb.size - inter);
-  const [small, big] = sa.size <= sb.size ? [sa, sb] : [sb, sa];
-  const contained = [...small].every(t => big.has(t));
-  return contained ? Math.max(jaccard, 0.85) : jaccard;
+  const queryContained = [...sa].every(t => sb.has(t));
+  return queryContained ? Math.max(jaccard, 0.85) : jaccard;
 }
 
 /**

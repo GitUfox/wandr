@@ -46,6 +46,20 @@ describe("venueMatchScore — the §12 contract cases", () => {
     expect(venueMatchScore("Desert Botanical Garden", "Desert Museum")).toBeLessThan(MATCH_THRESHOLD);
   });
 
+  it("a fragment candidate does NOT match — the 'The Coffee' live false positive (2026-08-13)", () => {
+    // Google returned "The Coffee" for the hallucinated "Futile Coffee
+    // Emporium"; the old bidirectional containment boost verified the fake
+    // and attached a real venue's address to it. Containment must never
+    // fire when the CANDIDATE is the contained side.
+    expect(venueMatchScore("Futile Coffee Emporium", "The Coffee")).toBeLessThan(MATCH_THRESHOLD);
+  });
+
+  it("containment stays one-directional: query inside fuller official candidate still matches", () => {
+    // The legit direction — model says the short name, Google returns the
+    // fuller official one — must keep the boost even for single-token names.
+    expect(venueMatchScore("Belcanto", "Belcanto by José Avillez")).toBeGreaterThanOrEqual(MATCH_THRESHOLD);
+  });
+
   it("identical names score 1", () => {
     expect(venueMatchScore("Heard Museum", "Heard Museum")).toBe(1);
   });
