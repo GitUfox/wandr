@@ -48,6 +48,8 @@ export default function Glyph({ name, size = 16, color = "currentColor", style }
       return <svg {...p}><path d="M4 20l4.2-1.1L20 7.1 16.9 4 5.1 15.8 4 20zM14.5 6.4l3.1 3.1" /></svg>;
     case "x": // remove (3B action bar)
       return <svg {...p}><path d="M6 6l12 12M18 6L6 18" /></svg>;
+    case "pin": // map chip (pick A) — verified venue opens in Google Maps
+      return <svg {...p}><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z" /><circle cx="12" cy="10" r="2.4" /></svg>;
     default:
       return null;
   }

@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MODES, T, FEATURES, AI_DISCLAIMER } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
-import { arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime } from "../lib/utils.js";
+import { arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime, findGroundedVenue } from "../lib/utils.js";
 import { parsePlan } from "../lib/planModel.js";
 import { TEAM_SHORT } from "../lib/mlbTeams.js";
 import Md from "./Md.jsx";
@@ -279,12 +279,19 @@ export default function Dashboard({
       const chipsHtml = chips.length
         ? `<div class="chips">${chips.map(f => `<span class="chip${f.kind === "booking" ? " hot" : ""}">${htmlEscape(f.text)}</span>`).join("")}</div>`
         : "";
+      // Pick A's print form: paper wants text, not taps — a grounded venue
+      // prints its real street address (Google's, never the model's).
+      const venue = findGroundedVenue(String(a.title || "").replace(/\*\*/g, ""), trip?.categories);
+      const addrHtml = venue?.address
+        ? `<div class="c-addr"><svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="#9a938c" stroke-width="2.2" stroke-linecap="round"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>${htmlEscape(venue.address)}</div>`
+        : "";
       return `<div class="card">
         <div class="rail"><div class="tm">${htmlEscape(displayTime(a.time))}</div>${dur ? `<div class="du">${htmlEscape(dur.text)}</div>` : ""}</div>
         <div>
           <div class="c-ttl">${htmlEscape(String(a.title || "").replace(/\*\*/g, ""))}</div>
           ${chipsHtml}
           ${desc ? `<div class="c-desc">${rich(desc)}</div>` : ""}
+          ${addrHtml}
           ${(a._tips || []).map(tip => `<div class="c-tip"><span class="bang">!</span><span>${rich(tip)}</span></div>`).join("")}
         </div>
       </div>`;
@@ -375,6 +382,8 @@ export default function Dashboard({
                 border: 1px solid #e5e0da; color: #6b655f; background: #fbfaf9; white-space: nowrap; }
         .chip.hot { border-color: #e8c4b4; color: #c96442; background: #fdf5f2; }
         .c-desc { font-size: 10px; color: #555; line-height: 1.55; margin-top: 3px; }
+        /* Pick A print form: the grounded venue's real street address. */
+        .c-addr { display: flex; align-items: center; gap: 4px; font-size: 8.5px; color: #9a938c; margin-top: 3px; }
         /* 2B: a tip rendered with the stop it belongs to. */
         .c-tip { display: flex; gap: 7px; margin-top: 6px; padding: 5px 9px; background: #fbf7f4;
                  border-left: 2.5px solid #c96442; border-radius: 0 4px 4px 0; break-inside: avoid; }
@@ -742,7 +751,7 @@ export default function Dashboard({
                   {/* Editable blocks once a full itinerary has finished streaming;
                       Md stays the fallback (during streaming, other modes, or if parsing yielded nothing). */}
                   {FEATURES.editableItinerary && !planLoading && planMode === "full" && planModel?.days?.length ? (
-                    <ItineraryEditor model={planModel} onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity} onReorderDay={onReorderDay} onMoveActivity={onMoveActivity} onMoveToBucket={onMoveToBucket} onTweakActivity={onTweakActivity} tweakingId={tweakingId} />
+                    <ItineraryEditor model={planModel} categories={trip?.categories} onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity} onReorderDay={onReorderDay} onMoveActivity={onMoveActivity} onMoveToBucket={onMoveToBucket} onTweakActivity={onTweakActivity} tweakingId={tweakingId} />
                   ) : (
                     <Md text={planText} />
                   )}

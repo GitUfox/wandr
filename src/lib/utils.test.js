@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles, splitDetails, classifyFact, matchTipToActivity, pruneOrphanTips } from "./utils.js";
+import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles, splitDetails, classifyFact, matchTipToActivity, pruneOrphanTips, findGroundedVenue } from "./utils.js";
 
 // ── arr ───────────────────────────────────────────────────────────────────────
 
@@ -606,5 +606,54 @@ describe("pruneOrphanTips", () => {
   it("handles empty and missing tips", () => {
     expect(pruneOrphanTips([], "**X**", ["**Y**"])).toEqual([]);
     expect(pruneOrphanTips(undefined, "**X**", ["**Y**"])).toEqual([]);
+  });
+});
+
+// ── findGroundedVenue (map chip, pick A) ─────────────────────────────────────
+
+describe("findGroundedVenue", () => {
+  const MAPS = "https://www.google.com/maps/search/?api=1&query=x&query_place_id=y";
+  const cats = {
+    culture: [
+      { name: "Museu do Fado", verified: true, canonicalName: "Fado Museum", address: "Largo do Chafariz de Dentro 1", mapUrl: MAPS },
+      { name: "Igreja de São Francisco", verified: false },
+    ],
+    nature: [
+      { name: "Jardins do Palácio de Cristal", verified: true, address: "R. de D Manuel II", mapUrl: MAPS },
+    ],
+    experiences: "not-an-array",
+  };
+
+  it("matches an exact title", () => {
+    expect(findGroundedVenue("Museu do Fado", cats)?.address).toBe("Largo do Chafariz de Dentro 1");
+  });
+
+  it("matches a title that wraps the venue in activity framing", () => {
+    expect(findGroundedVenue("Sunset picnic at the Jardins do Palácio de Cristal", cats)).toBeTruthy();
+  });
+
+  it("matches via Google's canonicalName and survives diacritic drift", () => {
+    expect(findGroundedVenue("Fado Museum visit", cats)).toBeTruthy();
+    expect(findGroundedVenue("Jardins do Palacio de Cristal", cats)).toBeTruthy();
+  });
+
+  it("one shared word is not that venue", () => {
+    expect(findGroundedVenue("Fado dinner show", cats)).toBeNull();
+    expect(findGroundedVenue("Cristal rooftop bar", cats)).toBeNull();
+  });
+
+  it("unverified venues never link", () => {
+    expect(findGroundedVenue("Igreja de São Francisco", cats)).toBeNull();
+  });
+
+  it("rejects a tampered mapUrl (localStorage is user-editable)", () => {
+    const bad = { culture: [{ name: "Museu do Fado", verified: true, mapUrl: "javascript:alert(1)" }] };
+    expect(findGroundedVenue("Museu do Fado", bad)).toBeNull();
+  });
+
+  it("handles missing/malformed categories safely", () => {
+    expect(findGroundedVenue("Museu do Fado", undefined)).toBeNull();
+    expect(findGroundedVenue("", cats)).toBeNull();
+    expect(findGroundedVenue("Anything", { x: "not-an-array" })).toBeNull();
   });
 });

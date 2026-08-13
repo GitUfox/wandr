@@ -18,7 +18,7 @@ import { useState, useEffect } from "react";
 import { Reorder, useDragControls } from "framer-motion";
 import { T } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
-import { BUCKETS, bucketOf, timeSortKey, formatTime, displayTime, splitDetails, matchTipToActivity } from "../lib/utils.js";
+import { BUCKETS, bucketOf, timeSortKey, formatTime, displayTime, splitDetails, matchTipToActivity, findGroundedVenue } from "../lib/utils.js";
 import Glyph from "./Glyphs.jsx";
 
 const clean = s => (s || "").replace(/\*\*/g, "").trim();
@@ -31,16 +31,16 @@ const clean = s => (s || "").replace(/\*\*/g, "").trim();
    prose (which keeps the facts too — a regex can miss). */
 const FACT_GLYPH = { cost: "coin", duration: "clock", hours: "doors", booking: "bookmark", note: "info" };
 
-function DetailsBlock({ details, tips, indent = 0 }) {
+function DetailsBlock({ details, tips, mapUrl, indent = 0 }) {
   const { desc, facts } = splitDetails(details);
-  if (!desc && !facts.length && !tips?.length) return null;
+  if (!desc && !facts.length && !tips?.length && !mapUrl) return null;
   return (
     <>
       {desc && <div style={{ fontSize: T.fs.meta, color: T.muted, lineHeight: 1.55, marginLeft: indent }}>{desc}</div>}
       {/* Attached tip reads as part of the description, so it sits above the
           fact chips — chips close the card (Kraig, 2026-08-11). */}
       <TipLines tips={tips} indent={indent} />
-      {facts.length > 0 && (
+      {(facts.length > 0 || mapUrl) && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: indent }}>
           {facts.map((f, i) => {
             const hot = f.kind === "booking";
@@ -58,6 +58,25 @@ function DetailsBlock({ details, tips, indent = 0 }) {
               </span>
             );
           })}
+          {/* Map chip (pick A) — verified venues only, pinned to Google's own
+              Place ID. An <a>, not a button: long-press/cmd-click must work.
+              stopPropagation keeps the card's tap-to-select untouched. */}
+          {mapUrl && (
+            <a href={mapUrl} target="_blank" rel="noopener noreferrer"
+              aria-label="Open in Google Maps"
+              onClick={e => e.stopPropagation()}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                fontSize: T.fs.label, fontWeight: 700, lineHeight: 1.3,
+                color: T.accentHover, textDecoration: "none",
+                background: "rgba(201,100,66,.10)",
+                border: "1px solid rgba(201,100,66,.55)",
+                borderRadius: T.r.sm, padding: "3px 8px",
+              }}>
+              <Glyph name="pin" size={11} color="currentColor" />
+              Map
+            </a>
+          )}
         </div>
       )}
     </>
@@ -146,7 +165,7 @@ function TipLines({ tips, indent = 0 }) {
   ));
 }
 
-function ActivityBlock({ a, tips, dayIdx, days, isTweaking, selected, onToggleSelect, onEditActivity, onDeleteActivity, onMoveActivity, onTweakActivity }) {
+function ActivityBlock({ a, tips, mapUrl, dayIdx, days, isTweaking, selected, onToggleSelect, onEditActivity, onDeleteActivity, onMoveActivity, onTweakActivity }) {
   // The ✦ tweak is the only per-activity action that calls the AI; inline edit,
   // move and delete are all local, so they stay available offline.
   const online = useOnline();
@@ -237,7 +256,7 @@ function ActivityBlock({ a, tips, dayIdx, days, isTweaking, selected, onToggleSe
             <div style={{ width: 58, flexShrink: 0, fontSize: T.fs.meta, color: T.accent, fontWeight: 700, paddingTop: 2 }}>{displayTime(clean(a.time))}</div>
             <div style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
               <div style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.35, marginBottom: 2 }}>{clean(a.title)}</div>
-              {(a.details || tips?.length > 0) && <DetailsBlock details={a.details} tips={tips} />}
+              {(a.details || tips?.length > 0 || mapUrl) && <DetailsBlock details={a.details} tips={tips} mapUrl={mapUrl} />}
               {/* Move picker — choose a destination day */}
               {moving && otherDays.length > 0 && (
                 <div onClick={e => e.stopPropagation()} style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", marginTop: 8 }}>
@@ -319,14 +338,14 @@ function FoodRow({ f }) {
 /* ── Buckets view ─────────────────────────────────────────────────────────
    Compact, read-only cards grouped by time-of-day. Tap a "→ Bucket" chip to
    re-time an activity into another bucket. Detailed edits live in Timeline. */
-function BucketCard({ a, tips, dayIdx, bucket, onMoveToBucket }) {
+function BucketCard({ a, tips, mapUrl, dayIdx, bucket, onMoveToBucket }) {
   return (
     <div style={{ background: T.bg1, border: `1px solid ${T.border}`, borderRadius: T.r.md, padding: "8px 10px", marginBottom: 6 }}>
       <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
         <span style={{ fontSize: T.fs.label, color: T.accent, fontWeight: 700, flexShrink: 0, width: 54 }}>{displayTime(clean(a.time))}</span>
         <span style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.3 }}>{clean(a.title)}</span>
       </div>
-      {(a.details || tips?.length > 0) && <div style={{ marginTop: 3 }}><DetailsBlock details={a.details} tips={tips} indent={62} /></div>}
+      {(a.details || tips?.length > 0 || mapUrl) && <div style={{ marginTop: 3 }}><DetailsBlock details={a.details} tips={tips} mapUrl={mapUrl} indent={62} /></div>}
       <div style={{ display: "flex", gap: 5, marginTop: 6, marginLeft: 62, alignItems: "center" }}>
         <span style={{ fontSize: T.fs.label, color: T.hint }}>Move to:</span>
         {BUCKETS.filter(b => b !== bucket).map(b => (
@@ -340,7 +359,7 @@ function BucketCard({ a, tips, dayIdx, bucket, onMoveToBucket }) {
   );
 }
 
-export function BucketView({ day, dayIdx, tipsFor, onMoveToBucket }) {
+export function BucketView({ day, dayIdx, tipsFor, mapUrlFor, onMoveToBucket }) {
   return (
     <div>
       {BUCKETS.map(bucket => {
@@ -357,7 +376,7 @@ export function BucketView({ day, dayIdx, tipsFor, onMoveToBucket }) {
             {items.length === 0 ? (
               <div style={{ fontSize: T.fs.meta, color: T.hint, fontStyle: "italic", paddingLeft: 2, marginBottom: 4 }}>Nothing planned.</div>
             ) : (
-              items.map(a => <BucketCard key={a.id} a={a} tips={tipsFor?.get(a.id)} dayIdx={dayIdx} bucket={bucket} onMoveToBucket={onMoveToBucket} />)
+              items.map(a => <BucketCard key={a.id} a={a} tips={tipsFor?.get(a.id)} mapUrl={mapUrlFor?.(a)} dayIdx={dayIdx} bucket={bucket} onMoveToBucket={onMoveToBucket} />)
             )}
           </div>
         );
@@ -366,7 +385,7 @@ export function BucketView({ day, dayIdx, tipsFor, onMoveToBucket }) {
   );
 }
 
-function DayCard({ day, dayIdx, days, viewMode, tweakingId, selectedId, onToggleSelect, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onMoveToBucket, onTweakActivity }) {
+function DayCard({ day, dayIdx, days, viewMode, categories, tweakingId, selectedId, onToggleSelect, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onMoveToBucket, onTweakActivity }) {
   // Tips attach to the activity they name (same matcher as the PDF's 2B day
   // cards); the rest stay day-level under "Before you go". Render-time only.
   const titles = day.activities.map(x => clean(x.title));
@@ -380,6 +399,10 @@ function DayCard({ day, dayIdx, days, viewMode, tweakingId, selectedId, onToggle
     } else dayTips.push(tip);
   }
 
+  // Map chip (pick A): a row whose title names a grounded venue links to
+  // Google's exact pin. Render-time only — nothing is stored on the plan.
+  const mapUrlFor = (a) => findGroundedVenue(clean(a.title), categories)?.mapUrl;
+
   return (
     <div style={{ marginBottom: 22 }}>
       <div style={{ fontSize: T.fs.ui, fontWeight: 800, color: T.ink, margin: "0 0 12px", paddingBottom: 6, borderBottom: `1px solid ${T.border}` }}>
@@ -391,11 +414,11 @@ function DayCard({ day, dayIdx, days, viewMode, tweakingId, selectedId, onToggle
           No activities left for this day.
         </div>
       ) : viewMode === "buckets" ? (
-        <BucketView day={day} dayIdx={dayIdx} tipsFor={tipsFor} onMoveToBucket={onMoveToBucket} />
+        <BucketView day={day} dayIdx={dayIdx} tipsFor={tipsFor} mapUrlFor={mapUrlFor} onMoveToBucket={onMoveToBucket} />
       ) : (
         <Reorder.Group axis="y" as="div" values={day.activities} onReorder={next => onReorderDay(dayIdx, next)}>
           {day.activities.map(a => (
-            <ActivityBlock key={a.id} a={a} tips={tipsFor.get(a.id)} dayIdx={dayIdx} days={days} isTweaking={tweakingId === a.id}
+            <ActivityBlock key={a.id} a={a} tips={tipsFor.get(a.id)} mapUrl={mapUrlFor(a)} dayIdx={dayIdx} days={days} isTweaking={tweakingId === a.id}
               selected={selectedId === a.id} onToggleSelect={onToggleSelect}
               onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity} onMoveActivity={onMoveActivity} onTweakActivity={onTweakActivity} />
           ))}
@@ -433,7 +456,7 @@ const viewTab = active => ({
   color: active ? T.white : T.muted, background: active ? T.accent : "transparent",
 });
 
-export default function ItineraryEditor({ model, tweakingId, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onMoveToBucket, onTweakActivity }) {
+export default function ItineraryEditor({ model, categories, tweakingId, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onMoveToBucket, onTweakActivity }) {
   const [viewMode, setViewMode] = useState("timeline"); // "timeline" | "buckets" — presentation only
   // 3B: one selected card at a time — tap to open its action bar, tap again
   // (or tap another card) to close. Presentation state only, never persisted.
@@ -454,7 +477,7 @@ export default function ItineraryEditor({ model, tweakingId, onEditActivity, onD
         <div style={{ fontSize: T.fs.body, color: T.muted, lineHeight: 1.7, marginBottom: 18 }}>{model.intro}</div>
       )}
       {model.days.map((day, i) => (
-        <DayCard key={i} day={day} dayIdx={i} days={days} viewMode={viewMode} tweakingId={tweakingId}
+        <DayCard key={i} day={day} dayIdx={i} days={days} viewMode={viewMode} categories={categories} tweakingId={tweakingId}
           selectedId={selectedId} onToggleSelect={toggleSelect}
           onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity}
           onReorderDay={onReorderDay} onMoveActivity={onMoveActivity} onMoveToBucket={onMoveToBucket} onTweakActivity={onTweakActivity} />

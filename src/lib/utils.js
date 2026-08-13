@@ -440,3 +440,44 @@ export function pruneOrphanTips(tips, oldTitle, currentTitles) {
     matchTipToActivity(tip, currentTitles) >= 0
   );
 }
+
+// ── Map chip — plan row ↔ grounded venue (design pick A, 2026-08-13) ─────────
+
+// Venue names are full of diacritics (Música, Palácio, São) which the tip
+// tokenizer would shred — this one strips them first. Local on purpose:
+// changing the shared tokens() would silently retune tip attachment.
+const venueTokens = (s) =>
+  String(s || "").toLowerCase().replace(/\*\*/g, "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .split(/[^a-z0-9]+/).filter(w => w.length >= 4);
+
+/**
+ * Find the grounded (verified) trip-DB venue an activity title refers to.
+ * Returns the category item — { mapUrl, address, canonicalName, … } — or null.
+ *
+ * Match rule: EVERY distinctive token of the venue's name (or Google's
+ * canonicalName) must appear in the title, prefix-tolerant. Titles wrap venue
+ * names in activity framing ("Sunset at Miradouro das Portas do Sol with
+ * Wine"), so title⊇venue is the correct direction; a title merely sharing one
+ * word with a venue must not earn that venue's pin.
+ *
+ * mapUrl is only ever trusted when it is a real Google Maps URL — stored trips
+ * are user-editable localStorage, so the href is validated at every use.
+ */
+export function findGroundedVenue(title, categories) {
+  const tt = venueTokens(title);
+  if (!tt.length) return null;
+  const covers = (name) => {
+    const nt = venueTokens(name);
+    return nt.length > 0 && nt.every(t => tt.some(w => w === t || w.startsWith(t) || t.startsWith(w)));
+  };
+  for (const items of Object.values(categories || {})) {
+    if (!Array.isArray(items)) continue;
+    for (const it of items) {
+      if (!it?.verified || typeof it.mapUrl !== "string") continue;
+      if (!it.mapUrl.startsWith("https://www.google.com/maps")) continue;
+      if (covers(it.name) || covers(it.canonicalName)) return it;
+    }
+  }
+  return null;
+}
