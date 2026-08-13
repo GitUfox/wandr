@@ -26,11 +26,18 @@ export function paceBand(pace) {
 
 // ── Venue grounding (PHASE2_PLANNING §12, phase 1) ───────────────────────────
 export const GROUNDING = {
-  // Which trip-DB categories get verified. Phase 1 grounds ONE POI-dense
-  // category so a miss means our matching is wrong, not Google's coverage.
-  // Expanding coverage = add category names here — but re-check the quota
-  // math in §12.2 first (each category ≈ 8 lookups per build).
-  categories: ["culture"],
+  // Which trip-DB categories get verified. Phase 1 grounded culture only so a
+  // miss meant our matching was wrong, not Google's coverage — that bet paid
+  // out 2026-08-13 (two matcher bugs found+fixed on the first live run), so
+  // phase 2 grounds every category the build can emit. Quota math at the slim
+  // schema's "3 items max per category": ≤15 lookups/build, ≤90/day at the
+  // 6-builds/IP/day limit ≈ 2.7K/month worst case vs 5K/month free (Text
+  // Search Pro SKU), before the 30-day venue cache. Effectively $0.
+  categories: ["nature", "culture", "nightlife", "exploration", "experiences"],
+  // Client-side mirror of MAX_VENUES_PER_REQUEST in api/places-shared.js —
+  // keep the two in sync. Over-limit requests 400 and lose ALL grounding for
+  // the build, so collectVenues trims to this (essentials first) instead.
+  maxPerRequest: 40,
   // Hard ceiling on how long verification may delay a build. It runs inside
   // the ~44s build await (blocking on purpose — single state write, no race
   // with navigation); on timeout the trip proceeds ungrounded.

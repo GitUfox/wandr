@@ -101,16 +101,35 @@ describe("mergeVerification", () => {
 });
 
 describe("collectVenues", () => {
-  it("collects only GROUNDING.categories, skipping blank names", () => {
+  it("collects all GROUNDING.categories, skipping blank names and non-grounded keys", () => {
     const cats = {
       culture: [{ name: "Heard Museum" }, { name: "  " }, { notName: true }],
       nature:  [{ name: "Camelback Mountain" }],
+      notARealCategory: [{ name: "Should Not Appear" }],
     };
     const venues = collectVenues(cats);
-    // Phase-1 config grounds culture only — this assertion intentionally
-    // couples to GROUNDING so expanding the list forces a conscious test touch.
-    expect(GROUNDING.categories).toEqual(["culture"]);
-    expect(venues).toEqual([{ name: "Heard Museum", category: "culture" }]);
+    // Phase-2 config (2026-08-13) grounds every category the build can emit —
+    // this assertion intentionally couples to GROUNDING so changing coverage
+    // forces a conscious test touch.
+    expect(GROUNDING.categories).toEqual(["nature", "culture", "nightlife", "exploration", "experiences"]);
+    expect(venues).toEqual([
+      { name: "Camelback Mountain", category: "nature" },
+      { name: "Heard Museum", category: "culture" },
+    ]);
+  });
+
+  it("caps at maxPerRequest with essentials surviving first", () => {
+    const many = n => Array.from({ length: n }, (_, i) => ({ name: `Optional ${i}`, priority: "optional" }));
+    const cats = {
+      nature: many(GROUNDING.maxPerRequest),
+      culture: [{ name: "Must See", priority: "essential" }, { name: "Nice To See", priority: "recommended" }],
+    };
+    const venues = collectVenues(cats);
+    expect(venues.length).toBe(GROUNDING.maxPerRequest);
+    expect(venues[0]).toEqual({ name: "Must See", category: "culture" });
+    expect(venues[1]).toEqual({ name: "Nice To See", category: "culture" });
+    // No internal fields leak into the request payload.
+    expect(Object.keys(venues[0])).toEqual(["name", "category"]);
   });
 
   it("handles missing categories safely", () => {

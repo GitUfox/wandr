@@ -117,15 +117,23 @@ export function mergeVerification(categories, results) {
   return { categories: merged, stats };
 }
 
-/** The venues we'll ask the server about: grounded categories only. Pure. */
+/** The venues we'll ask the server about: grounded categories only, capped at
+ *  GROUNDING.maxPerRequest (the server 400s above its mirror limit, which
+ *  would lose ALL grounding for the build). When trimming, essentials survive
+ *  first — they're the venues a traveler will actually stand in front of. Pure. */
 export function collectVenues(categories) {
+  const rank = { essential: 0, recommended: 1, optional: 2 };
   const out = [];
   for (const cat of GROUNDING.categories) {
     for (const it of categories?.[cat] || []) {
-      if (typeof it?.name === "string" && it.name.trim()) out.push({ name: it.name, category: cat });
+      if (typeof it?.name === "string" && it.name.trim())
+        out.push({ name: it.name, category: cat, _rank: rank[it.priority] ?? 2 });
     }
   }
-  return out;
+  return out
+    .sort((a, b) => a._rank - b._rank)
+    .slice(0, GROUNDING.maxPerRequest)
+    .map(({ name, category }) => ({ name, category }));
 }
 
 // ── Destination autocomplete (design pick 5A) ────────────────────────────────
