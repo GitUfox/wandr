@@ -74,6 +74,25 @@ describe("venueMatchScore — the §12 contract cases", () => {
     expect(venueMatchScore("Mercado da Ribeira", "Mercado de Campo de Ourique")).toBeLessThan(MATCH_THRESHOLD);
   });
 
+  it("parenthetical annotations are ignored (Porto full-category run, 2026-08-13)", () => {
+    // The model annotates venues with activity context; those words are
+    // noise to the comparison and cost real venues their verification.
+    expect(venueMatchScore("Casa da Música (evening concert)", "Casa da Música")).toBeGreaterThanOrEqual(MATCH_THRESHOLD);
+    expect(venueMatchScore("Igreja de São Francisco (interior)", "Church of São Francisco")).toBeGreaterThanOrEqual(MATCH_THRESHOLD);
+  });
+
+  it("cross-language spellings of the same word match (Porto misses, 2026-08-13)", () => {
+    // Saint-word canon + tight prefix tolerance: the two real Porto venues
+    // the categorical expansion run failed to verify.
+    expect(venueMatchScore("Igreja de São Francisco", "Church of Saint Francis")).toBeGreaterThanOrEqual(MATCH_THRESHOLD);
+    expect(venueMatchScore("Museu de Arte Contemporânea de Serralves", "Serralves Museum of Contemporary Art")).toBeGreaterThanOrEqual(MATCH_THRESHOLD);
+  });
+
+  it("prefix tolerance stays tight — distinct venues do not merge", () => {
+    expect(venueMatchScore("Bar Aduela", "Barca do Douro")).toBeLessThan(MATCH_THRESHOLD);
+    expect(venueMatchScore("Casa do Rio", "Casino do Rio")).toBeLessThan(MATCH_THRESHOLD);
+  });
+
   it("identical names score 1", () => {
     expect(venueMatchScore("Heard Museum", "Heard Museum")).toBe(1);
   });

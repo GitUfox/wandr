@@ -38,19 +38,31 @@ export const MATCH_THRESHOLD = 0.6;
 // ── Name matching (pure — the genuinely fiddly part, so fully unit-tested) ────
 
 /**
- * Normalize a venue name for comparison: lowercase, strip accents and
- * punctuation, drop a leading English article, collapse whitespace.
- * "The Café Boulud" → "cafe boulud".
+ * Normalize a venue name for comparison: drop parenthetical annotations,
+ * lowercase, strip accents and punctuation, drop a leading English article,
+ * collapse whitespace. "The Café Boulud" → "cafe boulud".
+ *
+ * Parentheticals go first: the model annotates venues with activity context —
+ * "Igreja de São Francisco (interior)", "Casa da Música (evening concert)" —
+ * and those words are noise to both Google and the token comparison.
  */
 export function normalizeVenueName(name) {
   if (typeof name !== "string") return "";
   return name
+    .replace(/\([^)]*\)/g, " ")
     .toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // strip diacritics: e-acute -> e
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .replace(/^(the|a|an) /, "");
+}
+
+/** The name we send Google: annotations stripped, otherwise verbatim.
+ *  "Casa da Música (evening concert)" → "Casa da Música". */
+export function queryName(name) {
+  const cleaned = String(name || "").replace(/\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+  return cleaned || String(name || "");
 }
 
 // Connector words that carry no venue identity, across the languages
@@ -85,7 +97,22 @@ const TYPE_CANON = {
   ponte: "bridge", puente: "bridge", pont: "bridge",
   miradouro: "viewpoint", mirador: "viewpoint",
   monumento: "monument",
+  teatro: "theater", theatre: "theater",
+  sao: "saint", san: "saint", santo: "saint", santa: "saint", st: "saint",
 };
+
+/** Token-level equality with a tight prefix tolerance, so cross-language
+ *  spellings of the same word match: "francisco"≈"francis",
+ *  "contemporânea"≈"contemporary". Requires a common prefix of ≥4 chars
+ *  covering ≥75% of the shorter token — "bar"/"barca" and "casa"/"casino"
+ *  stay distinct. */
+function tokensEqualish(a, b) {
+  if (a === b) return true;
+  const min = Math.min(a.length, b.length);
+  let cp = 0;
+  while (cp < min && a[cp] === b[cp]) cp++;
+  return cp >= 4 && cp >= 0.75 * min;
+}
 
 /** Tokens used for matching: normalized, type-canonicalized, connectors
  *  dropped. Falls back to the raw tokens if filtering empties the name. */
@@ -112,13 +139,19 @@ function matchTokens(name) {
  * (caught live 2026-08-13). Asymmetric on purpose — args are (query, candidate).
  */
 export function venueMatchScore(a, b) {
-  const ta = matchTokens(a);
-  const tb = matchTokens(b);
-  if (!ta.length || !tb.length) return 0;
-  const sa = new Set(ta), sb = new Set(tb);
-  const inter = [...sa].filter(t => sb.has(t)).length;
-  const jaccard = inter / (sa.size + sb.size - inter);
-  const queryContained = [...sa].every(t => sb.has(t));
+  const sa = [...new Set(matchTokens(a))];
+  const sb = [...new Set(matchTokens(b))];
+  if (!sa.length || !sb.length) return 0;
+  // Greedy fuzzy intersection — each candidate token pairs with at most one
+  // query token, via exact or tight-prefix equality (tokensEqualish).
+  const used = new Array(sb.length).fill(false);
+  let inter = 0;
+  for (const t of sa) {
+    const j = sb.findIndex((u, k) => !used[k] && tokensEqualish(t, u));
+    if (j >= 0) { used[j] = true; inter++; }
+  }
+  const jaccard = inter / (sa.length + sb.length - inter);
+  const queryContained = inter === sa.length;
   return queryContained ? Math.max(jaccard, 0.85) : jaccard;
 }
 
@@ -326,7 +359,7 @@ export async function handlePlacesRequest(req, res, { key, isDev }) {
   const { destination, venues } = req.body;
   const results = await Promise.all(
     venues.map(async v => {
-      const candidates = await googleTextSearch(`${v.name}, ${destination}`, key);
+      const candidates = await googleTextSearch(`${queryName(v.name)}, ${destination}`, key);
       return shapeResult(v, pickBestMatch(v.name, candidates));
     })
   );
