@@ -53,12 +53,57 @@ export function normalizeVenueName(name) {
     .replace(/^(the|a|an) /, "");
 }
 
+// Connector words that carry no venue identity, across the languages
+// travelers actually hit. Dropped before comparison — "Museu do Fado" and
+// "Fado Museum" should not disagree over "do".
+const CONNECTOR_TOKENS = new Set([
+  "the", "a", "an", "of", "and",
+  "de", "do", "da", "dos", "das", "del", "della", "di", "du", "des",
+  "la", "le", "el", "les", "los", "las", "e", "y", "et", "und",
+]);
+
+// Venue-TYPE words mapped to one canonical token, so a locally-named venue
+// and Google's English display name score as the same identity:
+// "Museu do Fado" ↔ "Fado Museum" (first live grounding run, 2026-08-13,
+// returned 0/3 verified in Lisbon purely from this language gap — Google
+// localizes displayName to English while the model writes local names).
+// Mapping is symmetric (both sides canonicalized), so it can only merge
+// same-meaning type words, never distinct venues.
+const TYPE_CANON = {
+  museu: "museum", museo: "museum", musee: "museum",
+  igreja: "church", iglesia: "church", eglise: "church", chiesa: "church", kirche: "church",
+  catedral: "cathedral", cathedrale: "cathedral", duomo: "cathedral",
+  palacio: "palace", palais: "palace", palazzo: "palace",
+  castelo: "castle", castillo: "castle", chateau: "castle", castello: "castle",
+  mosteiro: "monastery", monasterio: "monastery", monastere: "monastery",
+  mercado: "market", marche: "market", mercato: "market", markt: "market",
+  jardim: "garden", jardin: "garden", giardino: "garden", gardens: "garden",
+  parque: "park", parc: "park", parco: "park",
+  torre: "tower",
+  praia: "beach", playa: "beach", plage: "beach", spiaggia: "beach",
+  praca: "square", plaza: "square", piazza: "square", platz: "square",
+  ponte: "bridge", puente: "bridge", pont: "bridge",
+  miradouro: "viewpoint", mirador: "viewpoint",
+  monumento: "monument",
+};
+
+/** Tokens used for matching: normalized, type-canonicalized, connectors
+ *  dropped. Falls back to the raw tokens if filtering empties the name. */
+function matchTokens(name) {
+  const raw = normalizeVenueName(name).split(" ").filter(Boolean);
+  const mapped = raw
+    .map(t => TYPE_CANON[t] || t)
+    .filter(t => !CONNECTOR_TOKENS.has(t));
+  return mapped.length ? mapped : raw;
+}
+
 /**
  * Similarity between a generated venue name (query) and a Google candidate,
- * 0..1. Token-set Jaccard, plus a ONE-DIRECTIONAL containment boost: only
- * when every query token appears in the candidate — Google often returns the
- * fuller official name ("Camelback Mountain Echo Canyon Trailhead" for
- * "Camelback Mountain"), which plain Jaccard would under-score.
+ * 0..1. Token-set Jaccard over matchTokens(), plus a ONE-DIRECTIONAL
+ * containment boost: only when every query token appears in the candidate —
+ * Google often returns the fuller official name ("Camelback Mountain Echo
+ * Canyon Trailhead" for "Camelback Mountain"), which plain Jaccard would
+ * under-score.
  *
  * The reverse direction gets NO boost, deliberately: a candidate that is a
  * mere fragment of the query ("The Coffee" for the hallucinated "Futile
@@ -67,8 +112,8 @@ export function normalizeVenueName(name) {
  * (caught live 2026-08-13). Asymmetric on purpose — args are (query, candidate).
  */
 export function venueMatchScore(a, b) {
-  const ta = normalizeVenueName(a).split(" ").filter(Boolean);
-  const tb = normalizeVenueName(b).split(" ").filter(Boolean);
+  const ta = matchTokens(a);
+  const tb = matchTokens(b);
   if (!ta.length || !tb.length) return 0;
   const sa = new Set(ta), sb = new Set(tb);
   const inter = [...sa].filter(t => sb.has(t)).length;

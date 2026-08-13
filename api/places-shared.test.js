@@ -60,6 +60,20 @@ describe("venueMatchScore — the §12 contract cases", () => {
     expect(venueMatchScore("Belcanto", "Belcanto by José Avillez")).toBeGreaterThanOrEqual(MATCH_THRESHOLD);
   });
 
+  it("local name vs Google's English display name DOES match (Lisbon 0/3, 2026-08-13)", () => {
+    // Google localizes displayName to English; the model writes local names.
+    // Type-word canonicalization + connector stopwords bridge the gap.
+    expect(venueMatchScore("Museu do Fado", "Fado Museum")).toBeGreaterThanOrEqual(MATCH_THRESHOLD);
+    expect(venueMatchScore("Museu Calouste Gulbenkian", "Calouste Gulbenkian Museum")).toBeGreaterThanOrEqual(MATCH_THRESHOLD);
+    expect(venueMatchScore("Palácio Nacional da Pena", "Pena Palace")).toBeGreaterThanOrEqual(MATCH_THRESHOLD);
+  });
+
+  it("type-word canonicalization does not merge distinct venues", () => {
+    // Same type word, different identity — must still fail.
+    expect(venueMatchScore("Museu do Fado", "Museu Nacional do Azulejo")).toBeLessThan(MATCH_THRESHOLD);
+    expect(venueMatchScore("Mercado da Ribeira", "Mercado de Campo de Ourique")).toBeLessThan(MATCH_THRESHOLD);
+  });
+
   it("identical names score 1", () => {
     expect(venueMatchScore("Heard Museum", "Heard Museum")).toBe(1);
   });
