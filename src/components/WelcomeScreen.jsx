@@ -136,7 +136,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
     }
     return (
       <div key={t.id}
-        style={{ position: "relative", display: "flex", alignItems: "stretch", border: `1px solid ${isActive ? T.border2 : T.border}`, borderRadius: T.r.md, background: T.bg1, marginBottom: 8, opacity: broken ? .9 : 1 }}>
+        style={{ position: "relative", display: "flex", alignItems: "stretch", border: `1px solid ${isActive ? T.border2 : T.border}`, borderRadius: T.r.md, background: T.bg1, marginBottom: 10, opacity: broken ? .9 : 1, overflow: "hidden" /* clips the notch punches to half-circle bites — unclipped, adjacent cards' punches merge in the gap and the shelf reads as one sewn-together strip */ }}>
         <button onClick={() => onResume(t.id)}
           style={{ flex: 1, minWidth: 0, textAlign: "left", background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, padding: "11px 6px 11px 14px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
@@ -150,7 +150,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           ×
         </button>
         {/* Perforation + nights tail — the part that says "ticket". */}
-        <div style={{ position: "relative", width: 56, flexShrink: 0, borderLeft: `1.5px dashed ${T.border2}`, background: T.bg2, borderRadius: `0 ${T.r.md - 1}px ${T.r.md - 1}px 0`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
+        <div style={{ position: "relative", width: 56, flexShrink: 0, borderLeft: `1.5px dashed ${T.border2}`, background: T.bg2, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 }}>
           <span aria-hidden="true" style={{ position: "absolute", left: -6.5, top: -6.5, width: 11, height: 11, borderRadius: "50%", background: punchBg, border: `1px solid ${isActive ? T.border2 : T.border}` }} />
           <span aria-hidden="true" style={{ position: "absolute", left: -6.5, bottom: -6.5, width: 11, height: 11, borderRadius: "50%", background: punchBg, border: `1px solid ${isActive ? T.border2 : T.border}` }} />
           {broken ? (
