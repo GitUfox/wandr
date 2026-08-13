@@ -30,6 +30,26 @@ const CACHE_VERSION = 1;
 // the rest of the session — one probe per session, not one per build.
 let sessionUnavailable = false;
 
+// ── Activation status (read by SettingsSheet) ────────────────────────────────
+// Remembered the first time the server answers available:true, so Settings can
+// truthfully say "Active" instead of the pre-key "Waiting on activation".
+const ACTIVE_KEY = "wandr_places_active";
+
+function markPlacesActive() {
+  try { localStorage.setItem(ACTIVE_KEY, "1"); } catch { /* optional */ }
+}
+
+/** Has this device ever seen the places proxy answer available:true?
+ *  A non-empty grounding cache counts too — it can only fill from a
+ *  successful key-backed response, so it's valid retroactive evidence. */
+export function placesActivated() {
+  try {
+    if (localStorage.getItem(ACTIVE_KEY) === "1") return true;
+    const raw = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
+    return !!raw?.entries && Object.keys(raw.entries).length > 0;
+  } catch { return false; }
+}
+
 // ── Cache (pure helpers exported for tests; storage I/O isolated below) ──────
 
 export function cacheKeyFor(name, destination) {
@@ -135,6 +155,7 @@ export async function fetchDestinationSuggestions(input, signal) {
       autocompleteUnavailable = true; // key not configured — quiet no-op from here on
       return [];
     }
+    markPlacesActive();
     return data.suggestions || [];
   } catch {
     return []; // aborted or offline — typing continues either way
@@ -181,6 +202,7 @@ export async function verifyTripVenues(trip) {
         sessionUnavailable = true; // key not configured — stop probing this session
         return null;
       }
+      markPlacesActive();
       fetched = data.results || [];
       for (const r of fetched) cache[cacheKeyFor(r.name, destination)] = { t: now, r };
       saveCache(cache);

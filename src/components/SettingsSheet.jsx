@@ -15,6 +15,7 @@ import { MAX_TRIPS } from "../lib/tripStore.js";
 import { getTimeFormat, saveSettings, clearAllWandrData } from "../lib/settings.js";
 import { useAccount } from "../hooks/useAccount.js";
 import { signIn, signOut, fullSync } from "../lib/sync.js";
+import { placesActivated } from "../lib/places.js";
 
 export default function SettingsSheet({ open, onClose, tripCount = 0 }) {
   const [timeFormat, setTimeFormat] = useState(getTimeFormat);
@@ -170,8 +171,8 @@ export default function SettingsSheet({ open, onClose, tripCount = 0 }) {
           </div>
           <div style={{ ...row, borderBottom: "none" }}>
             <span style={{ fontSize: T.fs.body, color: T.muted }}>Venue verification</span>
-            <span style={{ fontSize: T.fs.body, color: T.hint, fontWeight: 600 }}>
-              {FEATURES.venueGrounding ? "Waiting on activation" : "Off"}
+            <span style={{ fontSize: T.fs.body, color: FEATURES.venueGrounding && placesActivated() ? T.accent : T.hint, fontWeight: 600 }}>
+              {FEATURES.venueGrounding ? (placesActivated() ? "Active" : "Waiting on activation") : "Off"}
             </span>
           </div>
         </div>
