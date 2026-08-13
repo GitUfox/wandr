@@ -31,12 +31,15 @@ const clean = s => (s || "").replace(/\*\*/g, "").trim();
    prose (which keeps the facts too — a regex can miss). */
 const FACT_GLYPH = { cost: "coin", duration: "clock", hours: "doors", booking: "bookmark", note: "info" };
 
-function DetailsBlock({ details, indent = 0 }) {
+function DetailsBlock({ details, tips, indent = 0 }) {
   const { desc, facts } = splitDetails(details);
-  if (!desc && !facts.length) return null;
+  if (!desc && !facts.length && !tips?.length) return null;
   return (
     <>
       {desc && <div style={{ fontSize: T.fs.meta, color: T.muted, lineHeight: 1.55, marginLeft: indent }}>{desc}</div>}
+      {/* Attached tip reads as part of the description, so it sits above the
+          fact chips — chips close the card (Kraig, 2026-08-11). */}
+      <TipLines tips={tips} indent={indent} />
       {facts.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: indent }}>
           {facts.map((f, i) => {
@@ -234,8 +237,7 @@ function ActivityBlock({ a, tips, dayIdx, days, isTweaking, selected, onToggleSe
             <div style={{ width: 58, flexShrink: 0, fontSize: T.fs.meta, color: T.accent, fontWeight: 700, paddingTop: 2 }}>{displayTime(clean(a.time))}</div>
             <div style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
               <div style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.35, marginBottom: 2 }}>{clean(a.title)}</div>
-              {a.details && <DetailsBlock details={a.details} />}
-              <TipLines tips={tips} />
+              {(a.details || tips?.length > 0) && <DetailsBlock details={a.details} tips={tips} />}
               {/* Move picker — choose a destination day */}
               {moving && otherDays.length > 0 && (
                 <div onClick={e => e.stopPropagation()} style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", marginTop: 8 }}>
@@ -324,8 +326,7 @@ function BucketCard({ a, tips, dayIdx, bucket, onMoveToBucket }) {
         <span style={{ fontSize: T.fs.label, color: T.accent, fontWeight: 700, flexShrink: 0, width: 54 }}>{displayTime(clean(a.time))}</span>
         <span style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.3 }}>{clean(a.title)}</span>
       </div>
-      {a.details && <div style={{ marginTop: 3 }}><DetailsBlock details={a.details} indent={62} /></div>}
-      <TipLines tips={tips} indent={62} />
+      {(a.details || tips?.length > 0) && <div style={{ marginTop: 3 }}><DetailsBlock details={a.details} tips={tips} indent={62} /></div>}
       <div style={{ display: "flex", gap: 5, marginTop: 6, marginLeft: 62, alignItems: "center" }}>
         <span style={{ fontSize: T.fs.label, color: T.hint }}>Move to:</span>
         {BUCKETS.filter(b => b !== bucket).map(b => (

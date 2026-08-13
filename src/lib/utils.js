@@ -425,3 +425,18 @@ export function matchTipToActivity(tip, titles) {
   });
   return bestScore >= 1 ? best : -1;
 }
+
+/**
+ * Tips follow their card (2026-08-11 report: an AI tweak left the old
+ * venue's tip stranded in "Before you go"). When an activity is replaced,
+ * removed, or renamed, drop the day tips that were pinned to the OUTGOING
+ * title — but only those: a tip is pruned when it matched the old title AND
+ * matches no current title. Venue-free day tips never matched the old title,
+ * and a tip that survives a typo-fix rename still matches, so both stay.
+ */
+export function pruneOrphanTips(tips, oldTitle, currentTitles) {
+  return (tips || []).filter(tip =>
+    matchTipToActivity(tip, [oldTitle]) < 0 ||
+    matchTipToActivity(tip, currentTitles) >= 0
+  );
+}

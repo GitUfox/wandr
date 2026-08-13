@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { stream, consumeStream, complete } from "../lib/api.js";
 import { buildPlanPrompt, buildEditDayPrompt, buildTweakActivityPrompt } from "../lib/prompts.js";
-import { spliceDayInPlan, resequenceTimes, bucketOf, retimeIntoBucket, sortDayByTime } from "../lib/utils.js";
+import { spliceDayInPlan, resequenceTimes, bucketOf, retimeIntoBucket, sortDayByTime, matchTipToActivity, pruneOrphanTips } from "../lib/utils.js";
 import { parsePlan, serializePlan } from "../lib/planModel.js";
 import { planKeyFor, deletePlan, mirrorLegacyPlan } from "../lib/tripStore.js";
 import { scheduleSyncPush } from "../lib/sync.js";
@@ -60,24 +60,31 @@ export function useGenerate() {
   function editActivity(dayIdx, actId, patch) {
     const prev = modelRef.current;
     if (!prev) return;
+    const before = prev.days[dayIdx]?.activities.find(a => a.id === actId);
+    const renamed = before && patch.title !== undefined && patch.title !== before.title;
     commitModel({
       ...prev,
-      days: prev.days.map((d, i) => i !== dayIdx ? d : {
-        ...d,
-        activities: d.activities.map(act => act.id === actId ? { ...act, ...patch } : act),
+      days: prev.days.map((d, i) => {
+        if (i !== dayIdx) return d;
+        const activities = d.activities.map(act => act.id === actId ? { ...act, ...patch } : act);
+        // Tips follow their card: a rename strands the old venue's tip unless
+        // it still matches (typo fixes keep theirs — see pruneOrphanTips).
+        return { ...d, activities, tips: renamed ? pruneOrphanTips(d.tips, before.title, activities.map(a => a.title)) : d.tips };
       }),
     });
   }
 
-  /** Remove one activity from a day. */
+  /** Remove one activity from a day (its pinned tips leave with it). */
   function removeActivity(dayIdx, actId) {
     const prev = modelRef.current;
     if (!prev) return;
+    const gone = prev.days[dayIdx]?.activities.find(a => a.id === actId);
     commitModel({
       ...prev,
-      days: prev.days.map((d, i) => i !== dayIdx ? d : {
-        ...d,
-        activities: d.activities.filter(act => act.id !== actId),
+      days: prev.days.map((d, i) => {
+        if (i !== dayIdx) return d;
+        const activities = d.activities.filter(act => act.id !== actId);
+        return { ...d, activities, tips: gone ? pruneOrphanTips(d.tips, gone.title, activities.map(a => a.title)) : d.tips };
       }),
     });
   }
@@ -122,12 +129,15 @@ export function useGenerate() {
       const cur = modelRef.current;
       commitModel({
         ...cur,
-        days: cur.days.map(d => ({
-          ...d,
-          activities: d.activities.map(a => a.id === actId
+        days: cur.days.map(d => {
+          if (!d.activities.some(a => a.id === actId)) return d;
+          const activities = d.activities.map(a => a.id === actId
             ? { ...a, time: fresh.time, title: fresh.title, details: fresh.details }
-            : a),
-        })),
+            : a);
+          // Tips follow their card: the outgoing venue's tip must not survive
+          // as a stranded "Before you go" line (2026-08-11 Flagstaff report).
+          return { ...d, activities, tips: pruneOrphanTips(d.tips, act.title, activities.map(a => a.title)) };
+        }),
       });
     } catch (e) {
       if (e?.name === "AbortError") return;
@@ -149,11 +159,17 @@ export function useGenerate() {
     if (!prev || fromDayIdx === toDayIdx) return;
     const act = prev.days[fromDayIdx]?.activities.find(a => a.id === actId);
     if (!act) return;
+    // Tips follow their card across days: a tip pinned to the moved venue
+    // (and to no venue staying behind) travels with it instead of stranding
+    // in the origin day's "Before you go".
+    const remainTitles = prev.days[fromDayIdx].activities.filter(a => a.id !== actId).map(a => a.title);
+    const traveling = (prev.days[fromDayIdx].tips || []).filter(tip =>
+      matchTipToActivity(tip, [act.title]) >= 0 && matchTipToActivity(tip, remainTitles) < 0);
     commitModel({
       ...prev,
       days: prev.days.map((d, i) => {
-        if (i === fromDayIdx) return { ...d, activities: d.activities.filter(a => a.id !== actId) };
-        if (i === toDayIdx)   return { ...d, activities: resequenceTimes([...d.activities, act]) };
+        if (i === fromDayIdx) return { ...d, activities: d.activities.filter(a => a.id !== actId), tips: (d.tips || []).filter(t => !traveling.includes(t)) };
+        if (i === toDayIdx)   return { ...d, activities: resequenceTimes([...d.activities, act]), tips: [...(d.tips || []), ...traveling] };
         return d;
       }),
     });

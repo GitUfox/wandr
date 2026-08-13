@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles, splitDetails, classifyFact, matchTipToActivity } from "./utils.js";
+import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles, splitDetails, classifyFact, matchTipToActivity, pruneOrphanTips } from "./utils.js";
 
 // ── arr ───────────────────────────────────────────────────────────────────────
 
@@ -573,5 +573,38 @@ describe("matchTipToActivity", () => {
     const day4 = ["North Point State Park & Beach", "Orioles Game at Camden Yards"];
     expect(matchTipToActivity("North Point is genuinely uncrowded — arrive by 08:00 for the beach", day4)).toBe(0);
     expect(matchTipToActivity("Camden Yards allows cameras with lenses up to a certain length", day4)).toBe(1);
+  });
+});
+
+// ── pruneOrphanTips (tips follow their card, 2026-08-11 Flagstaff report) ────
+//
+// An AI tweak replaced Buffalo Park but its tip survived, stranded in
+// "Before you go". Pruning fires inside the edit commits (tweak / remove /
+// rename); these fixtures mirror that report.
+
+describe("pruneOrphanTips", () => {
+  const TIPS = [
+    "Buffalo Park gets hot and exposed by 09:00 in mid-August — bring water",
+    "Flagstaff sits at 2,100m — expect cool evenings year-round",
+  ];
+
+  it("drops the tip pinned to the replaced venue", () => {
+    const out = pruneOrphanTips(TIPS, "**Buffalo Park Loop**", ["**Humphreys Peak Trail**", "**Lowell Observatory**"]);
+    expect(out).toEqual([TIPS[1]]);
+  });
+
+  it("keeps venue-free day tips untouched", () => {
+    const out = pruneOrphanTips(TIPS, "**Lowell Observatory**", ["**Humphreys Peak Trail**"]);
+    expect(out).toEqual(TIPS);
+  });
+
+  it("keeps a tip that still matches a current title (typo-fix rename)", () => {
+    const out = pruneOrphanTips(TIPS, "**Bufalo Park Loop**", ["**Buffalo Park Loop**"]);
+    expect(out).toEqual(TIPS);
+  });
+
+  it("handles empty and missing tips", () => {
+    expect(pruneOrphanTips([], "**X**", ["**Y**"])).toEqual([]);
+    expect(pruneOrphanTips(undefined, "**X**", ["**Y**"])).toEqual([]);
   });
 });
