@@ -8,7 +8,7 @@
  */
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { STEPS, T } from "../lib/constants.js";
+import { STEPS, T, INPUT_CAPS } from "../lib/constants.js";
 import { MLB_TEAMS } from "../lib/mlbTeams.js";
 import DateRangePicker from "./DateRangePicker.jsx";
 
@@ -225,7 +225,7 @@ export default function InterviewFlow({
                 Where are you staying? <span style={{ fontWeight:400, letterSpacing:"normal", textTransform:"none", color:T.hint, opacity:.6 }}>· optional</span>
               </div>
               <input type="text" value={logStay} onChange={e => setLogStay(e.target.value)}
-                placeholder="Times Square · Downtown · West Village · Countryside"
+                placeholder="Times Square · Downtown · West Village · Countryside" maxLength={INPUT_CAPS.stay}
                 style={{...inputSt, marginBottom:0}} />
             </div>
           </div>
@@ -235,9 +235,9 @@ export default function InterviewFlow({
         {S.type === "textarea+upload" && (
           <>
             <div style={{ position:"relative", marginBottom:"1.25rem" }}>
-              <textarea value={cur} onChange={e => setCur(e.target.value)} placeholder={S.ph} rows={4}
+              <textarea value={cur} onChange={e => setCur(e.target.value)} placeholder={S.ph} rows={4} maxLength={INPUT_CAPS.notes}
                 style={{...inputSt, marginBottom:0, lineHeight:1.7, resize:"none", paddingRight:48}} />
-              <DictationButton value={cur} onChange={setCur} />
+              <DictationButton value={cur} onChange={setCur} max={INPUT_CAPS.notes} />
             </div>
             {S.id === "notes" && (
               <div style={{ marginTop:2, marginBottom:"1.25rem" }}>
@@ -246,9 +246,9 @@ export default function InterviewFlow({
                   <div style={{ fontSize:T.fs.meta, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 }}>Anything to avoid?</div>
                   <div style={{ position:"relative" }}>
                     <input type="text" value={avoidText || ""} onChange={e => setAvoidText(e.target.value)}
-                      placeholder="e.g. crowds · seafood · long hikes · touristy spots"
+                      placeholder="e.g. crowds · seafood · long hikes · touristy spots" maxLength={INPUT_CAPS.avoid}
                       style={{...inputSt, paddingRight:40}} />
-                    <DictationButton value={avoidText || ""} onChange={setAvoidText} style={INPUT_MIC} />
+                    <DictationButton value={avoidText || ""} onChange={setAvoidText} style={INPUT_MIC} max={INPUT_CAPS.avoid} />
                   </div>
                   <div style={{ fontSize:T.fs.meta, color:T.hint, marginTop:6 }}>Hard no's — we'll keep these out of every suggestion.</div>
                 </div>
@@ -286,7 +286,7 @@ export default function InterviewFlow({
                 </div>
                 <input type="text" value={bucketWhen} onChange={e => setBucketWhen(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && isValid && onAdvance()}
-                  placeholder="next summer · December · someday" autoFocus
+                  placeholder="next summer · December · someday" autoFocus maxLength={INPUT_CAPS.when}
                   style={{...inputSt, marginBottom:0}} />
               </div>
             )}
@@ -326,9 +326,9 @@ export default function InterviewFlow({
               >
                 <div style={{ position:"relative" }}>
                   <input type="text" value={cur} onChange={e => setCur(e.target.value)}
-                    placeholder={S.ph}
+                    placeholder={S.ph} maxLength={INPUT_CAPS.interestsText}
                     style={{...inputSt, marginBottom:0, fontSize:T.fs.body, paddingRight:40}} />
-                  <DictationButton value={cur} onChange={setCur} style={INPUT_MIC} />
+                  <DictationButton value={cur} onChange={setCur} style={INPUT_MIC} max={INPUT_CAPS.interestsText} />
                 </div>
               </InterestsPicker>
             ) : (
@@ -370,9 +370,9 @@ export default function InterviewFlow({
             {!S.groups && (
               <div style={{ position:"relative" }}>
                 <input type="text" value={cur} onChange={e => setCur(e.target.value)}
-                  placeholder={S.ph}
+                  placeholder={S.ph} maxLength={INPUT_CAPS.partyText}
                   style={{...inputSt, marginBottom:0, fontSize:T.fs.body, paddingRight:40}} />
-                <DictationButton value={cur} onChange={setCur} style={INPUT_MIC} />
+                <DictationButton value={cur} onChange={setCur} style={INPUT_MIC} max={INPUT_CAPS.partyText} />
               </div>
             )}
           </div>

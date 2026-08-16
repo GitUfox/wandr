@@ -57,6 +57,23 @@ export const BUCKET_CATS = [
   ["nightlife",   "Nightlife"],
 ];
 
+// ── Input length caps (security sweep 2026-08-15) ───────────────────────────
+// Free-text answers feed the build prompt, so each input gets a generous-but-
+// finite maxLength (dictation respects the same caps via DictationButton's
+// max prop). These are UX-side guards; the proxy independently enforces the
+// total payload size (MAX_CONTENT_CHARS in api/shared.js) — that one is the
+// security boundary, these keep honest users from ever meeting it.
+export const INPUT_CAPS = {
+  destination:   120,  // matches the Places proxy's own destination cap
+  partyText:     200,
+  interestsText: 300,
+  notes:        2000,
+  avoid:         300,
+  stay:          160,
+  when:           80,  // bucket "when, roughly?" — a season phrase, not an essay
+  editPrompt:   1000,  // EditTripSheet instruction textareas
+};
+
 // ── Design tokens ────────────────────────────────────────────────────────────
 export const T = {
   bg0:"#0d0d0d", bg1:"#171717", bg2:"#1f1f1f", bg3:"#2a2a2a",

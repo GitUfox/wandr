@@ -16,7 +16,7 @@ import { T } from "../lib/constants.js";
 const SR = typeof window !== "undefined" &&
   (window.SpeechRecognition || window.webkitSpeechRecognition);
 
-export default function DictationButton({ value, onChange, style }) {
+export default function DictationButton({ value, onChange, style, max }) {
   const recRef = useRef(null);
   const [listening, setListening] = useState(false);
 
@@ -52,7 +52,8 @@ export default function DictationButton({ value, onChange, style }) {
         if (e.results[i].isFinal) finalText += chunk.trim() + " ";
         else interim += chunk;
       }
-      onChange(finalText + interim);
+      // Respect the field's cap — dictation bypasses the input's maxLength.
+      onChange(max ? (finalText + interim).slice(0, max) : finalText + interim);
     };
     rec.onend   = () => setListening(false);
     rec.onerror = () => setListening(false);

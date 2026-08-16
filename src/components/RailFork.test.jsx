@@ -78,3 +78,31 @@ describe("InterviewFlow — bucket dates step (now? / when?)", () => {
     expect(html).not.toContain("Build my trip →");
   });
 });
+
+describe("input caps (security sweep 2026-08-15)", () => {
+  const baseProps = {
+    step: 0, stepNumber: 1, stepTotal: 6, direction: 1,
+    onWelcome: () => {}, onAdvance: () => {}, onBack: () => {},
+    cur: "", setCur: () => {}, chips: [], setChips: () => {},
+    priorityChips: [], setPriorityChips: () => {}, teams: [], setTeams: () => {},
+    kids: "", setKids: () => {}, avoidText: "", setAvoidText: () => {},
+    budget: 120, setBudget: () => {},
+    d1: "", setD1: () => {}, d2: "", setD2: () => {},
+    logStay: "", setLogStay: () => {}, logTransport: "", setLogTransport: () => {},
+    logPace: "", setLogPace: () => {}, logFocus: "", setLogFocus: () => {},
+    logRhythm: "", setLogRhythm: () => {},
+    isValid: false,
+    setBucketNow: () => {}, setBucketWhen: () => {},
+  };
+
+  it("the bucket when? field is capped at a season phrase", () => {
+    const html = renderToStaticMarkup(<InterviewFlow {...baseProps} tripStyle="bucket" bucketNow="later" bucketWhen="" />);
+    expect(html).toContain('maxLength="80"');
+  });
+
+  it("the notes step caps its textarea and avoid field", () => {
+    const html = renderToStaticMarkup(<InterviewFlow {...baseProps} step={5} stepNumber={6} tripStyle="itinerary" bucketNow="" bucketWhen="" />);
+    expect(html).toContain('maxLength="2000"');
+    expect(html).toContain('maxLength="300"');
+  });
+});

@@ -12,7 +12,7 @@
  * exit animation + unmounting. Dashboard renders this component always mounted.
  */
 import { useState, useEffect } from "react";
-import { T, nearestBudgetTier, INTERESTS_GROUPS } from "../lib/constants.js";
+import { T, nearestBudgetTier, INTERESTS_GROUPS, INPUT_CAPS } from "../lib/constants.js";
 import { extractDayHeaders, extractActivityTitles } from "../lib/utils.js";
 import DateRangePicker from "./DateRangePicker.jsx";
 import BudgetTiers from "./BudgetTiers.jsx";
@@ -442,6 +442,7 @@ export default function EditTripSheet({
                 autoFocus
                 placeholder={"e.g. Swap the museum visit for something outdoors\n         Change the Yankees game to a Knicks game\n         Add another day trip outside the city"}
                 value={prompt}
+                maxLength={INPUT_CAPS.editPrompt}
                 onChange={e => setPrompt(e.target.value)}
                 rows={4}
                 style={textareaStyle}
@@ -507,6 +508,7 @@ export default function EditTripSheet({
               <textarea
                 placeholder="e.g. Add a morning hike · More local markets · Less museums — or leave blank to refresh the day"
                 value={prompt}
+                maxLength={INPUT_CAPS.editPrompt}
                 onChange={e => setPrompt(e.target.value)}
                 rows={3}
                 style={textareaStyle}
@@ -554,6 +556,7 @@ export default function EditTripSheet({
               <textarea
                 placeholder="or describe it in your own words…"
                 value={prompt}
+                maxLength={INPUT_CAPS.editPrompt}
                 onChange={e => setPrompt(e.target.value)}
                 rows={3}
                 style={textareaStyle}
@@ -595,6 +598,7 @@ export default function EditTripSheet({
                   autoFocus
                   type="text"
                   value={localDest}
+                  maxLength={INPUT_CAPS.destination}
                   onChange={e => setLocalDest(e.target.value)}
                   placeholder="e.g. Paris, France"
                   style={inputStyle}

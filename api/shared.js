@@ -60,6 +60,26 @@ const LIMIT_PLANS = 10;
 const LIMIT_PLACES = 20;
 export const WINDOW_MS = 24 * 60 * 60 * 1000;
 
+// Input-size ceiling (security sweep 2026-08-15). MAX_TOKENS_CAP bounds the
+// OUTPUT; this bounds the INPUT — without it a hostile client could stuff a
+// giant prompt into each of its rate-limited calls and inflate token spend.
+// Sizing: legitimate prompt text is a few KB; uploads are client-capped at
+// 3 files × 1MB, which is ≈4.02M chars once base64 (×4/3) and JSON framing
+// are counted — measured, not estimated (the first draft of this cap was 4M
+// and its own test caught the max legitimate payload not fitting). 4.4M sits
+// above that with prompt-text headroom and just under the ~4.5MB body-parse
+// limits (express.json "4500kb" / Vercel). Client-side maxLength caps
+// (INPUT_CAPS in constants.js) keep honest users far below this — this check
+// is the boundary, those are UX.
+export const MAX_CONTENT_CHARS = 4_400_000;
+export function oversizedPayload(messages) {
+  try {
+    return JSON.stringify(messages).length > MAX_CONTENT_CHARS;
+  } catch {
+    return true; // unserializable input is not a legitimate payload
+  }
+}
+
 // ── Redis-backed limiters (production) ───────────────────────────────────────
 //
 // Initialized only when Upstash credentials are present in the environment.
@@ -225,6 +245,11 @@ export async function handleAnthropicProxy(req, res, { key, isDev }) {
 
   if (!Array.isArray(messages) || messages.length === 0) {
     res.status(400).json({ error: "Invalid request." });
+    return;
+  }
+
+  if (oversizedPayload(messages)) {
+    res.status(413).json({ error: "That's a lot of text — trim your longest answers or attachments and try again." });
     return;
   }
 

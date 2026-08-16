@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { T, DEST_PLACEHOLDERS } from "../lib/constants.js";
+import { T, DEST_PLACEHOLDERS, INPUT_CAPS } from "../lib/constants.js";
 import { parseISODate, countIdeas } from "../lib/utils.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { useIsWide } from "../hooks/useIsWide.js";
@@ -369,6 +369,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
               autoFocus
               type="text"
               value={dest}
+              maxLength={INPUT_CAPS.destination}
               onChange={e => { setDest(e.target.value); setDestPicked(false); }}
               onKeyDown={e => e.key === "Enter" && handleStart(hasProfile ? "continue" : "fresh")}
               style={{ width: "100%", padding: "14px 16px", fontSize: T.fs.title, fontWeight: 600, background: T.bg1, border: "none", borderRadius: 10.5 /* off-ramp: inner radius = ring wrapper T.r.md(12) minus 1.5 padding */, color: T.ink, outline: "none", fontFamily: T.font, colorScheme: "dark", boxSizing: "border-box", display: "block" }}
