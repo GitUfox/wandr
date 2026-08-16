@@ -66,6 +66,10 @@ export function useBuildTrip() {
       }
       let trip = {
         destination: answers.destination,
+        // "bucket" = dateless activity list (2026-08-15); absent/legacy = itinerary.
+        tripStyle:   answers.tripStyle || "itinerary",
+        // Bucket trips have no dates: prompts returns n=null and season stays
+        // empty (season flavor went into the prompt's TIMEFRAME line instead).
         nights:      n,
         // Short derived label ("Early June") — replaces the old AI-written
         // season sentence in buildPlanPrompt's "- Season:" line.
@@ -92,6 +96,7 @@ export function useBuildTrip() {
       // Return a skeleton trip so the dashboard still renders
       return {
         destination: answers.destination,
+        tripStyle: answers.tripStyle || "itinerary",
         nights: n,
         categories: {},
         answers,

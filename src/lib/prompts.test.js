@@ -750,3 +750,54 @@ describe("details micro-grammar reaches every row-writing prompt", () => {
     expect(idx("opening-hours")).toBeLessThan(idx("booking note"));
   });
 });
+
+// ── Bucket List mode (2026-08-15): TIMEFRAME replaces DATES ───────────────────
+
+describe("buildTripCategoriesPrompt — bucket mode", () => {
+  const bucketAnswers = (dates) => ({
+    ...BASE_ANSWERS,
+    tripStyle: "bucket",
+    dates,
+  });
+
+  it('"going now" swaps DATES for a current-season TIMEFRAME and nulls nights', () => {
+    const { messageContent, n } = buildTripCategoriesPrompt(bucketAnswers({ bucket: true, now: true, whenText: "" }), []);
+    expect(n).toBeNull();
+    expect(messageContent).toContain("TIMEFRAME:");
+    expect(messageContent).not.toContain("DATES:");
+    // Season is derived from today's real date — assert the shape, not the month.
+    expect(messageContent).toMatch(/it is (Early|Mid|Late) [A-Z][a-z]+ right now/);
+  });
+
+  it("carries the traveler's own when-words verbatim", () => {
+    const { messageContent } = buildTripCategoriesPrompt(bucketAnswers({ bucket: true, now: false, whenText: "next summer" }), []);
+    expect(messageContent).toContain('"next summer"');
+    expect(messageContent).toContain("traveler's own words");
+  });
+
+  it("stays season-neutral when the when-blank was skipped", () => {
+    const { messageContent } = buildTripCategoriesPrompt(bucketAnswers({ bucket: true, now: false, whenText: "" }), []);
+    expect(messageContent).toContain("open-ended");
+    expect(messageContent).toContain("year-round");
+  });
+
+  it("adds the bucket-list instruction block, with the category keys pinned", () => {
+    const { messageContent } = buildTripCategoriesPrompt(bucketAnswers({ bucket: true, now: true, whenText: "" }), []);
+    expect(messageContent).toContain("BUCKET LIST:");
+    expect(messageContent).toContain("not a scheduled trip");
+    // First live run (Porto, 2026-08-15): the model re-shaped categories into
+    // interest names (museums/live_music), which silently disabled grounding.
+    expect(messageContent).toContain("EXACTLY the category keys");
+    expect(messageContent).toContain("never invent interest-named keys");
+  });
+
+  it("itinerary prompts are byte-identical to before the fork existed", () => {
+    const withStyle = buildTripCategoriesPrompt({ ...BASE_ANSWERS, tripStyle: "itinerary" }, []);
+    const legacy    = buildTripCategoriesPrompt(BASE_ANSWERS, []);
+    expect(withStyle.messageContent).toBe(legacy.messageContent);
+    expect(withStyle.messageContent).toContain("DATES:");
+    expect(withStyle.messageContent).not.toContain("TIMEFRAME:");
+    expect(withStyle.messageContent).not.toContain("BUCKET LIST:");
+    expect(withStyle.n).toBe(legacy.n);
+  });
+});

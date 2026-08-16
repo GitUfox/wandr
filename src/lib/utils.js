@@ -38,6 +38,24 @@ export function calcNights(start, end, defaultNights = 5) {
 }
 
 /**
+ * Total activity count across a trip DB's categories (bucket ticket + board +
+ * welcome shelf all read this — one source, three surfaces).
+ */
+export function countIdeas(categories) {
+  return Object.values(categories || {})
+    .reduce((sum, items) => sum + (Array.isArray(items) ? items.length : 0), 0);
+}
+
+/**
+ * Stable identity for one bucket-list item. Keys the trip.bucketPicks map, so
+ * a check-off survives reloads and category re-orders. Name-based on purpose:
+ * a rebuild that changes the list is a new list — stale picks should drop off.
+ */
+export function bucketPickKey(cat, item) {
+  return `${cat}:${item?.name || ""}`;
+}
+
+/**
  * Attempt to recover a truncated or malformed JSON string.
  * Tries to close unclosed brackets/braces before re-parsing.
  */

@@ -150,6 +150,7 @@ function SubmitBar({ label, enabled, loading, onSubmit }) {
 export default function EditTripSheet({
   open,
   trip,
+  tripStyle = "itinerary",
   planText,
   planMode,
   planLoading,
@@ -158,6 +159,9 @@ export default function EditTripSheet({
   onEditTripDetails,
   initialStage = null, // e.g. "full-itinerary" — Remix opens straight into that pane
 }) {
+  // Bucket trips have no plan and no dates: the sheet pins to Trip Details
+  // (Dashboard passes initialStage) with the picker + date fields hidden.
+  const bucketMode = tripStyle === "bucket";
   const [stage, setStage]           = useState("picker");
   const [selectedDay, setSelectedDay] = useState(null);
   const [prompt, setPrompt]         = useState("");
@@ -253,7 +257,8 @@ export default function EditTripSheet({
     const newAnswers = {
       ...a,
       destination: localDest.trim(),
-      dates: { ...(a.dates || {}), start: localStart, end: localEnd },
+      // Bucket answers carry {bucket, now, whenText} — never write start/end into them.
+      dates: bucketMode ? (a.dates || {}) : { ...(a.dates || {}), start: localStart, end: localEnd },
       budget: localBudget,
       party: typeof a.party === "object" && a.party !== null
         ? { ...a.party, chips: [localParty] }
@@ -331,7 +336,7 @@ export default function EditTripSheet({
           padding: "4px 20px 14px",
           borderBottom: `1px solid ${T.border}`,
         }}>
-          {stage !== "picker" && (
+          {stage !== "picker" && !bucketMode && (
             <button
               onClick={goBack}
               style={{
@@ -569,12 +574,14 @@ export default function EditTripSheet({
                 />
               </Field>
 
-              <Field label="Dates">
-                <DateRangePicker
-                  d1={localStart} setD1={setLocalStart}
-                  d2={localEnd}   setD2={setLocalEnd}
-                />
-              </Field>
+              {!bucketMode && (
+                <Field label="Dates">
+                  <DateRangePicker
+                    d1={localStart} setD1={setLocalStart}
+                    d2={localEnd}   setD2={setLocalEnd}
+                  />
+                </Field>
+              )}
 
               <Field label="Budget">
                 <BudgetTiers value={localBudget} onChange={setLocalBudget} />

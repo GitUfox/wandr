@@ -7,10 +7,11 @@
 import { useState, useEffect, useRef } from "react";
 import { MODES, T, FEATURES, AI_DISCLAIMER } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
-import { arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime, findGroundedVenue } from "../lib/utils.js";
+import { arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime, findGroundedVenue, countIdeas } from "../lib/utils.js";
 import { parsePlan } from "../lib/planModel.js";
 import { TEAM_SHORT } from "../lib/mlbTeams.js";
 import Md from "./Md.jsx";
+import BucketBoard from "./BucketBoard.jsx";
 import ItineraryEditor from "./ItineraryEditor.jsx";
 import WandrLogo from "./WandrLogo.jsx";
 import EditTripSheet from "./EditTripSheet.jsx";
@@ -117,6 +118,7 @@ export default function Dashboard({
   onMoveToBucket,
   onTweakActivity,
   tweakingId,
+  onTogglePick,
   onReset,
   showProfilePrompt,
   onSaveProfile,
@@ -176,6 +178,13 @@ export default function Dashboard({
 
   const a = trip.answers;
 
+  // Bucket List mode (2026-08-15): a place + activities, zero date DNA. The
+  // ticket trades Depart/Return for Ideas → Picked (the ember still rides),
+  // and the whole plan machinery below yields to the BucketBoard.
+  const isBucket = trip.tripStyle === "bucket";
+  const ideaCount = isBucket ? countIdeas(trip.categories) : 0;
+  const pickedCount = isBucket ? Object.keys(trip.bucketPicks || {}).length : 0;
+
   // "Watertown & Thousand Islands, NY, USA" → hero "Watertown & Thousand
   // Islands" + quiet region line "NY, USA". No comma = no region line.
   const [destMain, ...destRest] = String(trip.destination || "").split(",");
@@ -183,8 +192,8 @@ export default function Dashboard({
 
   // Boarding-pass data — shared by the on-screen hero and the PDF export (9B)
   // so the two tickets can never drift.
-  const dep = ticketDate(a.dates?.start);
-  const ret = ticketDate(a.dates?.end);
+  const dep = isBucket ? "" : ticketDate(a.dates?.start);
+  const ret = isBucket ? "" : ticketDate(a.dates?.end);
   const tripStubs = [
     ["Nights", trip.nights ? `${trip.nights}` : ""],
     ["Budget", a.budget === 0 ? "With friends" : a.budget ? `$${a.budget}/day` : ""],
@@ -455,7 +464,7 @@ export default function Dashboard({
           </div>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, flexWrap:"wrap", marginBottom:10 }}>
             <div>
-              <div style={{ fontSize:T.fs.micro, letterSpacing:".2em", textTransform:"uppercase", color:T.accent, fontWeight:700, marginBottom:5 }}>My trip</div>
+              <div style={{ fontSize:T.fs.micro, letterSpacing:".2em", textTransform:"uppercase", color:T.accent, fontWeight:700, marginBottom:5 }}>{isBucket ? "My bucket list" : "My trip"}</div>
               <div style={{ fontSize:T.fs.hero, fontWeight:800, color:T.ink, lineHeight:1.08, letterSpacing:"-.015em" }}>{destMain}</div>
               {destRegion && (
                 <div style={{ fontSize:T.fs.meta, color:T.hint, fontWeight:700, letterSpacing:".08em", textTransform:"uppercase", marginTop:4 }}>{destRegion}</div>
@@ -486,9 +495,11 @@ export default function Dashboard({
                             style={{ display:"block", width:"100%", textAlign:"left", padding:"9px 12px", background:"transparent", border:"none", borderTop: i === 0 ? "none" : `1px solid ${T.border}`, cursor:"pointer", fontFamily:T.font }}>
                             <div style={{ fontSize:T.fs.body, fontWeight:700, color:T.ink }}>{t.destination}</div>
                             <div style={{ fontSize:T.fs.label, color:T.hint, marginTop:1 }}>
-                              {[t.answers?.dates?.start, t.answers?.dates?.end].every(Boolean)
-                                ? `${fmtDate(t.answers.dates.start)} → ${fmtDate(t.answers.dates.end)}`
-                                : `${t.nights || "?"} nights`}
+                              {t.tripStyle === "bucket"
+                                ? `${countIdeas(t.categories)} ideas`
+                                : [t.answers?.dates?.start, t.answers?.dates?.end].every(Boolean)
+                                  ? `${fmtDate(t.answers.dates.start)} → ${fmtDate(t.answers.dates.end)}`
+                                  : `${t.nights || "?"} nights`}
                             </div>
                           </button>
                         ))}
@@ -498,7 +509,7 @@ export default function Dashboard({
                 </div>
               )}
               <button
-                onClick={() => { if (online && !building) { setEditSheetStage(null); setEditSheetOpen(true); } }}
+                onClick={() => { if (online && !building) { setEditSheetStage(isBucket ? "trip-details" : null); setEditSheetOpen(true); } }}
                 disabled={!online || building}
                 title={!online ? "Editing needs a connection" : building ? "One sec — still curating this trip" : undefined}
                 style={{ fontSize:T.fs.meta, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:online&&!building?"pointer":"not-allowed", opacity:online&&!building?1:.45, fontFamily:T.font, fontWeight:600 }}
@@ -515,9 +526,59 @@ export default function Dashboard({
             const stubLabel = { fontSize:T.fs.micro, letterSpacing:".18em", textTransform:"uppercase", color:T.hint, fontWeight:700 };
             const notch = { position:"absolute", width:22, height:22, borderRadius:"50%", background:T.bg1, border:`1px solid ${T.border2}`, top:-11 };
             const stubs = tripStubs;
+            // One rail, two tickets: Depart→Return (itinerary) and
+            // Ideas→Picked (bucket) seat this exact center, extracted so the
+            // two variants can never drift. Ticket center notes (design pick
+            // 2A, 2026-08-11): the ticket's earth retired — the logo keeps the
+            // real globe, the PDF keeps its static twin. The ember departs the
+            // hollow left ring, streams the dotted rail, arrives right with a
+            // soft pulse, and runs ALWAYS — one traveler on the rail in every
+            // state, curating included. Pulse pivot is baked into an attribute
+            // translate() group — CSS transform-origin on SVG children drifts.
+            const railCenter = (
+              <div style={{ position:"relative", flex:1, height:26, minWidth:48 }}>
+                <svg viewBox="0 0 120 26" style={{ display:"block", width:"100%", height:26, overflow:"visible" }} aria-hidden="true">
+                  <line x1="14" y1="13" x2="106" y2="13" stroke={T.border2} strokeWidth="1.6" strokeDasharray="0.1 5" strokeLinecap="round" />
+                  <circle cx="8" cy="13" r="2.4" fill="none" stroke={T.muted} strokeWidth="1.3" />
+                  <circle cx="112" cy="13" r="2.4" fill={T.accent} />
+                  <g transform="translate(112,13)">
+                    <circle className="warrive" r="3" fill="none" stroke={T.accent} strokeWidth="1.2" opacity="0" style={{ animation:"warrive 3.4s ease-out infinite" }} />
+                  </g>
+                  {/* Ember rests mid-rail when animation is off
+                      (reduced motion / VITE_NO_MOTION harness). */}
+                  <g className="wtravel" style={{ animation:"wtravel 3.4s ease-in-out infinite" }}>
+                    <line x1="49" y1="13" x2="56.5" y2="13" stroke={T.accentHover} strokeWidth="1.5" strokeLinecap="round" opacity=".45" />
+                    <circle cx="60" cy="13" r="4.5" fill={T.accentHover} opacity=".18" />
+                    <circle cx="60" cy="13" r="2.4" fill={T.accentHover} />
+                  </g>
+                </svg>
+              </div>
+            );
             return (
               <div style={{ position:"relative", marginTop:4, background:T.bg2, border:`1px solid ${T.border2}`, borderRadius:T.r.lg, overflow:"hidden" }}>
                 <div style={{ position:"absolute", right:12, top:14, bottom:14, width:13, background:`repeating-linear-gradient(180deg, ${T.border2} 0 2px, transparent 2px 5px)`, opacity:.5, borderRadius:2 }} />
+                {/* Bucket ticket (1F mode): Depart/Return have no meaning, so
+                    the rail's endpoints become the list's own journey — IDEAS
+                    curated → PICKED by the traveler. Same ember, same rail. */}
+                {isBucket && (
+                  <>
+                    <div style={{ display:"flex", alignItems:"center", gap:14, padding:"15px 38px 13px 18px" }}>
+                      <div>
+                        <div style={stubLabel}>Ideas</div>
+                        <div style={{ fontSize:19 /* off-ramp: matches the DEPART/RETURN numeral tier */, fontWeight:800, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{building ? "…" : ideaCount}</div>
+                      </div>
+                      {railCenter}
+                      <div style={{ textAlign:"right" }}>
+                        <div style={stubLabel}>Picked</div>
+                        <div style={{ fontSize:19 /* off-ramp: matches the DEPART/RETURN numeral tier */, fontWeight:800, color:pickedCount ? T.ink : T.hint, fontVariantNumeric:"tabular-nums" }}>{building ? "…" : pickedCount}</div>
+                      </div>
+                    </div>
+                    <div style={{ position:"relative", borderTop:`1.5px dashed ${T.border2}`, margin:"0 26px" }}>
+                      <div style={{ ...notch, left:-37 }} />
+                      <div style={{ ...notch, right:-37 }} />
+                    </div>
+                  </>
+                )}
                 {dep && ret && (
                   <>
                     <div style={{ display:"flex", alignItems:"center", gap:14, padding:"15px 38px 13px 18px" }}>
@@ -525,35 +586,7 @@ export default function Dashboard({
                         <div style={stubLabel}>Depart</div>
                         <div style={{ fontSize:19 /* off-ramp: ticket DEPART/RETURN dates — hero-tier numerals, title(17) visibly demotes them */, fontWeight:800, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{dep}</div>
                       </div>
-                      {/* Ticket center (design pick 2A, 2026-08-11): the
-                          journey itself. The ticket's earth retired — Kraig's
-                          2026-08-08 note called two earths on one screen
-                          overload; the logo keeps the real globe and the PDF
-                          keeps its static light-stock twin. An ember departs
-                          the hollow Depart ring, streams the dotted rail, and
-                          arrives on Return with a soft pulse. It runs ALWAYS:
-                          one traveler on the rail in every state (it also
-                          replaces the curating-only 1A wspark — progress while
-                          building, the trip afterwards). Pulse pivot is baked
-                          into an attribute translate() group — CSS
-                          transform-origin on SVG children drifts. */}
-                      <div style={{ position:"relative", flex:1, height:26, minWidth:48 }}>
-                        <svg viewBox="0 0 120 26" style={{ display:"block", width:"100%", height:26, overflow:"visible" }} aria-hidden="true">
-                          <line x1="14" y1="13" x2="106" y2="13" stroke={T.border2} strokeWidth="1.6" strokeDasharray="0.1 5" strokeLinecap="round" />
-                          <circle cx="8" cy="13" r="2.4" fill="none" stroke={T.muted} strokeWidth="1.3" />
-                          <circle cx="112" cy="13" r="2.4" fill={T.accent} />
-                          <g transform="translate(112,13)">
-                            <circle className="warrive" r="3" fill="none" stroke={T.accent} strokeWidth="1.2" opacity="0" style={{ animation:"warrive 3.4s ease-out infinite" }} />
-                          </g>
-                          {/* Ember rests mid-rail when animation is off
-                              (reduced motion / VITE_NO_MOTION harness). */}
-                          <g className="wtravel" style={{ animation:"wtravel 3.4s ease-in-out infinite" }}>
-                            <line x1="49" y1="13" x2="56.5" y2="13" stroke={T.accentHover} strokeWidth="1.5" strokeLinecap="round" opacity=".45" />
-                            <circle cx="60" cy="13" r="4.5" fill={T.accentHover} opacity=".18" />
-                            <circle cx="60" cy="13" r="2.4" fill={T.accentHover} />
-                          </g>
-                        </svg>
-                      </div>
+                      {railCenter}
                       <div style={{ textAlign:"right" }}>
                         <div style={stubLabel}>Return</div>
                         <div style={{ fontSize:19 /* off-ramp: ticket DEPART/RETURN dates — hero-tier numerals, title(17) visibly demotes them */, fontWeight:800, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{ret}</div>
@@ -651,11 +684,15 @@ export default function Dashboard({
                 <>
                   <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:10, rowGap:8, padding:"4px 2px 12px", borderBottom:`1px solid ${T.border}`, marginBottom:12 }}>
                     <span style={{ width:7, height:7, borderRadius:"50%", background:T.accent, boxShadow:"0 0 0 3px rgba(201,100,66,.14)", flexShrink:0, animation:"pulse 1.2s ease-in-out infinite" }} />
-                    <span style={{ fontSize:T.fs.body, fontWeight:800, color:T.ink }}>Curating your trip</span>
+                    <span style={{ fontSize:T.fs.body, fontWeight:800, color:T.ink }}>{isBucket ? "Curating your ideas" : "Curating your trip"}</span>
                     <RollingMsg text={buildingMsg || "finding the good stuff…"} />
                   </div>
                   <GhostDays nights={trip.nights} />
                 </>
+              ) : isBucket ? (
+                /* Bucket mode: the curated list IS the product — no generate,
+                   no plan machinery, no dates. Check-off persists via App. */
+                <BucketBoard trip={trip} onTogglePick={onTogglePick} />
               ) : !planText && !planLoading ? (() => {
                 const hero = MODES[0];
                 return (
@@ -773,6 +810,7 @@ export default function Dashboard({
       <EditTripSheet
         open={editSheetOpen}
         trip={trip}
+        tripStyle={trip.tripStyle}
         planText={planText}
         planMode={planMode}
         planLoading={planLoading}

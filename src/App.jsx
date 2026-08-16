@@ -111,6 +111,10 @@ export default function Wandr() {
   const [budget, setBudget]               = useState(120);
   const [d1, setD1]                       = useState("");
   const [d2, setD2]                       = useState("");
+  // Bucket List mode's dates-step answers (Kraig's spec, 2026-08-15):
+  // "now?" yes/no; on no, an optional free-text "when?" — never a date.
+  const [bucketNow, setBucketNow]         = useState("");   // "" | "now" | "later"
+  const [bucketWhen, setBucketWhen]       = useState("");
   const [logStay, setLogStay]             = useState("");
   const [logTransport, setLogTransport]   = useState("");
   const [logPace, setLogPace]             = useState("");
@@ -181,7 +185,9 @@ export default function Wandr() {
       if (S.id === "interests") return { chips, text: cur, priorityChips, teams };
       return { chips, text: cur };
     }
-    if (S.type === "daterange")  return { start: d1, end: d2 };
+    if (S.type === "daterange")  return answers.tripStyle === "bucket"
+      ? { bucket: true, now: bucketNow === "now", whenText: bucketNow === "later" ? bucketWhen.trim() : "" }
+      : { start: d1, end: d2 };
     if (S.type === "budget")     return budget;
     if (S.type === "logistics")  return { stay: logStay, transport: logTransport, pace: logPace, focus: logFocus, rhythm: logRhythm };
     return cur;
@@ -193,7 +199,9 @@ export default function Wandr() {
     if (S.type === "chips+text") return S.id === "interests"
       ? (chips.length > 0 || cur.trim().length > 1)
       : (v.chips.length > 0 || v.text.trim().length > 1);
-    if (S.type === "daterange")  return !!(d1 && d2 && d1.length >= 8 && d2.length >= 8 && d2 > d1);
+    if (S.type === "daterange")  return answers.tripStyle === "bucket"
+      ? bucketNow !== ""                       // yes/no answered; "when?" text stays optional
+      : !!(d1 && d2 && d1.length >= 8 && d2.length >= 8 && d2 > d1);
     if (S.type === "budget")     return true;
     if (S.type === "logistics")  return true;
     if (S.id === "notes")        return true;
@@ -300,10 +308,12 @@ export default function Wandr() {
    */
   async function handleBuildTrip(a, opts = {}) {
     const run = ++buildRunRef.current;
+    const isBucket = a.tripStyle === "bucket";
     setTrip({
       id: opts.replaceId || undefined,
       destination: a.destination,
-      nights: calcNights(a.dates?.start, a.dates?.end),
+      tripStyle: a.tripStyle || "itinerary",
+      nights: isBucket ? null : calcNights(a.dates?.start, a.dates?.end), // bucket = dateless, never the 5-night default
       categories: {},
       answers: a,
       _building: true, // memory-only flag — never persisted
@@ -334,9 +344,25 @@ export default function Wandr() {
     // Auto-start the itinerary. Only on a successful build: with empty
     // categories the plan would be generic model guesswork, so the failure
     // path keeps the traveler in control (banner + manual Generate).
-    if (!result._error) {
+    // Bucket trips never generate — the curated list IS the product.
+    if (!result._error && !isBucket) {
       doGenerate(MODES[0].id, saved, null, null, eventsRef.current);
     }
+  }
+
+  /**
+   * Bucket-mode check-off (2026-08-15): toggle one idea in/out of "my list".
+   * Persists through the normal trip store (replaceId keeps id + position),
+   * so picks survive reload and ride the future Supabase sync for free.
+   */
+  function toggleBucketPick(key) {
+    if (!trip?.id || trip._building) return; // unsaved/failed builds have nothing durable to write
+    const picks = { ...(trip.bucketPicks || {}) };
+    if (picks[key]) delete picks[key]; else picks[key] = true;
+    const updated = { ...trip, bucketPicks: picks };
+    setTrip(updated);
+    setTripStore(persistTrip(updated, { replaceId: trip.id }));
+    scheduleSyncPush();
   }
 
   // Accept the one-time "save these as your defaults?" prompt (first-time users).
@@ -398,7 +424,7 @@ export default function Wandr() {
     buildRunRef.current++; // orphan any in-flight build (it still persists itself)
     setScreen("welcome"); setStep(0); setAnswers({}); setDir(1);
     setCur(""); setChips([]); setPriorityChips([]); setTeams([]); setKids(""); setAvoidText("");
-    setBudget(120); setD1(""); setD2(""); setLogStay(""); setLogTransport(""); setLogPace(""); setLogFocus(""); setLogRhythm("");
+    setBudget(120); setD1(""); setD2(""); setBucketNow(""); setBucketWhen(""); setLogStay(""); setLogTransport(""); setLogPace(""); setLogFocus(""); setLogRhythm("");
     setInterviewMode("fresh");
     setTrip(null);
     // Memory-only reset: no trip id, so no saved plan is deleted. "Start over"
@@ -454,7 +480,7 @@ export default function Wandr() {
    *   "edit"     — pre-fill from profile, show every step (update defaults on build)
    * Dates are always trip-specific and start blank.
    */
-  function startInterview(dest, mode = "fresh") {
+  function startInterview(dest, mode = "fresh", tripStyle = "itinerary") {
     setInterviewMode(mode);
     const p = (mode === "continue" || mode === "edit") ? savedProfile : null;
     if (p) {
@@ -471,6 +497,7 @@ export default function Wandr() {
       // Pre-populate answers so steps skipped in "continue" mode still contribute.
       setAnswers({
         destination: dest,
+        tripStyle,
         party:     p.party,
         logistics: p.logistics,
         budget:    p.budget,
@@ -482,9 +509,10 @@ export default function Wandr() {
       setCur(""); setChips([]); setPriorityChips([]); setTeams([]); setKids(""); setAvoidText("");
       setBudget(120);
       setLogStay(""); setLogTransport(""); setLogPace(""); setLogFocus(""); setLogRhythm("");
-      setAnswers({ destination: dest });
+      setAnswers({ destination: dest, tripStyle });
     }
     setD1(""); setD2("");
+    setBucketNow(""); setBucketWhen("");
     setDir(1);
     setScreen("interview");
     setStep(0);
@@ -531,6 +559,9 @@ export default function Wandr() {
                 avoidText={avoidText} setAvoidText={setAvoidText}
                 budget={budget} setBudget={setBudget}
                 d1={d1} setD1={setD1} d2={d2} setD2={setD2}
+                tripStyle={answers.tripStyle || "itinerary"}
+                bucketNow={bucketNow} setBucketNow={setBucketNow}
+                bucketWhen={bucketWhen} setBucketWhen={setBucketWhen}
                 logStay={logStay} setLogStay={setLogStay}
                 logTransport={logTransport} setLogTransport={setLogTransport}
                 logPace={logPace} setLogPace={setLogPace}
@@ -565,6 +596,7 @@ export default function Wandr() {
                   onMoveToBucket={moveActivityToBucket}
                   onTweakActivity={(dayIdx, actId, instruction) => tweakActivity(dayIdx, actId, instruction, trip)}
                   tweakingId={tweakingId}
+                  onTogglePick={toggleBucketPick}
                   onReset={resetAll}
                   showProfilePrompt={!!trip && !trip._error && !trip._building && !savedProfile && !profilePromptDismissed}
                   onSaveProfile={handleSaveProfile}

@@ -51,6 +51,9 @@ export default function InterviewFlow({
   avoidText, setAvoidText,
   budget, setBudget,
   d1, setD1, d2, setD2,
+  tripStyle = "itinerary",
+  bucketNow = "", setBucketNow,
+  bucketWhen = "", setBucketWhen,
   logStay, setLogStay,
   logTransport, setLogTransport,
   logPace, setLogPace,
@@ -255,7 +258,41 @@ export default function InterviewFlow({
         )}
 
         {/* ── Date range ── */}
-        {S.type === "daterange" && (
+        {/* Bucket mode (2026-08-15, Kraig's spec): the dates step becomes
+            "now? yes/no — no → when? ____". No calendar, no date anywhere;
+            the free-text answer only flavors curation. Still step 1 of 6. */}
+        {S.type === "daterange" && tripStyle === "bucket" && (
+          <div style={{ marginBottom:"1.25rem" }}>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:7, marginBottom:12 }}>
+              {[["now", "Going now"], ["later", "Not yet"]].map(([val, label]) => {
+                const sel = bucketNow === val;
+                return (
+                  <button key={val} className="wandr-chip" data-label={label} onClick={() => setBucketNow(sel ? "" : val)}
+                    style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accent:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.white:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            {bucketNow === "now" && (
+              <div className="fade-up" style={{ fontSize:T.fs.body, color:T.hint, lineHeight:1.5 }}>
+                We'll lean the list toward what's great this time of year.
+              </div>
+            )}
+            {bucketNow === "later" && (
+              <div className="fade-up">
+                <div style={{ fontSize:T.fs.label, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:5 }}>
+                  When, roughly? <span style={{ fontWeight:400, letterSpacing:"normal", textTransform:"none", opacity:.6 }}>· optional</span>
+                </div>
+                <input type="text" value={bucketWhen} onChange={e => setBucketWhen(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && isValid && onAdvance()}
+                  placeholder="next summer · December · someday" autoFocus
+                  style={{...inputSt, marginBottom:0}} />
+              </div>
+            )}
+          </div>
+        )}
+        {S.type === "daterange" && tripStyle !== "bucket" && (
           <DateRangePicker d1={d1} setD1={setD1} d2={d2} setD2={setD2} />
         )}
 
@@ -356,7 +393,7 @@ export default function InterviewFlow({
           <button onClick={step > 0 ? onBack : onWelcome} style={{ fontSize:T.fs.body, color:T.hint, padding:"8px 0", background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>← Back</button>
           <button onClick={onAdvance} disabled={!isValid}
             style={{ background:isValid?T.accent:T.bg3, color:isValid?T.white:T.hint, padding:"10px 26px", borderRadius:T.r.md, fontSize:T.fs.body, fontWeight:700, cursor:isValid?"pointer":"default", border:"none", fontFamily:T.font, transition:"all .15s" }}>
-            {step === STEPS.length - 1 ? "Build my trip →" : "Continue →"}
+            {step === STEPS.length - 1 ? (tripStyle === "bucket" ? "Build my list →" : "Build my trip →") : "Continue →"}
           </button>
         </div>
         {S.id === "notes" && (

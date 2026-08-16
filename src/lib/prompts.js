@@ -1,4 +1,4 @@
-import { arr, calcNights, parseISODate } from "./utils.js";
+import { arr, calcNights, parseISODate, seasonShort } from "./utils.js";
 import { paceBand, INTERESTS_GROUPS } from "./constants.js";
 
 // ── Activity priority helpers ───────────────────────────────────────────────
@@ -265,12 +265,24 @@ const CATEGORIES_SCHEMA      = (nl) => `{${categoriesBody(nl)}}`;
 function tripContext(answers, uploadedFiles) {
   const a = answers;
   const c = travelerContext(a);
+  const isBucket = a.tripStyle === "bucket";
   const d1 = parseISODate(a.dates?.start);
   const d2 = parseISODate(a.dates?.end);
-  const n  = calcNights(a.dates?.start, a.dates?.end);
+  const n  = isBucket ? null : calcNights(a.dates?.start, a.dates?.end);
 
   const safeStart = (d1 ? d1.toISOString().slice(0, 10) : a.dates?.start) || "?";
   const safeEnd   = (d2 ? d2.toISOString().slice(0, 10) : a.dates?.end)   || "?";
+
+  // Bucket List mode (2026-08-15): no dates exist — the "now? / when?" answer
+  // becomes a soft TIMEFRAME flavor line instead of a DATES line. whenText is
+  // the traveler's own words ("next summer", "someday"); absent both, the list
+  // stays season-neutral.
+  const timeframe = !isBucket ? null
+    : a.dates?.now
+      ? `starting soon — it is ${seasonShort(new Date().toISOString().slice(0, 10))} right now, so prefer currently-open, in-season picks`
+      : (a.dates?.whenText || "").trim()
+        ? `"${a.dates.whenText.trim()}" (the traveler's own words — flavor seasonal picks toward it)`
+        : "open-ended — no dates; favor year-round picks over narrowly seasonal ones";
 
   const textFileContext = (uploadedFiles || [])
     .filter(f => !f.isImage)
@@ -284,7 +296,7 @@ function tripContext(answers, uploadedFiles) {
   const contextText = `Return ONLY a valid JSON object. No markdown, no explanation, nothing else.
 
 DESTINATION: ${a.destination}
-DATES: ${safeStart} → ${safeEnd} (${n} nights)
+${isBucket ? `TIMEFRAME: ${timeframe}` : `DATES: ${safeStart} → ${safeEnd} (${n} nights)`}
 PARTY: ${c.partyLine}${c.kidsSuffix}
 STAYING: ${c.stayLine}
 TRANSPORT: ${c.transportLine}
@@ -296,7 +308,9 @@ NOTES: ${a.notes || "none"}${c.pace ? `\nPACE: ${c.pace}` : ""}${c.focus ? `\nFO
 ${textFileContext ? `\nUPLOADED CONTEXT:\n${textFileContext}` : ""}
 
 INSTRUCTIONS — apply these to every selection you make:
-
+${isBucket ? `
+BUCKET LIST: This is a dateless bucket list, not a scheduled trip. Curate the definitive "worth doing here" set for this traveler — judge every item on its own merits and ignore day-to-day scheduling or feasibility entirely. Use EXACTLY the category keys shown in the JSON schema at the end — never rename them and never invent interest-named keys; sort each pick into the closest schema category instead.
+` : ""}
 PARTY: ${c.partyText}
 
 LOCATION: ${c.stayText}

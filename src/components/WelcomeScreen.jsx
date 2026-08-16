@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { T, DEST_PLACEHOLDERS } from "../lib/constants.js";
-import { parseISODate } from "../lib/utils.js";
+import { parseISODate, countIdeas } from "../lib/utils.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { useIsWide } from "../hooks/useIsWide.js";
 import { fetchDestinationSuggestions } from "../lib/places.js";
@@ -39,6 +39,73 @@ function departsIn(iso) {
   if (days === 1) return "departs tomorrow";
   if (days === 0) return "departs today";
   return "";
+}
+
+/**
+ * RailFork — the welcome fork (design pick 1F, 2026-08-15, off the round-two
+ * board). The ticket rail arrives at a literal Y-junction: the ember idles at
+ * the switch until the traveler taps a branch pill, then commits down that
+ * track — branch ignites, the other line goes cold — and the flow starts.
+ * The pills ARE the CTAs: one tap either way, same as the old single button.
+ *
+ * Motion notes: ember runs on CSS offset-path (wrfidle / wrfrun keyframes in
+ * the welcome style block). VITE_NO_MOTION renders the ember parked and picks
+ * navigate synchronously (harness clicks); prefers-reduced-motion gets the
+ * same via the media query + the reduced check in pick().
+ */
+export function RailFork({ onPick, noMotion = false }) {
+  const [committed, setCommitted] = useState(null); // "A" | "B" once a branch is chosen
+  const reduced = typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function pick(branch, style) {
+    if (committed) return;
+    setCommitted(branch);
+    if (noMotion || reduced) { onPick(style); return; }
+    setTimeout(() => onPick(style), 520); // let the ember finish the run (.5s)
+  }
+
+  const pillSt = (on, off) => ({
+    position: "absolute", left: 158, width: 138, textAlign: "left", cursor: "pointer",
+    background: on ? "#211712" : T.bg1, border: `1px solid ${on ? T.accent : T.border2}`,
+    borderRadius: T.r.pill, padding: "7px 14px", fontFamily: T.font,
+    opacity: off ? .4 : 1, transition: "border-color .3s, background .3s, opacity .3s",
+    boxShadow: on ? "0 0 0 1px rgba(201,100,66,.35), 0 0 18px rgba(201,100,66,.18)" : "none",
+  });
+  const glowSt = (lit) => ({ strokeDasharray: 1, strokeDashoffset: lit ? 0 : 1, transition: "stroke-dashoffset .5s ease" });
+
+  return (
+    <div role="group" aria-label="Choose how to build this trip" className="fade-up"
+      style={{ position: "relative", width: 300, height: 132, margin: "2px auto 4px" }}>
+      <svg viewBox="0 0 300 132" width="300" height="132" aria-hidden="true" style={{ position: "absolute", inset: 0, overflow: "visible" }}>
+        <defs>
+          <linearGradient id="wrfGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor={T.accent} /><stop offset="1" stopColor="#ffc79b" />
+          </linearGradient>
+        </defs>
+        <path d="M8,65 H96" fill="none" stroke={T.border} strokeWidth="3" strokeLinecap="round" />
+        <path d="M96,65 C126,65 130,34 150,34" fill="none" strokeWidth="3" strokeLinecap="round"
+          stroke={committed === "B" ? "#242424" : T.border} style={{ transition: "stroke .4s" }} />
+        <path d="M96,65 C126,65 130,96 150,96" fill="none" strokeWidth="3" strokeLinecap="round"
+          stroke={committed === "A" ? "#242424" : T.border} style={{ transition: "stroke .4s" }} />
+        <path d="M8,65 H96 C126,65 130,34 150,34" pathLength="1" fill="none" stroke="url(#wrfGrad)"
+          strokeWidth="3" strokeLinecap="round" style={{ ...glowSt(committed === "A"), filter: "drop-shadow(0 0 5px rgba(201,100,66,.65))" }} />
+        <path d="M8,65 H96 C126,65 130,96 150,96" pathLength="1" fill="none" stroke="url(#wrfGrad)"
+          strokeWidth="3" strokeLinecap="round" style={{ ...glowSt(committed === "B"), filter: "drop-shadow(0 0 5px rgba(201,100,66,.65))" }} />
+      </svg>
+      <span aria-hidden="true"
+        className={noMotion ? "wrf-ember wrf-still" : committed ? `wrf-ember wrf-run${committed}` : "wrf-ember"} />
+      <button onClick={() => pick("A", "itinerary")} aria-label="Full itinerary — a day-by-day plan"
+        style={{ ...pillSt(committed === "A", committed === "B"), top: 12 }}>
+        <span style={{ display: "block", fontSize: T.fs.meta, fontWeight: 800, color: T.ink, lineHeight: 1.25 }}>Full itinerary</span>
+        <span style={{ display: "block", fontSize: T.fs.micro, fontWeight: 600, color: T.hint, lineHeight: 1.3 }}>day-by-day plan</span>
+      </button>
+      <button onClick={() => pick("B", "bucket")} aria-label="Bucket list — just the activities, no dates"
+        style={{ ...pillSt(committed === "B", committed === "A"), top: 74 }}>
+        <span style={{ display: "block", fontSize: T.fs.meta, fontWeight: 800, color: T.ink, lineHeight: 1.25 }}>Bucket list</span>
+        <span style={{ display: "block", fontSize: T.fs.micro, fontWeight: 600, color: T.hint, lineHeight: 1.3 }}>just the activities</span>
+      </button>
+    </div>
+  );
 }
 
 export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdateProfile, savedTrip, onResume, trips = [], onDeleteTrip }) {
@@ -87,9 +154,9 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
     return () => clearInterval(intervalRef.current);
   }, [dest]);
 
-  function handleStart(mode = "fresh") {
+  function handleStart(mode = "fresh", tripStyle = "itinerary") {
     if (!destValid || !online) return;   // building a trip requires the AI
-    onStart(dest.trim(), mode);
+    onStart(dest.trim(), mode, tripStyle);
   }
 
   // Motion is idle-only (design picks 8A + 8D): the comet orbits and the
@@ -113,10 +180,17 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
     const start  = t.answers?.dates?.start;
     const stub   = stubDate(start);
     const broken = !!t._error;
+    // Bucket trips (1F, 2026-08-15) carry no date words anywhere — the card
+    // identifies by place + activities: "18 ideas · 6 picked", IDEAS tail.
+    const isBucketTrip = t.tripStyle === "bucket";
+    const ideas  = isBucketTrip ? countIdeas(t.categories) : 0;
+    const picked = isBucketTrip ? Object.keys(t.bucketPicks || {}).length : 0;
     const punchBg = isWide ? T.bg1 : T.bg0;
     const sub = broken
       ? "build didn't finish — tap to rebuild"
-      : [stub && `${stub.mon} ${stub.day}`, departsIn(start)].filter(Boolean).join(" · ") || "planning";
+      : isBucketTrip
+        ? [`${ideas} ${ideas === 1 ? "idea" : "ideas"}`, picked ? `${picked} picked` : ""].filter(Boolean).join(" · ")
+        : [stub && `${stub.mon} ${stub.day}`, departsIn(start)].filter(Boolean).join(" · ") || "planning";
     if (confirming) {
       return (
         <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, border: `1px solid ${T.border2}`, borderRadius: T.r.md, background: T.bg1, padding: "12px 14px", marginBottom: 8 }}>
@@ -155,6 +229,11 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           <span aria-hidden="true" style={{ position: "absolute", left: -6.5, bottom: -6.5, width: 11, height: 11, borderRadius: "50%", background: punchBg, border: `1px solid ${isActive ? T.border2 : T.border}` }} />
           {broken ? (
             <span style={{ color: T.accent, fontWeight: 800, fontSize: T.fs.title }}>↻</span>
+          ) : isBucketTrip ? (
+            <>
+              <span style={{ fontSize: T.fs.title, fontWeight: 800, color: T.accent, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{ideas}</span>
+              <span style={{ fontSize: T.fs.micro, fontWeight: 800, letterSpacing: ".14em", color: T.hint, textTransform: "uppercase" }}>{ideas === 1 ? "idea" : "ideas"}</span>
+            </>
           ) : t.nights ? (
             <>
               <span style={{ fontSize: T.fs.title, fontWeight: 800, color: T.accent, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{t.nights}</span>
@@ -188,9 +267,22 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           -webkit-background-clip: text; background-clip: text; color: transparent;
           animation: wshim 2.7s linear infinite;
         }
+        /* Rail-fork ember (1F). Idle: patrols the trunk toward the junction.
+           Run: commits down the chosen branch (paths must mirror the SVG). */
+        .wrf-ember{position:absolute;width:11px;height:11px;border-radius:50%;z-index:2;pointer-events:none;
+          background:radial-gradient(circle at 38% 35%, #ffd9b3 0%, #ffc79b 34%, ${T.accent} 72%, rgba(201,100,66,0) 100%);
+          box-shadow:0 0 10px 2px rgba(224,112,80,.75), 0 0 26px 6px rgba(201,100,66,.3);
+          offset-path:path("M8,65 H96");offset-distance:4%;
+          animation:wrfidle 2.6s ease-in-out infinite alternate}
+        @keyframes wrfidle{from{offset-distance:4%}to{offset-distance:96%}}
+        .wrf-ember.wrf-runA{offset-path:path("M8,65 H96 C126,65 130,34 150,34");animation:wrfrun .5s ease-in-out forwards}
+        .wrf-ember.wrf-runB{offset-path:path("M8,65 H96 C126,65 130,96 150,96");animation:wrfrun .5s ease-in-out forwards}
+        @keyframes wrfrun{from{offset-distance:0%}to{offset-distance:100%}}
+        .wrf-ember.wrf-still{animation:none;offset-distance:96%}
         @media (prefers-reduced-motion: reduce) {
           .wbeam-idle { animation: none; background: ${T.accent}; }
           .wshim { animation: none; background: none; color: ${T.hint}; }
+          .wrf-ember { animation: none; offset-distance: 96%; }
         }
       `}</style>
 
@@ -326,21 +418,17 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           </div>
         )}
 
-        {/* CTA — "Let's go" for first-timers; once a profile exists the primary
-            action plans with it (design pick 6B), and "start fresh" demotes to
-            a text link. Editing preferences opens the ProfileSheet — never the
+        {/* CTA — the rail fork (design pick 1F, 2026-08-15). The two branch
+            pills ARE the commit buttons: Full itinerary keeps today's one-tap
+            flow, Bucket list starts the dateless mode. With a profile, either
+            branch plans "my way" (mode continue); the blank-slate escape below
+            stays. Editing preferences opens the ProfileSheet — never the
             interview. */}
-        {destValid && online && !hasProfile && (
-          <button onClick={() => handleStart("fresh")} className="fade-up"
-            style={{ width: "100%", background: T.accent, color: T.white, padding: "14px 0", borderRadius: T.r.md, fontSize: T.fs.ui, fontWeight: 700, cursor: "pointer", border: "none", fontFamily: T.font, marginBottom: "1rem" }}>
-            Let's go →
-          </button>
-        )}
-        {destValid && online && hasProfile && (
-          <button onClick={() => handleStart("continue")} className="fade-up"
-            style={{ width: "100%", background: T.accent, color: T.white, padding: "14px 0", borderRadius: T.r.md, fontSize: T.fs.ui, fontWeight: 700, cursor: "pointer", border: "none", fontFamily: T.font, marginBottom: 10 }}>
-            Plan it my way →
-          </button>
+        {destValid && online && (
+          <RailFork
+            noMotion={!!import.meta.env.VITE_NO_MOTION}
+            onPick={(style) => handleStart(hasProfile ? "continue" : "fresh", style)}
+          />
         )}
 
         {/* Traveler profile strip — always visible once a profile exists, so

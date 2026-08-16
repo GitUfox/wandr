@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles, splitDetails, classifyFact, matchTipToActivity, pruneOrphanTips, findGroundedVenue } from "./utils.js";
+import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles, splitDetails, classifyFact, matchTipToActivity, pruneOrphanTips, findGroundedVenue, countIdeas, bucketPickKey } from "./utils.js";
 
 // ── arr ───────────────────────────────────────────────────────────────────────
 
@@ -655,5 +655,39 @@ describe("findGroundedVenue", () => {
     expect(findGroundedVenue("Museu do Fado", undefined)).toBeNull();
     expect(findGroundedVenue("", cats)).toBeNull();
     expect(findGroundedVenue("Anything", { x: "not-an-array" })).toBeNull();
+  });
+});
+
+// ── countIdeas / bucketPickKey (Bucket List mode, 2026-08-15) ─────────────────
+
+describe("countIdeas", () => {
+  it("returns 0 for empty or missing categories", () => {
+    expect(countIdeas(undefined)).toBe(0);
+    expect(countIdeas(null)).toBe(0);
+    expect(countIdeas({})).toBe(0);
+  });
+
+  it("sums items across categories, ignoring non-array values", () => {
+    expect(countIdeas({
+      culture: [{ name: "A" }, { name: "B" }],
+      nature: [{ name: "C" }],
+      junk: "not an array",
+      alsoJunk: null,
+    })).toBe(3);
+  });
+});
+
+describe("bucketPickKey", () => {
+  it("is category-scoped and name-based", () => {
+    expect(bucketPickKey("culture", { name: "Livraria Lello" })).toBe("culture:Livraria Lello");
+  });
+
+  it("never throws on a malformed item", () => {
+    expect(bucketPickKey("nature", null)).toBe("nature:");
+    expect(bucketPickKey("nature", {})).toBe("nature:");
+  });
+
+  it("keeps same-named venues in different categories distinct", () => {
+    expect(bucketPickKey("culture", { name: "X" })).not.toBe(bucketPickKey("nature", { name: "X" }));
   });
 });

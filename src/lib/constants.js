@@ -44,6 +44,19 @@ export const GROUNDING = {
   timeoutMs: 8000,
 };
 
+// ── Bucket List mode (2026-08-15, fork pick 1F) ──────────────────────────────
+// A bucket trip is a place + a curated activity list — zero date DNA. The
+// canonical category order for the bucket board. Deliberately NOT merged with
+// GROUNDING.categories: that list is "what gets verified" (quota config, may
+// shrink), this one is "how the board reads" (presentation, stable).
+export const BUCKET_CATS = [
+  ["culture",     "Culture"],
+  ["nature",      "Nature"],
+  ["exploration", "Exploration"],
+  ["experiences", "Experiences"],
+  ["nightlife",   "Nightlife"],
+];
+
 // ── Design tokens ────────────────────────────────────────────────────────────
 export const T = {
   bg0:"#0d0d0d", bg1:"#171717", bg2:"#1f1f1f", bg3:"#2a2a2a",
