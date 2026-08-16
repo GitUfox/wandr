@@ -11,8 +11,8 @@
  * validated Map chip as the itinerary (href must be a google.com/maps URL) and
  * unverified rows deliberately get no link at all.
  */
-import { T, BUCKET_CATS } from "../lib/constants.js";
-import { bucketPickKey, countIdeas } from "../lib/utils.js";
+import { T } from "../lib/constants.js";
+import { bucketPickKey, bucketShelves, countIdeas } from "../lib/utils.js";
 
 const PRIORITY_STYLE = {
   essential:   { color: T.white,  background: T.accent,     border: `1px solid ${T.accent}` },
@@ -82,23 +82,16 @@ function IdeaCard({ cat, item, picked, onToggle }) {
   );
 }
 
-export default function BucketBoard({ trip, onTogglePick }) {
+export default function BucketBoard({ trip, onTogglePick, onExport, onCopy, copied }) {
   const categories = trip?.categories || {};
   const picks = trip?.bucketPicks || {};
   const ideas = countIdeas(categories);
   const picked = Object.keys(picks).length;
 
-  // Canonical shelf order first, then any category the schema pin didn't
-  // anticipate — nothing the model curated is ever silently dropped. Extras
-  // get readable labels ("live_music" → "Live music"); this fallback caught a
-  // real deviation on the first live run (the prompt now pins the keys, this
-  // stays as the belt to that suspender).
-  const prettify = (id) => id.replace(/[_-]+/g, " ").replace(/^\w/, ch => ch.toUpperCase());
-  const known = BUCKET_CATS.filter(([id]) => Array.isArray(categories[id]) && categories[id].length > 0);
-  const extras = Object.keys(categories)
-    .filter(id => !BUCKET_CATS.some(([k]) => k === id) && Array.isArray(categories[id]) && categories[id].length > 0)
-    .map(id => [id, prettify(id)]);
-  const shelves = [...known, ...extras];
+  // Shelf order + unknown-key tolerance live in bucketShelves (utils) — ONE
+  // source shared with the PDF export and the copy text, so the surfaces
+  // can't drift.
+  const shelves = bucketShelves(categories);
 
   if (ideas === 0) {
     return (
@@ -121,6 +114,23 @@ export default function BucketBoard({ trip, onTogglePick }) {
         <span style={{ fontSize: T.fs.meta, color: T.hint }}>
           {picked ? `${picked} of ${ideas} picked` : `${ideas} ideas — tap the ring to claim one`}
         </span>
+        {/* Same toolbar anatomy as the itinerary status row. */}
+        {(onCopy || onExport) && (
+          <div style={{ display: "flex", gap: 7, marginLeft: "auto" }}>
+            {onCopy && (
+              <button onClick={onCopy}
+                style={{ fontSize: T.fs.meta, fontWeight: 600, color: copied === "error" ? "#f08070" : copied ? T.ink : T.muted, background: copied ? T.bg3 : "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "5px 12px", cursor: "pointer", fontFamily: T.font, transition: "all .15s" }}>
+                {copied === "error" ? "Copy failed" : copied ? "✓ Copied" : "Copy"}
+              </button>
+            )}
+            {onExport && (
+              <button onClick={onExport}
+                style={{ fontSize: T.fs.meta, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "5px 12px", cursor: "pointer", fontFamily: T.font }}>
+                Export PDF
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {shelves.map(([id, label]) => {

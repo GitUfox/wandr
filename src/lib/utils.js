@@ -1,4 +1,5 @@
 import { getTimeFormat } from "./settings.js";
+import { BUCKET_CATS } from "./constants.js";
 
 /**
  * Flatten an answer value to a plain string for use in prompts.
@@ -53,6 +54,45 @@ export function countIdeas(categories) {
  */
 export function bucketPickKey(cat, item) {
   return `${cat}:${item?.name || ""}`;
+}
+
+/**
+ * Shelf assembly for every bucket-list surface — the on-screen board, the PDF
+ * export, and the copy-to-clipboard text all read THIS, so category order and
+ * the unknown-key tolerance can never drift between them. Canonical shelves
+ * first (BUCKET_CATS order), then any key the schema pin didn't anticipate
+ * with a prettified label ("live_music" → "Live music") — that fallback
+ * caught a real model deviation on the first live run.
+ * Returns [ [id, label, items], … ] with empty categories dropped.
+ */
+export function bucketShelves(categories) {
+  const cats = categories || {};
+  const has = (id) => Array.isArray(cats[id]) && cats[id].length > 0;
+  const prettify = (id) => id.replace(/[_-]+/g, " ").replace(/^\w/, ch => ch.toUpperCase());
+  const known = BUCKET_CATS.filter(([id]) => has(id)).map(([id, label]) => [id, label, cats[id]]);
+  const extras = Object.keys(cats)
+    .filter(id => !BUCKET_CATS.some(([k]) => k === id) && has(id))
+    .map(id => [id, prettify(id), cats[id]]);
+  return [...known, ...extras];
+}
+
+/**
+ * Rebuild-time pick carryover: keep the traveler's picks for venues that
+ * survived the recuration, drop the rest. Dropping matters as much as
+ * keeping — orphaned keys would silently inflate the ticket's PICKED count
+ * (it counts the map's keys, not what the board can render).
+ */
+export function carryBucketPicks(picks, categories) {
+  const valid = new Set();
+  for (const [cat, items] of Object.entries(categories || {})) {
+    if (!Array.isArray(items)) continue;
+    for (const it of items) valid.add(bucketPickKey(cat, it));
+  }
+  const kept = {};
+  for (const key of Object.keys(picks || {})) {
+    if (valid.has(key)) kept[key] = true;
+  }
+  return kept;
 }
 
 /**

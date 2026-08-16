@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { STEPS, MODES, T } from "./lib/constants.js";
-import { calcNights } from "./lib/utils.js";
+import { calcNights, carryBucketPicks } from "./lib/utils.js";
 import { loadTripStore, persistTrip, getActiveTrip, listTrips, activateTripId, deleteTrip } from "./lib/tripStore.js";
 import { useAccount } from "./hooks/useAccount.js";
 import { recordDeletion, scheduleSyncPush } from "./lib/sync.js";
@@ -323,6 +323,13 @@ export default function Wandr() {
     const result = await doBuildTrip(a, uploadedFiles);
     let saved = result;
     if (!result._error) {
+      // Bucket rebuild: carry the traveler's picks forward for venues that
+      // survived the recuration (name-stable keys); the rest prune so the
+      // PICKED count can never include ideas the board no longer shows.
+      // `trip` here is the render-time value — the OLD trip, pre-skeleton.
+      if (isBucket && opts.replaceId && trip?.bucketPicks) {
+        result.bucketPicks = carryBucketPicks(trip.bucketPicks, result.categories);
+      }
       // A rebuild invalidates that trip's existing plan; a brand-new trip has
       // none. Either way the incoming trip starts with no plan attached.
       clearSavedPlan(opts.replaceId || undefined);

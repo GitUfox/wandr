@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from "react";
 import { MODES, T, FEATURES, AI_DISCLAIMER } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime, findGroundedVenue, countIdeas } from "../lib/utils.js";
+import { bucketTicketRow, bucketPrintBody, bucketPlainText } from "../lib/printBucket.js";
 import { parsePlan } from "../lib/planModel.js";
 import { TEAM_SHORT } from "../lib/mlbTeams.js";
 import Md from "./Md.jsx";
@@ -176,6 +177,17 @@ export default function Dashboard({
     });
   }
 
+  // Bucket-mode Copy — same feedback states, plain-text list serializer.
+  function copyBucketList() {
+    navigator.clipboard.writeText(bucketPlainText(trip)).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    }).catch(() => {
+      setCopied("error");
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
   const a = trip.answers;
 
   // Bucket List mode (2026-08-15): a place + activities, zero date DNA. The
@@ -223,21 +235,15 @@ export default function Dashboard({
         <div class="p-label">${htmlEscape(l)}</div>
         <div style="font-size:11px;font-weight:700">${htmlEscape(v)}</div>
       </div>`).join("");
-    const ticketHtml = `
-      <div class="ticket">
-        <div class="barcode"></div>
-        ${dep && ret ? `
-        <div style="display:flex;align-items:center;gap:14px;padding:13px 34px 11px 16px">
-          <div><div class="p-label">Depart</div><div class="p-date">${htmlEscape(dep)}</div></div>
-          <svg viewBox="0 0 120 26" style="flex:1;height:22px;min-width:48px;overflow:visible" aria-hidden="true">
+    // Light-stock twin of the ticket emblem (4A+5A): canvas can't print, so
+    // paper gets TiltedEarthMark's construction with the ring and ember
+    // frozen mid-front-pass. Keep in sync with TiltedEarthMark in this file.
+    // ONE string, seated by BOTH ticket variants (dates + bucket) — drift-proof.
+    const printEarthSvg = `<svg viewBox="0 0 120 26" style="flex:1;height:22px;min-width:48px;overflow:visible" aria-hidden="true">
             <line x1="10" y1="13" x2="40" y2="13" stroke="#d8d2cb" stroke-width="1.2"/>
             <line x1="80" y1="13" x2="110" y2="13" stroke="#d8d2cb" stroke-width="1.2"/>
             <circle cx="8" cy="13" r="2.4" fill="none" stroke="#9a938c" stroke-width="1.3"/>
             <circle cx="112" cy="13" r="2.4" fill="#c96442"/>
-            <!-- Light-stock twin of the ticket emblem (4A+5A): canvas can't
-                 print, so paper gets TiltedEarthMark's construction with the
-                 ring and ember frozen mid-front-pass. Keep in sync with
-                 TiltedEarthMark in this file. -->
             <g transform="translate(60,13) rotate(-20)">
               <ellipse rx="16" ry="5" fill="none" stroke="#c9c2ba" stroke-width=".9"/>
             </g>
@@ -255,10 +261,19 @@ export default function Dashboard({
             <g transform="translate(60,13) rotate(-20) scale(1,0.3125)">
               <ellipse cx="8" cy="13.9" rx="1.7" ry="5.4" fill="#c96442"/>
             </g>
-          </svg>
+          </svg>`;
+    const ticketTop = isBucket
+      ? bucketTicketRow(ideaCount, pickedCount, printEarthSvg)
+      : dep && ret ? `
+        <div style="display:flex;align-items:center;gap:14px;padding:13px 34px 11px 16px">
+          <div><div class="p-label">Depart</div><div class="p-date">${htmlEscape(dep)}</div></div>
+          ${printEarthSvg}
           <div style="text-align:right"><div class="p-label">Return</div><div class="p-date">${htmlEscape(ret)}</div></div>
         </div>
-        <div class="perf"><div class="notch" style="left:-31px"></div><div class="notch" style="right:-31px"></div></div>` : ""}
+        <div class="perf"><div class="notch" style="left:-31px"></div><div class="notch" style="right:-31px"></div></div>` : "";
+    const ticketHtml = `
+      <div class="ticket">
+        <div class="barcode"></div>${ticketTop}
         <div style="display:flex;gap:20px;padding:10px 34px 13px 16px">${stubsHtml}</div>
       </div>`;
 
@@ -306,10 +321,12 @@ export default function Dashboard({
       </div>`;
     };
 
-    const model = parsePlan(planText);
-    let bodyHtml = model.intro ? proseHtml(model.intro) : "";
+    // Bucket export: the shelf body comes from printBucket (shared shelf
+    // source with the on-screen board); the day-card machinery below no-ops.
+    const model = isBucket ? null : parsePlan(planText);
+    let bodyHtml = isBucket ? bucketPrintBody(trip) : model.intro ? proseHtml(model.intro) : "";
 
-    for (const day of model.days) {
+    for (const day of model?.days || []) {
       const dm = String(day.label).match(/^Day (\d+) — (.+)$/);
       bodyHtml += dm
         ? `<div class="dayhead"><span class="daychip">${String(dm[1]).padStart(2, "0")}</span><span>${htmlEscape(dm[2])}</span></div>`
@@ -347,7 +364,7 @@ export default function Dashboard({
     }
     w.document.write(`<!DOCTYPE html><html><head>
       <meta charset="utf-8">
-      <title>${htmlEscape(trip.destination)} — Wandr Itinerary</title>
+      <title>${htmlEscape(trip.destination)} — Wandr ${isBucket ? "Bucket List" : "Itinerary"}</title>
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&display=swap" rel="stylesheet">
       <style>
@@ -402,6 +419,13 @@ export default function Dashboard({
         .prebox { border: 1px solid #e5e0da; border-left: 2.5px solid #c96442; border-radius: 0 5px 5px 0;
                   padding: 8px 11px; margin: 10px 0 4px; background: #fdfbfa; break-inside: avoid; }
         .prebox .tipline { font-size: 9px; color: #6b5f57; line-height: 1.55; margin-top: 2px; }
+        /* Bucket-list print cards: check ring column instead of the time rail. */
+        .shelfcount { font-size: 9px; font-weight: 700; color: #9a938c; margin-left: 8px; letter-spacing: .04em; text-transform: none; }
+        .bcard { display: grid; grid-template-columns: 22px 1fr; gap: 10px; padding: 9px 0 10px;
+                 border-bottom: 1px solid #f0eeeb; break-inside: avoid; }
+        .bring { width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid #d8d2cb; margin-top: 1px;
+                 font-size: 9px; font-weight: 800; color: #fff; display: flex; align-items: center; justify-content: center; }
+        .bring.on { background: #c96442; border-color: #c96442; }
         .foot { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 720px;
                 box-sizing: border-box; display: flex; align-items: center; gap: 10px;
                 background: #fff; border-top: 1px solid #e8e4e0; padding: 8px 20px 12px; font-size: 8.5px; color: #9a938c; }
@@ -411,7 +435,7 @@ export default function Dashboard({
       </style>
     </head><body>
       <div style="text-align:center;margin-bottom:14px"><span class="wm">wandr<span class="dot">.</span></span></div>
-      <div class="p-label" style="color:#c96442;margin-bottom:4px">My trip</div>
+      <div class="p-label" style="color:#c96442;margin-bottom:4px">${isBucket ? "My bucket list" : "My trip"}</div>
       <div style="font-size:26px;font-weight:800;letter-spacing:-.015em;line-height:1.1">${htmlEscape(destMain)}${destRegion ? ` <span style="font-size:12px;color:#9a938c;font-weight:700">${htmlEscape(destRegion)}</span>` : ""}</div>
       ${ticketHtml}
       <div style="margin-top:6px">${bodyHtml}</div>
@@ -692,7 +716,8 @@ export default function Dashboard({
               ) : isBucket ? (
                 /* Bucket mode: the curated list IS the product — no generate,
                    no plan machinery, no dates. Check-off persists via App. */
-                <BucketBoard trip={trip} onTogglePick={onTogglePick} />
+                <BucketBoard trip={trip} onTogglePick={onTogglePick}
+                  onExport={exportToPdf} onCopy={copyBucketList} copied={copied} />
               ) : !planText && !planLoading ? (() => {
                 const hero = MODES[0];
                 return (

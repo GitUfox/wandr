@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles, splitDetails, classifyFact, matchTipToActivity, pruneOrphanTips, findGroundedVenue, countIdeas, bucketPickKey } from "./utils.js";
+import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles, splitDetails, classifyFact, matchTipToActivity, pruneOrphanTips, findGroundedVenue, countIdeas, bucketPickKey, carryBucketPicks, bucketShelves } from "./utils.js";
 
 // ── arr ───────────────────────────────────────────────────────────────────────
 
@@ -689,5 +689,46 @@ describe("bucketPickKey", () => {
 
   it("keeps same-named venues in different categories distinct", () => {
     expect(bucketPickKey("culture", { name: "X" })).not.toBe(bucketPickKey("nature", { name: "X" }));
+  });
+});
+
+describe("carryBucketPicks", () => {
+  const categories = {
+    culture: [{ name: "Lello" }, { name: "Serralves" }],
+    nature: [{ name: "Crystal Palace Gardens" }],
+  };
+
+  it("keeps picks whose venues survived the rebuild", () => {
+    expect(carryBucketPicks({ "culture:Lello": true }, categories))
+      .toEqual({ "culture:Lello": true });
+  });
+
+  it("drops picks for venues the recuration removed (no phantom PICKED count)", () => {
+    expect(carryBucketPicks({ "culture:Gone Venue": true, "nature:Crystal Palace Gardens": true }, categories))
+      .toEqual({ "nature:Crystal Palace Gardens": true });
+  });
+
+  it("survives empty and malformed inputs", () => {
+    expect(carryBucketPicks(undefined, categories)).toEqual({});
+    expect(carryBucketPicks({ "culture:Lello": true }, undefined)).toEqual({});
+    expect(carryBucketPicks({ "culture:Lello": true }, { culture: "junk" })).toEqual({});
+  });
+});
+
+describe("bucketShelves", () => {
+  it("orders canonical categories first, then prettified extras, dropping empties", () => {
+    const shelves = bucketShelves({
+      live_music: [{ name: "A" }],
+      nature: [{ name: "B" }],
+      culture: [{ name: "C" }],
+      exploration: [],
+      junk: "not an array",
+    });
+    expect(shelves.map(([, label]) => label)).toEqual(["Culture", "Nature", "Live music"]);
+  });
+
+  it("returns [] for empty input", () => {
+    expect(bucketShelves(undefined)).toEqual([]);
+    expect(bucketShelves({})).toEqual([]);
   });
 });

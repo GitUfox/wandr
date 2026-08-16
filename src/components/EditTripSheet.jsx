@@ -191,6 +191,28 @@ export default function EditTripSheet({
   const [localTeams, setLocalTeams]       = useState(() => a.interests?.teams || []);
   const [confirmRebuild, setConfirmRebuild] = useState(false);
 
+  // Re-seed the Trip Details fields each time the sheet opens. The sheet is
+  // always mounted (see header), so the mount-time useState seeds go stale
+  // the moment the trip underneath changes — after an in-place rebuild, and
+  // especially after a trip switch, an open sheet would show a previous
+  // trip's values. `open` is the only dependency on purpose: reseeding must
+  // happen on the open transition, never while the user is typing.
+  useEffect(() => {
+    if (!open) return;
+    setLocalDest(a.destination || "");
+    setLocalStart(a.dates?.start || "");
+    setLocalEnd(a.dates?.end || "");
+    setLocalBudget(nearestBudgetTier(a.budget));
+    setLocalParty(
+      Array.isArray(a.party?.chips) ? a.party.chips[0] :
+      typeof a.party === "string"   ? a.party : ""
+    );
+    setLocalChips(a.interests?.chips || []);
+    setLocalPriority(a.interests?.priorityChips || []);
+    setLocalTeams(a.interests?.teams || []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const dayHeaders = extractDayHeaders(planText || "");
   const hasPlan    = (planText || "").trim().length > 0;
 
@@ -273,7 +295,12 @@ export default function EditTripSheet({
     };
     setConfirmRebuild(false);
     onEditTripDetails(newAnswers);
-    // Screen navigates to loading — sheet unmounts automatically
+    // Dismiss explicitly. This used to say "screen navigates to loading —
+    // sheet unmounts automatically", which stopped being true when the
+    // loading screen died (2026-08-05 straight-to-dashboard): the dashboard
+    // stays mounted through a rebuild, so an open sheet just sat on top of
+    // the curating state looking frozen (Kraig's 2026-08-15 report).
+    handleClose();
   }
 
   const stageTitle = {
