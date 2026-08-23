@@ -15,8 +15,29 @@
  * an in-app warning rather than living only in a dev script.
  */
 
-import { parseTime, bucketOf } from "./utils.js";
+import { parseTime, bucketOf, splitDetails } from "./utils.js";
 import { paceBand } from "./constants.js";
+
+// ── Duration chips → minutes (day-load meter) ────────────────────────────────
+// "2h" → 120 · "45 min" → 45 · "1.5h" → 90 · "2–3 hours" → 120 (the LOWER
+// bound of a range on purpose: the stacked-day check below only fires when
+// even the minimum stay overruns — false alarms erode the strip's authority).
+export function parseDurationMin(text) {
+  const m = String(text || "").match(/(\d+(?:[.,]\d+)?)(?:\s?[–-]\s?\d+(?:[.,]\d+)?)?\s?(h(?:ours?|rs?)?|min(?:utes?|s)?)/i);
+  if (!m) return null;
+  const n = parseFloat(m[1].replace(",", "."));
+  if (!Number.isFinite(n)) return null;
+  return /^h/i.test(m[2]) ? Math.round(n * 60) : Math.round(n);
+}
+
+/** An activity's duration in minutes, read from its own duration chip. */
+function activityDurationMin(a) {
+  const dur = splitDetails(a?.details).facts.find(f => f.kind === "duration");
+  return dur ? parseDurationMin(dur.text) : null;
+}
+
+const fmtDur = (min) =>
+  min % 60 === 0 ? `${min / 60}h` : min < 60 ? `${min} min` : `${+(min / 60).toFixed(1)}h`;
 
 // Phrases the plan prompt explicitly bans ("no filler phrases like 'soak in the
 // views'"). Kept as a list so a violation is countable, not a vibe.
@@ -270,6 +291,34 @@ export function checkPlan(model, expectedDays = null) {
     const mins = (d.activities || []).map(a => parseTime(a.time)).filter(m => m !== null);
     if (mins.some((m, j) => j > 0 && m < mins[j - 1])) {
       problems.push({ code: "times-out-of-order", message: `${dayName(d, i)} has activities listed out of order.` });
+    }
+  });
+
+  // 5. Stacked day (the day-load meter, v1): an activity's own duration chip
+  //    runs past the next activity's start — the plan's numbers contradict
+  //    themselves, which makes this unambiguous AND actionable (retime or
+  //    trim), unlike pace/rhythm preferences which stay dev-side. A 15-minute
+  //    grace lets tight-but-plausible handoffs pass; range durations already
+  //    use their lower bound. One message per day — the first collision names
+  //    the problem, more would nag.
+  const STACK_GRACE_MIN = 15;
+  days.forEach((d, i) => {
+    const acts = d.activities || [];
+    for (let j = 0; j < acts.length - 1; j++) {
+      const start = parseTime(acts[j].time);
+      const next = parseTime(acts[j + 1].time);
+      if (start === null || next === null || next <= start) continue; // backwards is reported above
+      const dur = activityDurationMin(acts[j]);
+      if (dur === null) continue;
+      if (start + dur > next + STACK_GRACE_MIN) {
+        const name = String(acts[j].title || "").replace(/\*\*/g, "").trim();
+        const nextName = String(acts[j + 1].title || "").replace(/\*\*/g, "").trim();
+        problems.push({
+          code: "stacked-day",
+          message: `${dayName(d, i)} looks stacked — ${name} (about ${fmtDur(dur)}) runs past the ${String(acts[j + 1].time || "").replace(/\*\*/g, "").trim()} start of ${nextName}.`,
+        });
+        break;
+      }
     }
   });
 

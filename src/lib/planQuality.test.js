@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scorePlan, checkPlan, namesAPlace, countFiller, paceBand } from "./planQuality.js";
+import { scorePlan, checkPlan, namesAPlace, countFiller, paceBand, parseDurationMin } from "./planQuality.js";
 import { PACE_BANDS } from "./constants.js";
 
 const act = (time, title, details = "d") => ({ id: title, time, title, details });
@@ -276,5 +276,82 @@ describe("checkPlan", () => {
     expect(codes).toContain("empty-day");
     expect(codes).toContain("duplicate-venue");
     expect(codes).toContain("times-out-of-order");
+  });
+});
+
+// ── Stacked day (day-load meter v1) + duration parsing ───────────────────────
+
+describe("parseDurationMin", () => {
+  it("parses hour and minute chips", () => {
+    expect(parseDurationMin("2h")).toBe(120);
+    expect(parseDurationMin("1.5h")).toBe(90);
+    expect(parseDurationMin("45 min")).toBe(45);
+    expect(parseDurationMin("~2 hours")).toBe(120);
+  });
+
+  it("uses the LOWER bound of a range (fires only when even the minimum overruns)", () => {
+    expect(parseDurationMin("2–3 hours")).toBe(120);
+    expect(parseDurationMin("30-45 min")).toBe(30);
+  });
+
+  it("returns null for non-durations", () => {
+    expect(parseDurationMin("opens 09:00")).toBe(null);
+    expect(parseDurationMin("")).toBe(null);
+  });
+});
+
+describe("checkPlan — stacked day", () => {
+  const day = (activities) => ({ days: [{ label: "Day 1 — Test", activities, tips: [], food: [], extras: [] }] });
+  const act = (time, title, details) => ({ id: title, time, title: `**${title}**`, details });
+
+  it("flags a duration chip that runs past the next start", () => {
+    const model = day([
+      act("13:00", "Lowell Observatory", "Historic observatory. · ~$25 · 2h"),
+      act("14:00", "Chase Field", "Ballgame. · $20"),
+    ]);
+    const { problems } = checkPlan(model);
+    const stacked = problems.find(p => p.code === "stacked-day");
+    expect(stacked).toBeTruthy();
+    expect(stacked.message).toContain("Day 1 looks stacked");
+    expect(stacked.message).toContain("Lowell Observatory");
+    expect(stacked.message).toContain("14:00");
+  });
+
+  it("respects the 15-minute grace for tight handoffs", () => {
+    const model = day([
+      act("13:00", "Museum", "Art. · 1h"),
+      act("14:10", "Cafe Central", "Coffee. · 30 min"),
+    ]);
+    expect(checkPlan(model).problems.filter(p => p.code === "stacked-day")).toEqual([]);
+  });
+
+  it("uses range lower bounds — '2–3 hours' at a 2h30 gap does not fire", () => {
+    const model = day([
+      act("09:00", "Humphreys Peak Trail", "Summit hike. · free · 2–3 hours"),
+      act("11:30", "Lunch Spot Diner", "Lunch. · ~$15"),
+    ]);
+    expect(checkPlan(model).problems.filter(p => p.code === "stacked-day")).toEqual([]);
+  });
+
+  it("stays silent without a duration chip and reports once per day", () => {
+    const noDur = day([act("13:00", "Walkabout Tour", "City walk."), act("13:30", "Plaza Mayor", "Square.")]);
+    expect(checkPlan(noDur).problems.filter(p => p.code === "stacked-day")).toEqual([]);
+    const two = day([
+      act("09:00", "A Museum", "X. · 3h"),
+      act("10:00", "B Gallery", "Y. · 3h"),
+      act("11:00", "C Market", "Z."),
+    ]);
+    expect(two.days[0].activities.length).toBe(3);
+    expect(checkPlan(two).problems.filter(p => p.code === "stacked-day")).toHaveLength(1);
+  });
+
+  it("leaves backwards times to the existing check", () => {
+    const model = day([
+      act("15:00", "First Stop Hall", "X. · 2h"),
+      act("10:00", "Second Stop Hall", "Y."),
+    ]);
+    const codes = checkPlan(model).problems.map(p => p.code);
+    expect(codes).toContain("times-out-of-order");
+    expect(codes).not.toContain("stacked-day");
   });
 });
