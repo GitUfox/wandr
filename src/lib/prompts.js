@@ -420,6 +420,76 @@ TIPS: [practical tip] | [logistics tip]
 - ACCURACY: Only recommend venues you are confident are currently operating.`;
 }
 
+// Right Now mode (design pick 2A): each reason chip maps to concrete prompt
+// context. Ids are the UI contract — Dashboard's chips carry these exact keys.
+export const RIGHT_NOW_REASONS = {
+  raining:  "It's raining right now — swap outdoor stops for indoor alternatives (museums, galleries, markets, food halls). Do not schedule anything weather-exposed.",
+  tired:    "Energy is low — fewer stops, closer together, gentler pacing, and build in a real break. Comfort beats coverage for the rest of today.",
+  late:     "Running behind schedule — compress what remains: keep the most important stop, shorten or drop the rest, and push start times later so nothing is rushed.",
+  came_up:  "Plans changed unexpectedly — rebuild the rest of the day fresh, keeping only what still genuinely fits.",
+  surprise: "Surprise me — swap in unexpected picks this plan doesn't have. Never re-suggest the activities being replaced.",
+};
+
+/**
+ * Right Now mode rework prompt (design picks 1A+2A+3A, 2026-08-23): rewrite
+ * ONLY the remainder of today. Everything already done (before fromTime) is
+ * copied verbatim — the traveler lived it; it is history, not a suggestion.
+ * Same output contract as buildEditDayPrompt so spliceDayInPlan and the
+ * shared TABLE_BLOCK/DETAILS_RULE micro-grammar keep every surface in sync.
+ *
+ * opts: { fromTime: "14:05", reasons: ["raining", ...], note: "free text" }
+ */
+export function buildRightNowPrompt(dayLabel, dayContent, opts, trip) {
+  const a = trip.answers;
+  const c = travelerContext(a);
+  const [lo, hi] = paceBand(c.pace);
+  const { fromTime, reasons = [], note = "" } = opts || {};
+
+  const reasonLines = reasons.map(r => RIGHT_NOW_REASONS[r]).filter(Boolean);
+  const changed = [...reasonLines, note.trim()].filter(Boolean).join("\n") ||
+    "The traveler wants a fresh take on the rest of today.";
+
+  const allItems = formatActivityItems(trip.categories);
+
+  return `You are a travel companion reworking the REST OF TODAY, live, mid-trip in ${trip.destination}. It is currently ${fromTime} on this day.
+
+WHAT CHANGED:
+${changed}
+
+CURRENT DAY:
+${dayContent}
+
+${travelerBlock(a, c)}
+
+APPLY THESE RULES:
+PARTY: ${c.partyText}
+ROUTING: ${c.stayText} ${c.transportText}
+BUDGET: ${c.budgetText}${c.paceText ? `\nPACE: ${c.paceText}` : ""}${c.rhythmText ? `\nRHYTHM: ${c.rhythmText}` : ""}${c.kidsText ? `\nKIDS: ${c.kidsText}` : ""}
+AVOID: Never suggest anything related to: ${c.avoidLine}.
+
+ACTIVITIES TO USE (tagged by priority, essentials first):
+${allItems || `Use your knowledge of ${trip.destination}`}
+
+STRICT OUTPUT RULES:
+- Return ONLY the full replacement day content. Nothing before or after.
+- Start with the exact day header: ## ${dayLabel}
+- KEEP EVERY ACTIVITY THAT STARTS BEFORE ${fromTime} — copy those table rows VERBATIM, unchanged. They already happened.
+- REPLACE everything at or after ${fromTime} with the reworked remainder. First new activity starts at or after ${fromTime} — never earlier.
+- Use the same format as the original:
+
+## ${dayLabel}
+
+${TABLE_BLOCK}
+
+TIPS: [practical tip] | [logistics tip]
+
+- The whole day should still total roughly ${lo} to ${hi} activities, but NEVER pad the remainder to hit a count — late in the day, fewer is correct.
+- ${DETAILS_RULE}
+- Do not schedule a venue that already appears on another day of this trip, and never re-suggest an activity you are replacing.
+- Bold place names inside table cells using **Name**
+- ACCURACY: Only recommend venues you are confident are currently operating.`;
+}
+
 /**
  * Build a prompt to tweak ONE activity in place (Phase 3 per-activity AI edit).
  * Returns a single replacement activity as a one-row TABLE block, which the

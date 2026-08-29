@@ -153,7 +153,7 @@ export default function Wandr() {
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
   const { buildTrip: doBuildTrip, loadMsg, error: buildError } = useBuildTrip();
-  const { planText, planModel, planMode, planLoading, patchError, tweakingId, generatedAt, generate: doGenerate, patchDay: doPatchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity } = useGenerate();
+  const { planText, planModel, planMode, planLoading, patchError, tweakingId, generatedAt, reworkUndo, generate: doGenerate, patchDay: doPatchDay, reworkDay: doReworkDay, undoRework, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity } = useGenerate();
   const { games: tripGames, forPrompt: eventsForPrompt } = useLocalEvents(trip);
 
   // The auto-generate below fires from an async completion, where a captured
@@ -405,6 +405,11 @@ export default function Wandr() {
    *   dayIndex    — 0-based day index (day edits only)
    *   dayLabel    — full label string (day edits only)
    */
+  /** Right Now mode: rework the rest of today (picks 1A+2A+3A). */
+  function handleReworkDay(dayIndex, dayLabel, opts) {
+    doReworkDay(dayIndex, dayLabel, opts, trip);
+  }
+
   function handleEditPlan(type, instruction, dayIndex, dayLabel) {
     if (type === "day") {
       doPatchDay(dayIndex, dayLabel, instruction, trip);
@@ -595,6 +600,9 @@ export default function Wandr() {
                   debugMsg={buildError}
                   onGenerate={handleGenerate}
                   onEditPlan={handleEditPlan}
+                  onReworkDay={handleReworkDay}
+                  reworkUndo={reworkUndo}
+                  onUndoRework={undoRework}
                   onEditTripDetails={handleEditTripDetails}
                   onEditActivity={editActivity}
                   onDeleteActivity={removeActivity}

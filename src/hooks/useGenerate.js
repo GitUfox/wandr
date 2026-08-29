@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { stream, consumeStream, complete } from "../lib/api.js";
-import { buildPlanPrompt, buildEditDayPrompt, buildTweakActivityPrompt } from "../lib/prompts.js";
+import { buildPlanPrompt, buildEditDayPrompt, buildRightNowPrompt, buildTweakActivityPrompt } from "../lib/prompts.js";
 import { spliceDayInPlan, resequenceTimes, bucketOf, retimeIntoBucket, sortDayByTime, matchTipToActivity, pruneOrphanTips } from "../lib/utils.js";
 import { parsePlan, serializePlan } from "../lib/planModel.js";
 import { planKeyFor, deletePlan, mirrorLegacyPlan } from "../lib/tripStore.js";
@@ -13,6 +13,7 @@ export function useGenerate() {
   const [planLoading, setPlanLoading] = useState(false);
   const [patchError, setPatchError]   = useState("");
   const [tweakingId, setTweakingId]   = useState(null); // id of the activity currently being AI-tweaked
+  const [reworkUndo, setReworkUndo]   = useState(null); // { prevText, at } — held after a Right Now rework for the Undo toast
   const [generatedAt, setGeneratedAt] = useState(null); // epoch ms of the last AI (re)generation — manual edits don't bump it
   const streamRef  = useRef("");
   const modelRef   = useRef(null); // mirrors planModel — avoids stale closures in edit handlers
@@ -245,16 +246,15 @@ export function useGenerate() {
   }
 
   /**
-   * Patch a single day in the current plan using complete() (non-streaming).
-   * On success: splices the new day content into planText.
-   * On failure: planText is left unchanged; patchError is set.
+   * Shared single-day patch plumbing: extract the day block, ask the AI for a
+   * replacement via buildPrompt(dayContent), splice it back in. Used by
+   * patchDay (Edit Trip → Specific Day) and reworkDay (Right Now mode) — ONE
+   * implementation so the two paths can never drift.
    *
-   * dayIndex — 0-based (0 = Day 1)
-   * dayLabel — full label string e.g. "Day 1 — Wednesday, June 11, 2025"
-   * instruction — user's change instruction (may be empty — means "refresh")
-   * trip — the current trip object
+   * captureUndo — Right Now commits instantly (design pick 3A); the pre-patch
+   * planText is kept so the Undo toast can restore it.
    */
-  async function patchDay(dayIndex, dayLabel, instruction, trip) {
+  async function runDayPatch(dayIndex, buildPrompt, trip, { captureUndo = false } = {}) {
     if (planLoading) return;
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -273,19 +273,21 @@ export function useGenerate() {
     const end   = dayIndex + 1 < positions.length ? positions[dayIndex + 1] : currentPlan.length;
     const dayContent = currentPlan.slice(start, end).trim();
 
-    const prompt = buildEditDayPrompt(dayLabel, dayContent, instruction, trip);
+    const prompt = buildPrompt(dayContent);
 
     try {
       const data = await complete([{ role: "user", content: prompt }], 3000, controller.signal);
       const raw  = data.content?.find(b => b.type === "text")?.text || "";
       if (!raw) throw new Error("No response from AI. Please try again.");
       const newPlan = spliceDayInPlan(currentPlan, dayIndex, raw);
+      if (captureUndo) setReworkUndo({ prevText: currentPlan, at: Date.now() });
       setPlanText(newPlan);
       streamRef.current = newPlan;
       adoptPlan(newPlan); // keep the editable model in sync after an AI day-patch
       setGeneratedAt(Date.now());
+      return true;
     } catch (e) {
-      if (e?.name === "AbortError") return;
+      if (e?.name === "AbortError") return false;
       const msg = e.message || "";
       const isBrowserNetworkError = /failed to fetch|network|load failed/i.test(msg);
       // Don't overwrite existing planText — show error separately
@@ -294,9 +296,38 @@ export function useGenerate() {
           ? "Couldn't reach the server. Please check it's running and try again."
           : msg || "Something went wrong updating the day. Please try again."
       );
+      return false;
     } finally {
       if (!controller.signal.aborted) setPlanLoading(false);
     }
+  }
+
+  /**
+   * Patch a single day in the current plan using complete() (non-streaming).
+   * dayIndex — 0-based (0 = Day 1) · dayLabel — full label string ·
+   * instruction — user's change instruction (empty means "refresh").
+   */
+  async function patchDay(dayIndex, dayLabel, instruction, trip) {
+    return runDayPatch(dayIndex, dayContent => buildEditDayPrompt(dayLabel, dayContent, instruction, trip), trip);
+  }
+
+  /**
+   * Right Now mode (picks 1A+2A+3A): rework the REST of today from fromTime,
+   * committing instantly with the previous day held for Undo.
+   * opts — { fromTime, reasons: ["raining", ...], note }
+   */
+  async function reworkDay(dayIndex, dayLabel, opts, trip) {
+    return runDayPatch(dayIndex, dayContent => buildRightNowPrompt(dayLabel, dayContent, opts, trip), trip, { captureUndo: true });
+  }
+
+  /** Restore the plan as it was before the last Right Now rework. */
+  function undoRework() {
+    const prev = reworkUndo?.prevText;
+    if (!prev) return;
+    streamRef.current = prev;
+    setPlanText(prev);
+    adoptPlan(prev);
+    setReworkUndo(null);
   }
 
   function resetPlan() {
@@ -309,6 +340,7 @@ export function useGenerate() {
     setPlanLoading(false);
     setPatchError("");
     setGeneratedAt(null);
+    setReworkUndo(null); // an undo must never resurrect a different trip's plan
     streamRef.current = "";
   }
 
@@ -350,5 +382,5 @@ export function useGenerate() {
     resetPlan();
   }
 
-  return { planText, planModel, planMode, planLoading, patchError, tweakingId, generatedAt, generate, patchDay, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity };
+  return { planText, planModel, planMode, planLoading, patchError, tweakingId, generatedAt, reworkUndo, generate, patchDay, reworkDay, undoRework, resetPlan, restorePlan, clearSavedPlan, editActivity, removeActivity, reorderDayActivities, moveActivity, moveActivityToBucket, tweakActivity };
 }

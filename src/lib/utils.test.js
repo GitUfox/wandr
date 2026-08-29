@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles, splitDetails, classifyFact, matchTipToActivity, pruneOrphanTips, findGroundedVenue, countIdeas, bucketPickKey, carryBucketPicks, bucketShelves } from "./utils.js";
+import { arr, parseISODate, calcNights, recoverJSON, parseTime, formatTime, resequenceTimes, bucketOf, sortDayByTime, retimeIntoBucket, formatShortDate, ticketDate, seasonShort, timeAgo, extractActivityTitles, splitDetails, classifyFact, matchTipToActivity, pruneOrphanTips, findGroundedVenue, countIdeas, bucketPickKey, carryBucketPicks, bucketShelves, tripDayIndex } from "./utils.js";
 
 // ── arr ───────────────────────────────────────────────────────────────────────
 
@@ -730,5 +730,33 @@ describe("bucketShelves", () => {
   it("returns [] for empty input", () => {
     expect(bucketShelves(undefined)).toEqual([]);
     expect(bucketShelves({})).toEqual([]);
+  });
+});
+
+// ── tripDayIndex (Right Now mode trigger, pick 1A) ───────────────────────────
+
+describe("tripDayIndex", () => {
+  const dates = { start: "2026-09-01", end: "2026-09-05" };
+  const at = (iso) => new Date(iso + "T14:30:00");
+
+  it("returns the 1-based day number inside the range", () => {
+    expect(tripDayIndex(dates, at("2026-09-01"))).toEqual({ dayNum: 1, totalDays: 5 });
+    expect(tripDayIndex(dates, at("2026-09-03"))).toEqual({ dayNum: 3, totalDays: 5 });
+    expect(tripDayIndex(dates, at("2026-09-05"))).toEqual({ dayNum: 5, totalDays: 5 });
+  });
+
+  it("returns null outside the range", () => {
+    expect(tripDayIndex(dates, at("2026-08-31"))).toBe(null);
+    expect(tripDayIndex(dates, at("2026-09-06"))).toBe(null);
+  });
+
+  it("returns null for missing or bucket-shaped dates", () => {
+    expect(tripDayIndex(undefined, at("2026-09-03"))).toBe(null);
+    expect(tripDayIndex({}, at("2026-09-03"))).toBe(null);
+    expect(tripDayIndex({ bucket: true, now: false, whenText: "next spring" }, at("2026-09-03"))).toBe(null);
+  });
+
+  it("handles a single-day trip", () => {
+    expect(tripDayIndex({ start: "2026-09-01", end: "2026-09-01" }, at("2026-09-01"))).toEqual({ dayNum: 1, totalDays: 1 });
   });
 });

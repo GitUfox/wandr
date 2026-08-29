@@ -345,6 +345,23 @@ export function extractDayHeaders(planText) {
  * dayIndex is 0-based (0 = Day 1).
  * newContent should begin with the ## Day N — … header.
  */
+/**
+ * Right Now mode trigger (design pick 1A): which trip day is today?
+ * Pure date math — returns { dayNum (1-based), totalDays } when today falls
+ * inside the trip's date range, else null. Null for missing/invalid dates,
+ * which also covers bucket trips (their dates shape has no start/end).
+ */
+export function tripDayIndex(dates, now = new Date()) {
+  const start = parseISODate(dates?.start);
+  const end   = parseISODate(dates?.end);
+  if (!start || !end) return null;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const totalDays = Math.round((end - start) / 86400000) + 1;
+  const dayNum    = Math.round((today - start) / 86400000) + 1;
+  if (totalDays < 1 || dayNum < 1 || dayNum > totalDays) return null;
+  return { dayNum, totalDays };
+}
+
 export function spliceDayInPlan(planText, dayIndex, newContent) {
   const re = /^## Day \d+ —/gm;
   const positions = [];

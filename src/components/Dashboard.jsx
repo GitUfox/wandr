@@ -7,7 +7,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MODES, T, FEATURES, AI_DISCLAIMER } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
-import { arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime, findGroundedVenue, countIdeas } from "../lib/utils.js";
+import { arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime, findGroundedVenue, countIdeas, tripDayIndex, parseTime, formatTime } from "../lib/utils.js";
 import { bucketTicketRow, bucketPrintBody, bucketPlainText } from "../lib/printBucket.js";
 import { parsePlan } from "../lib/planModel.js";
 import { TEAM_SHORT } from "../lib/mlbTeams.js";
@@ -98,6 +98,134 @@ function GhostDays({ nights }) {
   );
 }
 
+/* ── Right Now mode (design picks 1A+2A+3A, 2026-08-23) ──────────────────────
+   When today falls inside the trip's dates, today takes the stage: this panel
+   leads the itinerary area with what's next and ONE primary verb ("Change my
+   afternoon"). Reason chips (2A) map to prompt context through their ids —
+   the RIGHT_NOW_REASONS contract in prompts.js — and the rework commits
+   instantly with a 30-second Undo (3A). The full plan stays one scroll
+   below, untouched. Text-only chips: UI emoji are banned (Glyphs rule). */
+const RIGHT_NOW_CHIPS = [
+  { id: "raining",  label: "Raining" },
+  { id: "tired",    label: "Tired" },
+  { id: "late",     label: "Running late" },
+  { id: "came_up",  label: "Something came up" },
+  { id: "surprise", label: "Surprise me", glyph: "sparkle" },
+];
+
+function TodayPanel({ todayInfo, day, dayIdx, online, planLoading, onRework, reworkUndo, onUndoRework }) {
+  const [open, setOpen]         = useState(false);
+  const [reasons, setReasons]   = useState([]);
+  const [note, setNote]         = useState("");
+  const [pending, setPending]   = useState(false); // a rework WE started is in flight
+  const [showUndo, setShowUndo] = useState(false);
+
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const daypart = now.getHours() < 12 ? "morning" : now.getHours() < 17 ? "afternoon" : "evening";
+  const fromTime = formatTime(nowMin);
+
+  const acts = day?.activities || [];
+  const upcoming = acts.filter(x => { const t = parseTime(x.time); return t !== null && t >= nowMin; });
+  const upNext = upcoming[0] || null;
+
+  // Undo toast: shows when a fresh rework lands (reworkUndo.at changes),
+  // auto-hides after 30s; pressing Undo clears reworkUndo upstream.
+  const undoAt = reworkUndo?.at || 0;
+  useEffect(() => {
+    if (!undoAt) { setShowUndo(false); return; }
+    setShowUndo(true);
+    const t = setTimeout(() => setShowUndo(false), 30000);
+    return () => clearTimeout(t);
+  }, [undoAt]);
+  useEffect(() => { if (!planLoading) setPending(false); }, [planLoading]);
+
+  function submit() {
+    if (!online || planLoading || !day) return;
+    onRework(dayIdx, day.label, { fromTime, reasons, note: note.trim() });
+    setPending(true);
+    setOpen(false); setReasons([]); setNote("");
+  }
+  const toggleReason = id => setReasons(r => (r.includes(id) ? r.filter(x => x !== id) : [...r, id]));
+
+  const dateLine = now.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const clean = s => String(s || "").replace(/\*\*/g, "").trim();
+
+  return (
+    <div key={undoAt} style={{ padding:"13px 15px 14px", background:T.bg1, border:"1px solid rgba(201,100,66,.45)", borderRadius:T.r.md, marginBottom:12, animation: undoAt ? "wonce 1.1s ease" : "none" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+        <span style={{ width:7, height:7, borderRadius:"50%", background:T.accentHover, flexShrink:0, animation:"pulse 2s ease-in-out infinite" }} />
+        <span style={{ fontSize:T.fs.label, fontWeight:800, letterSpacing:".14em", textTransform:"uppercase", color:T.accentHover }}>
+          Today · Day {todayInfo.dayNum} of {todayInfo.totalDays}
+        </span>
+        <span style={{ fontSize:T.fs.meta, color:T.hint }}>{dateLine}</span>
+      </div>
+
+      {upNext ? (
+        <div style={{ marginTop:10 }}>
+          <div style={{ fontSize:T.fs.micro, fontWeight:800, letterSpacing:".14em", textTransform:"uppercase", color:T.hint, marginBottom:3 }}>Up next</div>
+          <div style={{ display:"flex", gap:9, alignItems:"baseline" }}>
+            <span style={{ fontSize:T.fs.body, fontWeight:700, color:T.accent, fontVariantNumeric:"tabular-nums", flexShrink:0 }}>{displayTime(clean(upNext.time))}</span>
+            <span style={{ fontSize:T.fs.ui, fontWeight:800, color:T.ink }}>{clean(upNext.title)}</span>
+          </div>
+          {upcoming.length > 1 && (
+            <div style={{ fontSize:T.fs.meta, color:T.muted, marginTop:3 }}>then {upcoming.length - 1} more {upcoming.length - 1 === 1 ? "stop" : "stops"} today</div>
+          )}
+        </div>
+      ) : (
+        <div style={{ marginTop:10, fontSize:T.fs.body, color:T.muted }}>All scheduled stops for today are done.</div>
+      )}
+
+      {pending && planLoading ? (
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:12, fontSize:T.fs.body, color:T.accent, fontWeight:700 }}>
+          <span style={{ width:13, height:13, border:`1.5px solid ${T.border}`, borderTopColor:T.accent, borderRadius:"50%", display:"inline-block", animation:"spin .7s linear infinite" }} />
+          Reworking your {daypart}…
+        </div>
+      ) : upNext && (
+        <>
+          <button onClick={() => online && !planLoading && setOpen(o => !o)} disabled={!online || planLoading}
+            title={online ? undefined : "Reworking your day needs a connection"}
+            style={{ width:"100%", marginTop:12, padding:"12px 0", borderRadius:T.r.md, background:open ? T.bg3 : T.accent, color:open ? T.muted : T.white, fontSize:T.fs.ui, fontWeight:800, border:"none", cursor:online && !planLoading ? "pointer" : "not-allowed", opacity:online ? 1 : .5, fontFamily:T.font, transition:"background .2s" }}>
+            {open ? "Never mind" : `Change my ${daypart}`}
+          </button>
+          <div style={{ maxHeight:open ? 230 : 0, opacity:open ? 1 : 0, overflow:"hidden", transition:"max-height .28s ease, opacity .22s ease" }}>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:11 }}>
+              {RIGHT_NOW_CHIPS.map(chip => {
+                const on = reasons.includes(chip.id);
+                return (
+                  <button key={chip.id} onClick={() => toggleReason(chip.id)}
+                    style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:T.fs.meta, fontWeight:700, color:on ? T.accentHover : T.muted, background:on ? "rgba(201,100,66,.08)" : T.bg2, border:`1px solid ${on ? T.accent : T.border}`, borderRadius:T.r.pill, padding:"7px 13px", cursor:"pointer", fontFamily:T.font }}>
+                    {chip.glyph && <Glyph name={chip.glyph} size={11} color="currentColor" />}
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+            <input value={note} onChange={e => setNote(e.target.value)} maxLength={280}
+              onKeyDown={e => e.key === "Enter" && submit()}
+              placeholder="Anything else? e.g. we're near the university now"
+              style={{ width:"100%", marginTop:9, padding:"9px 12px", border:`1px solid ${T.border}`, borderRadius:T.r.sm, background:T.bg2, color:T.ink, outline:"none", fontSize:T.fs.body, fontFamily:T.font, boxSizing:"border-box" }} />
+            <button onClick={submit} disabled={!online}
+              style={{ width:"100%", marginTop:9, padding:"11px 0", borderRadius:T.r.md, background:T.accent, color:T.white, fontSize:T.fs.body, fontWeight:800, border:"none", cursor:"pointer", fontFamily:T.font }}>
+              Rework from {displayTime(fromTime)} →
+            </button>
+          </div>
+        </>
+      )}
+
+      {showUndo && reworkUndo && (
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:11, background:T.bg3, border:`1px solid ${T.border2}`, borderRadius:T.r.pill, padding:"7px 8px 7px 14px", fontSize:T.fs.meta, color:T.muted }}>
+          <span>Rest of today reworked</span>
+          <button onClick={onUndoRework}
+            style={{ marginLeft:"auto", color:T.accentHover, fontWeight:800, fontSize:T.fs.meta, padding:"4px 12px", border:`1px solid ${T.accent}`, borderRadius:T.r.pill, background:"transparent", cursor:"pointer", fontFamily:T.font }}>
+            Undo
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard({
   trip,
   trips = [],
@@ -111,6 +239,9 @@ export default function Dashboard({
   debugMsg,
   onGenerate,
   onEditPlan,
+  onReworkDay,
+  reworkUndo,
+  onUndoRework,
   onEditTripDetails,
   onEditActivity,
   onDeleteActivity,
@@ -194,6 +325,12 @@ export default function Dashboard({
   // ticket trades Depart/Return for Ideas → Picked (the ember still rides),
   // and the whole plan machinery below yields to the BucketBoard.
   const isBucket = trip.tripStyle === "bucket";
+
+  // Right Now mode trigger (design pick 1A, 2026-08-23): pure date math —
+  // non-null only when today falls inside a DATED trip's range. Bucket trips
+  // have no start/end, so tripDayIndex is null for them anyway; the guard is
+  // belt-and-suspenders.
+  const todayInfo = isBucket ? null : tripDayIndex(a.dates);
   const ideaCount = isBucket ? countIdeas(trip.categories) : 0;
   const pickedCount = isBucket ? Object.keys(trip.bucketPicks || {}).length : 0;
 
@@ -466,8 +603,11 @@ export default function Dashboard({
         @keyframes wghostbreathe{0%,100%{opacity:.45}50%{opacity:.8}}
         @keyframes wghostshim{to{background-position:-220% 0}}
         @keyframes wtravel{0%{transform:translateX(-52px);opacity:0}8%{opacity:1}72%{transform:translateX(52px);opacity:1}82%{transform:translateX(52px);opacity:0}100%{transform:translateX(52px);opacity:0}}
+        @keyframes wpark{50%{transform:scale(1.25)}}
+        @keyframes wparkring{0%{transform:scale(.5);opacity:.7}70%,100%{transform:scale(1.9);opacity:0}}
+        @keyframes wonce{0%{box-shadow:0 0 0 0 rgba(201,100,66,0)}25%{box-shadow:0 0 0 5px rgba(201,100,66,.28)}100%{box-shadow:0 0 0 0 rgba(201,100,66,0)}}
         @keyframes warrive{0%,66%{transform:scale(.35);opacity:0}74%{transform:scale(1);opacity:.8}92%{transform:scale(2.1);opacity:0}100%{transform:scale(2.1);opacity:0}}
-        @media (prefers-reduced-motion:reduce){.wroll-in,.wroll-out,.wghost,.wghost-bar,.wtravel,.warrive{animation:none!important}.wtravel{opacity:1!important}}
+        @media (prefers-reduced-motion:reduce){.wroll-in,.wroll-out,.wghost,.wghost-bar,.wtravel,.warrive,.wpark,.wparkring{animation:none!important}.wtravel{opacity:1!important}}
         *{box-sizing:border-box}
       `}</style>
 
@@ -568,13 +708,26 @@ export default function Dashboard({
                   <g transform="translate(112,13)">
                     <circle className="warrive" r="3" fill="none" stroke={T.accent} strokeWidth="1.2" opacity="0" style={{ animation:"warrive 3.4s ease-out infinite" }} />
                   </g>
-                  {/* Ember rests mid-rail when animation is off
-                      (reduced motion / VITE_NO_MOTION harness). */}
-                  <g className="wtravel" style={{ animation:"wtravel 3.4s ease-in-out infinite" }}>
-                    <line x1="49" y1="13" x2="56.5" y2="13" stroke={T.accentHover} strokeWidth="1.5" strokeLinecap="round" opacity=".45" />
-                    <circle cx="60" cy="13" r="4.5" fill={T.accentHover} opacity=".18" />
-                    <circle cx="60" cy="13" r="2.4" fill={T.accentHover} />
-                  </g>
+                  {/* Right Now (1A): on trip days the ember stops commuting and
+                      PARKS at today's position along the rail, breathing — the
+                      rail becomes a progress bar for the trip you're on. Pivot
+                      baked into the translate() group (SVG transform-origin
+                      drifts). Other days: the ember travels A → B as shipped;
+                      it rests mid-rail when animation is off (reduced motion /
+                      VITE_NO_MOTION harness). */}
+                  {todayInfo ? (
+                    <g transform={`translate(${todayInfo.totalDays === 1 ? 60 : 8 + 104 * (todayInfo.dayNum - 1) / (todayInfo.totalDays - 1)},13)`}>
+                      <circle r="4.5" fill={T.accentHover} opacity=".18" />
+                      <circle className="wpark" r="2.6" fill={T.accentHover} style={{ animation:"wpark 2.4s ease-in-out infinite" }} />
+                      <circle className="wparkring" r="4" fill="none" stroke={T.accentHover} strokeWidth="1" opacity="0" style={{ animation:"wparkring 2.4s ease-out infinite" }} />
+                    </g>
+                  ) : (
+                    <g className="wtravel" style={{ animation:"wtravel 3.4s ease-in-out infinite" }}>
+                      <line x1="49" y1="13" x2="56.5" y2="13" stroke={T.accentHover} strokeWidth="1.5" strokeLinecap="round" opacity=".45" />
+                      <circle cx="60" cy="13" r="4.5" fill={T.accentHover} opacity=".18" />
+                      <circle cx="60" cy="13" r="2.4" fill={T.accentHover} />
+                    </g>
+                  )}
                 </svg>
               </div>
             );
@@ -696,6 +849,22 @@ export default function Dashboard({
                 )}
               </div>
             </div>
+          )}
+
+          {/* Right Now mode (1A): on trip days, today leads with the one verb.
+              Needs a parsed plan that actually covers today; hidden while the
+              build or a full generation is in flight. */}
+          {!building && !isBucket && todayInfo && planModel?.days?.[todayInfo.dayNum - 1] && (
+            <TodayPanel
+              todayInfo={todayInfo}
+              day={planModel.days[todayInfo.dayNum - 1]}
+              dayIdx={todayInfo.dayNum - 1}
+              online={online}
+              planLoading={planLoading}
+              onRework={onReworkDay}
+              reworkUndo={reworkUndo}
+              onUndoRework={onUndoRework}
+            />
           )}
 
           {/* Itinerary */}

@@ -3,6 +3,8 @@ import {
   buildTripCategoriesPrompt,
   buildPlanPrompt,
   buildEditDayPrompt,
+  buildRightNowPrompt,
+  RIGHT_NOW_REASONS,
   buildTweakActivityPrompt,
   buildEventsBlock,
 } from "./prompts.js";
@@ -799,5 +801,40 @@ describe("buildTripCategoriesPrompt — bucket mode", () => {
     expect(withStyle.messageContent).not.toContain("TIMEFRAME:");
     expect(withStyle.messageContent).not.toContain("BUCKET LIST:");
     expect(withStyle.n).toBe(legacy.n);
+  });
+});
+
+// ── buildRightNowPrompt (Right Now mode, picks 1A+2A+3A) ─────────────────────
+
+describe("buildRightNowPrompt", () => {
+  const DAY = "Day 3 — Wednesday, September 3, 2026";
+  const CONTENT = "## Day 3 — Wednesday, September 3, 2026\nTABLE:\n| 09:00 | **Buffalo Park Loop** | Walk. · free |\nENDTABLE";
+  const opts = { fromTime: "14:05", reasons: ["raining", "tired"], note: "we are downtown now" };
+  const result = buildRightNowPrompt(DAY, CONTENT, opts, BASE_TRIP);
+
+  it("anchors the rework to the current time and keeps history verbatim", () => {
+    expect(result).toContain("It is currently 14:05");
+    expect(result).toContain("KEEP EVERY ACTIVITY THAT STARTS BEFORE 14:05");
+    expect(result).toContain("VERBATIM");
+    expect(result).toContain("REPLACE everything at or after 14:05");
+  });
+
+  it("maps reason chip ids to their prompt context and carries the note", () => {
+    expect(result).toContain(RIGHT_NOW_REASONS.raining);
+    expect(result).toContain(RIGHT_NOW_REASONS.tired);
+    expect(result).toContain("we are downtown now");
+    expect(result).not.toContain(RIGHT_NOW_REASONS.late);
+  });
+
+  it("keeps the shared output contract: exact header + details micro-grammar", () => {
+    expect(result).toContain(`## ${DAY}`);
+    expect(result).toContain("DETAILS FORMAT:");
+    expect(result).toContain("NEVER pad the remainder");
+  });
+
+  it("ignores unknown reason ids and falls back to a neutral line when empty", () => {
+    const bare = buildRightNowPrompt(DAY, CONTENT, { fromTime: "10:00", reasons: ["bogus"], note: "" }, BASE_TRIP);
+    expect(bare).toContain("fresh take on the rest of today");
+    expect(bare).not.toContain("undefined");
   });
 });
