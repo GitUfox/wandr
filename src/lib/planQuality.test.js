@@ -355,3 +355,47 @@ describe("checkPlan — stacked day", () => {
     expect(codes).not.toContain("stacked-day");
   });
 });
+
+// ── Before-opening check (§15 #15) ───────────────────────────────────────────
+
+describe("checkPlan — scheduled before opening", () => {
+  const day = (activities) => ({ days: [{ label: "Day 1 — Test", activities, tips: [], food: [], extras: [] }] });
+  const act = (time, title, details) => ({ id: title, time, title: `**${title}**`, details });
+
+  it("flags a slot earlier than the activity's own opens chip", () => {
+    const { problems } = checkPlan(day([act("09:00", "Lowell Observatory", "Observatory. · ~$25 · opens 11:00")]));
+    const p = problems.find(x => x.code === "before-opening");
+    expect(p).toBeTruthy();
+    expect(p.message).toContain("Lowell Observatory at 09:00");
+    expect(p.message).toContain("opens at 11:00");
+  });
+
+  it("accepts arriving at or after opening", () => {
+    const ok = day([
+      act("11:00", "Lowell Observatory", "Observatory. · opens 11:00"),
+      act("14:00", "Heard Museum", "Museum. · opens 09:00"),
+    ]);
+    expect(checkPlan(ok).problems.filter(p => p.code === "before-opening")).toEqual([]);
+  });
+
+  it("parses am/pm opens-times", () => {
+    const { problems } = checkPlan(day([act("08:00", "Desert Garden", "Garden. · opens at 9am")]));
+    expect(problems.some(p => p.code === "before-opening")).toBe(true);
+  });
+
+  it("stays silent on non-numeric hours and missing chips", () => {
+    const quiet = day([
+      act("05:30", "Humphreys Peak Trail", "Hike. · free · opens at dawn"),
+      act("07:00", "Buffalo Park Loop", "Walk. · free"),
+    ]);
+    expect(checkPlan(quiet).problems.filter(p => p.code === "before-opening")).toEqual([]);
+  });
+
+  it("reports once per day", () => {
+    const two = day([
+      act("08:00", "A Museum", "X. · opens 10:00"),
+      act("08:30", "B Gallery", "Y. · opens 12:00"),
+    ]);
+    expect(checkPlan(two).problems.filter(p => p.code === "before-opening")).toHaveLength(1);
+  });
+});

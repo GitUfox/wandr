@@ -18,7 +18,7 @@
  *   node scripts/quality-check.mjs after
  *   node scripts/quality-check.mjs --compare baseline after
  *
- * COSTS REAL API CALLS — 3 per case (2 build + 1 plan). Localhost is treated as
+ * COSTS REAL API CALLS — 2 per case (1 build + 1 plan). Localhost is treated as
  * dev by server.js, so it bypasses the per-IP rate limit; it does not bypass
  * billing. Keep the case list short.
  *
@@ -33,7 +33,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUTDIR = path.join(ROOT, ".quality");
 const PROXY = process.env.WANDR_PROXY || "http://localhost:3001/api/anthropic";
 
-const { buildTripCategoriesPrompt, buildTripMetaPrompt, buildPlanPrompt } =
+const { buildTripCategoriesPrompt, buildPlanPrompt } =
   await import(path.join(ROOT, "src/lib/prompts.js"));
 const { parsePlan } = await import(path.join(ROOT, "src/lib/planModel.js"));
 const { scorePlan } = await import(path.join(ROOT, "src/lib/planQuality.js"));
@@ -135,11 +135,12 @@ fs.mkdirSync(OUTDIR, { recursive: true });
 const results = [];
 for (const c of CASES) {
   process.stdout.write(`\n▶ ${c.name} — building trip… `);
+  // ONE slim build call — the meta call was deleted in the 08-05 speed pass
+  // (destination is the traveler's own input); this mirrors useBuildTrip.
   const { messageContent: catsMsg, n } = buildTripCategoriesPrompt(c.answers);
-  const { messageContent: metaMsg }     = buildTripMetaPrompt(c.answers);
-  const [catsRaw, metaRaw] = await Promise.all([call(catsMsg, 6000), call(metaMsg, 4000)]);
+  const catsRaw = await call(catsMsg, 6000);
   const trip = {
-    ...recoverJSON(metaRaw),
+    destination: c.answers.destination,
     categories: recoverJSON(catsRaw)?.categories || {},
     answers: c.answers,
     nights: n,

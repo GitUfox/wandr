@@ -322,5 +322,29 @@ export function checkPlan(model, expectedDays = null) {
     }
   });
 
+  // 6. Scheduled before the doors open (§15 #15): the activity's slot says
+  //    09:00 while its own hours chip says "opens 11:00" — the plan
+  //    contradicts itself, so it's unambiguous and actionable. Numeric
+  //    opens-times only ("opens at dawn" isn't checkable); arriving exactly
+  //    at opening is fine. One message per day.
+  days.forEach((d, i) => {
+    for (const a of d.activities || []) {
+      const start = parseTime(a.time);
+      if (start === null) continue;
+      const hours = splitDetails(a.details).facts.find(f => f.kind === "hours");
+      if (!hours) continue;
+      const m = String(hours.text).match(/\bopens?\s*(?:at\s*)?([0-2]?\d(?::\d{2})?\s*(?:am|pm)?)\b/i);
+      if (!m) continue;
+      const openMin = parseTime(m[1]);
+      if (openMin === null || start >= openMin) continue;
+      const name = String(a.title || "").replace(/\*\*/g, "").trim();
+      problems.push({
+        code: "before-opening",
+        message: `${dayName(d, i)} schedules ${name} at ${String(a.time || "").replace(/\*\*/g, "").trim()}, but its own note says it opens at ${m[1].trim()}.`,
+      });
+      break;
+    }
+  });
+
   return { problems };
 }
