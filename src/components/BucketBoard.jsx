@@ -55,13 +55,13 @@ function IdeaCard({ cat, item, picked, onToggle }) {
           )}
         </div>
         {item.description && (
-          <div style={{ fontSize: T.fs.body, color: T.muted, lineHeight: 1.55, marginTop: 3 }}>{item.description}</div>
+          <div style={{ fontFamily: T.fontProse, fontWeight: 500, fontSize: T.fs.body, color: T.muted, lineHeight: 1.5, marginTop: 3 }}>{item.description}</div>
         )}
         {item.proTip && (
           <div style={{ display: "flex", gap: 7, marginTop: 7, padding: "5px 10px", background: "rgba(201,100,66,.07)",
             borderLeft: `2.5px solid ${T.accent}`, borderRadius: `0 ${T.r.sm}px ${T.r.sm}px 0` }}>
             <span style={{ color: T.accent, fontWeight: 800, fontSize: T.fs.meta, lineHeight: 1.5 }}>!</span>
-            <span style={{ fontSize: T.fs.meta, color: T.muted, lineHeight: 1.5 }}>{item.proTip}</span>
+            <span style={{ fontFamily: T.fontProse, fontWeight: 500, fontSize: T.fs.meta, color: T.muted, lineHeight: 1.5 }}>{item.proTip}</span>
           </div>
         )}
         {mapOk && (
@@ -139,8 +139,8 @@ export default function BucketBoard({ trip, onTogglePick, onExport, onCopy, copi
         return (
           <div key={id} style={{ marginBottom: 18 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
-              <span style={{ fontSize: T.fs.label, fontWeight: 800, color: T.hint, textTransform: "uppercase", letterSpacing: ".07em" }}>{label}</span>
-              <span style={{ fontSize: T.fs.micro, color: shelfPicked ? T.accent : T.hint, fontWeight: 700 }}>
+              <span style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, fontWeight: 400, color: T.hint, textTransform: "uppercase", letterSpacing: ".1em" }}>{label}</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, color: shelfPicked ? T.accent : T.hint, fontWeight: 400 }}>
                 {shelfPicked ? `${shelfPicked} of ${items.length} picked` : `${items.length}`}
               </span>
             </div>

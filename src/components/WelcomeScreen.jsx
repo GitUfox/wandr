@@ -217,7 +217,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
             <span style={{ fontSize: T.fs.ui, fontWeight: 800, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.destination}</span>
             {isActive && <span style={{ fontSize: T.fs.micro, fontWeight: 700, color: T.accent, border: `1px solid ${T.accent}`, borderRadius: T.r.pill, padding: "1px 6px", letterSpacing: ".06em", flexShrink: 0 }}>CURRENT</span>}
           </div>
-          <div style={{ fontSize: T.fs.label, color: broken ? "#f08070" : T.muted, marginTop: 3 }}>{sub}</div>
+          <div style={{ fontFamily: T.fontMono, fontWeight: 400, fontSize: T.fs.micro, letterSpacing: ".02em", color: broken ? "#f08070" : T.muted, marginTop: 3 }}>{sub}</div>
         </button>
         <button onClick={() => setConfirmDeleteId(t.id)} aria-label={`Delete ${t.destination}`}
           style={{ width: 30, alignSelf: "stretch", fontSize: T.fs.ui, lineHeight: 1, color: T.hint, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, flexShrink: 0 }}>
@@ -231,13 +231,13 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
             <span style={{ color: T.accent, fontWeight: 800, fontSize: T.fs.title }}>↻</span>
           ) : isBucketTrip ? (
             <>
-              <span style={{ fontSize: T.fs.title, fontWeight: 800, color: T.accent, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{ideas}</span>
-              <span style={{ fontSize: T.fs.micro, fontWeight: 800, letterSpacing: ".14em", color: T.hint, textTransform: "uppercase" }}>{ideas === 1 ? "idea" : "ideas"}</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: T.fs.title, fontWeight: 400, color: T.accent, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{ideas}</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: 8.5, fontWeight: 400, letterSpacing: ".1em", color: T.hint, textTransform: "uppercase" }}>{ideas === 1 ? "idea" : "ideas"}</span>
             </>
           ) : t.nights ? (
             <>
-              <span style={{ fontSize: T.fs.title, fontWeight: 800, color: T.accent, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{t.nights}</span>
-              <span style={{ fontSize: T.fs.micro, fontWeight: 800, letterSpacing: ".14em", color: T.hint, textTransform: "uppercase" }}>{t.nights === 1 ? "night" : "nights"}</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: T.fs.title, fontWeight: 400, color: T.accent, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{t.nights}</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: 8.5, fontWeight: 400, letterSpacing: ".1em", color: T.hint, textTransform: "uppercase" }}>{t.nights === 1 ? "night" : "nights"}</span>
             </>
           ) : (
             <Glyph name="plane" size={14} color={T.hint} />
@@ -359,7 +359,8 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
 
         {/* Destination input */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: T.fs.meta, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", marginBottom: 8 }}>Where to?</div>
+          {/* 2A quiet mono — the kicker whispers in ticket voice; the input keeps the stage. */}
+          <div style={{ fontFamily: T.fontMono, fontSize: T.fs.label, fontWeight: 400, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", marginBottom: 8 }}>Where to?</div>
           {/* Comet ring (8A): the wrapper IS the border — a 1.5px ring the
               gradient orbits while idle, solid accent otherwise. */}
           <div className={destIdle ? "wbeam-idle" : undefined}
@@ -468,7 +469,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           Same renderTripCard as the mobile shelf; only the arrangement differs. */}
       {isWide && (
         <div style={{ width: 316, flexShrink: 0, borderLeft: `1px solid ${T.border}`, background: T.bg1, padding: "22px 18px", overflowY: "auto" }}>
-          <div style={{ fontSize: T.fs.label, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".18em", margin: "2px 0 12px" }}>Departures</div>
+          <div style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, fontWeight: 400, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", margin: "2px 0 12px" }}>Departures</div>
           {trips.map(renderTripCard)}
           <button onClick={() => inputRef.current?.focus()}
             style={{ width: "100%", border: `1px dashed ${T.border2}`, borderRadius: T.r.md, background: "transparent", textAlign: "center", padding: "11px 0", fontSize: T.fs.body, color: T.muted, fontWeight: 700, cursor: "pointer", fontFamily: T.font }}>

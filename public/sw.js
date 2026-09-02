@@ -32,7 +32,7 @@
  * Bump CACHE_VERSION to evict every old cache on activate.
  */
 
-const CACHE_VERSION = "v2"; // v2: new w-dot favicons
+const CACHE_VERSION = "v3"; // v3: Editorial Pass — self-hosted /fonts/ route (v2: new w-dot favicons)
 const SHELL_CACHE   = `wandr-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `wandr-assets-${CACHE_VERSION}`;
 const FONT_CACHE    = `wandr-fonts-${CACHE_VERSION}`;
@@ -162,6 +162,14 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.startsWith("/assets/")) {
     event.respondWith(cacheFirst(request, ASSET_CACHE));
+    return;
+  }
+
+  // Self-hosted faces (Editorial Pass: Erode) get the same offline guarantee
+  // the Google-hosted fonts do. Cache-first — a woff2 here only ever changes
+  // by changing filename.
+  if (url.pathname.startsWith("/fonts/")) {
+    event.respondWith(cacheFirst(request, FONT_CACHE));
     return;
   }
 

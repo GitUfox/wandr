@@ -22,7 +22,19 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Editorial Pass faces (2026-09-02, board picks 1B+2A+3B+4A): Instrument
+         Serif (hero), Young Serif (day headers) and Martian Mono (times/data)
+         ride the existing Google request — 400 weight only, see the WEIGHT
+         RULE in constants.js. Manrope stays the UI base (pick 4A). -->
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Instrument+Serif&family=Martian+Mono&family=Young+Serif&display=swap" rel="stylesheet" />
+    <!-- Erode (itinerary prose) isn't on Google Fonts — self-hosted from
+         Fontshare's free build (ITF-FFL, see /fonts/LICENSES.txt). 500 is the
+         screen weight; 600 exists for print bold and loads on demand. -->
+    <link rel="preload" href="/fonts/erode-500.woff2" as="font" type="font/woff2" crossorigin />
+    <style>
+      @font-face { font-family: "Erode"; src: url("/fonts/erode-500.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+      @font-face { font-family: "Erode"; src: url("/fonts/erode-600.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

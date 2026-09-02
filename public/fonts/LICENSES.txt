@@ -1,0 +1,12 @@
+Self-hosted webfonts
+====================
+
+Erode (erode-500.woff2, erode-600.woff2)
+  Designer: Nikhil Ranganathan · Indian Type Foundry
+  Source:   https://www.fontshare.com/fonts/erode
+  License:  ITF Free Font License (permits web embedding / self-hosting)
+            https://www.fontshare.com/licenses/itf-ffl
+
+Instrument Serif, Young Serif, and Martian Mono are served from the Google
+Fonts CDN (SIL Open Font License 1.1) and are not redistributed here.
+Manrope (UI base) likewise loads from Google Fonts.
