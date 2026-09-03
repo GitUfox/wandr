@@ -9,21 +9,29 @@
  * y:"100%" computes wrong on fixed-bottom elements (see CLAUDE.md).
  */
 
-import { useState } from "react";
-import { T, FEATURES } from "../lib/constants.js";
+import { useState, useEffect } from "react";
+import { T, FEATURES, ACCOUNT_COPY } from "../lib/constants.js";
 import { MAX_TRIPS } from "../lib/tripStore.js";
 import { getTimeFormat, saveSettings, clearAllWandrData } from "../lib/settings.js";
 import { useAccount } from "../hooks/useAccount.js";
 import { signIn, signOut, fullSync } from "../lib/sync.js";
+import { timeAgo } from "../lib/utils.js";
 import { placesActivated } from "../lib/places.js";
 
 export default function SettingsSheet({ open, onClose, tripCount = 0 }) {
   const [timeFormat, setTimeFormat] = useState(getTimeFormat);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
   const account = useAccount();
   const [email, setEmail] = useState("");
   const [justSynced, setJustSynced] = useState(null); // {pushed, pulled} flash
   const emailValid = /.+@.+\..+/.test(email.trim());
+
+  // The sheet never unmounts (CSS slide, same as EditTripSheet) — any armed
+  // confirm must disarm on close or it greets the next open mid-question.
+  useEffect(() => {
+    if (!open) { setConfirmClear(false); setConfirmSignOut(false); }
+  }, [open]);
 
   async function handleSync() {
     const r = await fullSync();
@@ -69,7 +77,11 @@ export default function SettingsSheet({ open, onClose, tripCount = 0 }) {
           <div style={{ width: 34, height: 34, borderRadius: "50%", background: T.bg3, border: `1px solid ${T.border2}`, color: T.muted, fontWeight: 800, fontSize: T.fs.title, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>⚙</div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: T.fs.title, fontWeight: 800, color: T.ink }}>Settings</div>
-            <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 1 }}>{account.email ? "Synced to your account." : "Everything stays on this device."}</div>
+            <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 1 }}>
+              {account.email ? ACCOUNT_COPY.subtitleIn
+                : account.configured ? ACCOUNT_COPY.subtitleOut
+                : ACCOUNT_COPY.subtitleOff}
+            </div>
           </div>
           <button onClick={onClose} aria-label="Close"
             style={{ width: 28, height: 28, borderRadius: "50%", background: "transparent", border: "none", color: T.hint, fontSize: T.fs.title, cursor: "pointer", fontFamily: T.font, lineHeight: 1 }}>×</button>
@@ -88,23 +100,52 @@ export default function SettingsSheet({ open, onClose, tripCount = 0 }) {
                 <span style={{ fontSize: T.fs.body, color: T.muted }}>Signed in</span>
                 <span style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis" }}>{account.email}</span>
               </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
-                <button onClick={handleSync} disabled={account.syncing}
-                  style={{ fontSize: T.fs.body, fontWeight: 700, color: T.white, background: T.accent, border: "none", borderRadius: T.r.sm, padding: "8px 14px", cursor: account.syncing ? "default" : "pointer", opacity: account.syncing ? .6 : 1, fontFamily: T.font }}>
-                  {account.syncing ? "Syncing…" : "Sync now"}
-                </button>
-                <button onClick={signOut}
-                  style={{ fontSize: T.fs.body, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "8px 14px", cursor: "pointer", fontFamily: T.font }}>
-                  Sign out
-                </button>
-                {justSynced && (
-                  <span style={{ fontSize: T.fs.meta, color: T.accent, fontWeight: 600 }}>
-                    ✓ Synced{justSynced.pushed ? ` · ${justSynced.pushed} up` : ""}{justSynced.deleted ? ` · ${justSynced.deleted} removed` : ""}
-                  </span>
-                )}
-              </div>
+              {/* Only render when a sync has actually completed this session —
+                  a guessed or stale time on the trust surface is worse than none. */}
+              {account.lastSync > 0 && (
+                <div style={{ ...row }}>
+                  <span style={{ fontSize: T.fs.body, color: T.muted }}>Last synced</span>
+                  <span style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 600 }}>{timeAgo(account.lastSync)}</span>
+                </div>
+              )}
+              {!confirmSignOut ? (
+                <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
+                  <button onClick={handleSync} disabled={account.syncing}
+                    style={{ fontSize: T.fs.body, fontWeight: 700, color: T.white, background: T.accent, border: "none", borderRadius: T.r.sm, padding: "8px 14px", cursor: account.syncing ? "default" : "pointer", opacity: account.syncing ? .6 : 1, fontFamily: T.font }}>
+                    {account.syncing ? "Syncing…" : "Sync now"}
+                  </button>
+                  <button onClick={() => setConfirmSignOut(true)}
+                    style={{ fontSize: T.fs.body, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "8px 14px", cursor: "pointer", fontFamily: T.font }}>
+                    Sign out
+                  </button>
+                  {justSynced && (
+                    <span style={{ fontSize: T.fs.meta, color: T.accent, fontWeight: 600 }}>
+                      ✓ Synced{justSynced.pushed ? ` · ${justSynced.pushed} up` : ""}{justSynced.deleted ? ` · ${justSynced.deleted} removed` : ""}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div style={{ background: T.bg2, border: `1px solid ${T.border2}`, borderRadius: T.r.md, padding: "12px 14px", marginTop: 12 }}>
+                  <div style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, marginBottom: 4 }}>
+                    {ACCOUNT_COPY.signOutTitle}
+                  </div>
+                  <div style={{ fontSize: T.fs.meta, color: T.muted, lineHeight: 1.55, marginBottom: 12 }}>
+                    {ACCOUNT_COPY.signOutBody}
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => { setConfirmSignOut(false); signOut(); }}
+                      style={{ fontSize: T.fs.body, fontWeight: 700, color: T.white, background: T.accent, border: "none", borderRadius: T.r.sm, padding: "8px 14px", cursor: "pointer", fontFamily: T.font }}>
+                      Sign out
+                    </button>
+                    <button onClick={() => setConfirmSignOut(false)}
+                      style={{ fontSize: T.fs.body, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "8px 14px", cursor: "pointer", fontFamily: T.font }}>
+                      Stay signed in
+                    </button>
+                  </div>
+                </div>
+              )}
               <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 8, lineHeight: 1.5 }}>
-                Trips and your traveler profile sync to your account. Signing out keeps this device's copy.
+                {ACCOUNT_COPY.contract}
               </div>
             </div>
           ) : account.pendingLink ? (

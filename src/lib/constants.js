@@ -222,6 +222,21 @@ export function nearestBudgetTier(budget) {
 export const AI_DISCLAIMER =
   "AI-planned — always verify opening hours, prices, and details with venues before your trip.";
 
+// ── Account copy (Profile spec P0-6/P0-7, PROFILE_SPEC.html) ─────────────────
+// Same rule as AI_DISCLAIMER: these strings are the account trust surface, and
+// the upcoming build steps (identity chip, sync status line, Profile merge)
+// reuse them — one home or they drift. Changes go through the spec first.
+export const ACCOUNT_COPY = {
+  subtitleIn:  "Synced to your account.",
+  subtitleOut: "Your trips can follow you — sign in below.",
+  subtitleOff: "Everything stays on this device.",
+  // The entire sync engine (fail-soft · debounced push · last-write-wins)
+  // translated to human. The ONLY place the app explains sync.
+  contract: "Trips save to this device instantly and to your account whenever you're online — if you edit on two devices, the newest change wins.",
+  signOutTitle: "Sign out?",
+  signOutBody:  "Your trips stay on this device. Your account keeps its own copy.",
+};
+
 // ── Loading messages ──────────────────────────────────────────────────────────
 export const LOAD_MSGS = [
   "Researching your destination…",

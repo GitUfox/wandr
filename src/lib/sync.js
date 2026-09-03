@@ -171,7 +171,11 @@ export async function signIn(email) {
 export async function signOut() {
   const sb = await getSupabase();
   await sb?.auth.signOut().catch(() => {});
-  emit({ email: null });
+  // Reset the session-scoped UI state along with the identity: a lingering
+  // pendingLink would show "Check your email" to a signed-out card, and a
+  // stale lastSync would label the NEXT account's card with the previous
+  // account's sync time. (Spec P0-6: no orphaned states after sign-out.)
+  emit({ email: null, pendingLink: false, lastSync: 0 });
 }
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
