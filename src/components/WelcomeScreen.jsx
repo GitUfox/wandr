@@ -8,6 +8,7 @@ import WandrLogo from "./WandrLogo.jsx";
 import ProfileSheet from "./ProfileSheet.jsx";
 import SettingsSheet from "./SettingsSheet.jsx";
 import ProfileChip from "./ProfileChip.jsx";
+import SyncStatusLine from "./SyncStatusLine.jsx";
 import StardustBurst from "./StardustBurst.jsx";
 import Glyph from "./Glyphs.jsx";
 
@@ -471,6 +472,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           <div style={{ marginBottom: "1.5rem" }}>
             <div style={{ fontSize: T.fs.label, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".16em", margin: "4px 0 8px" }}>My trips</div>
             {trips.map(renderTripCard)}
+            <SyncStatusLine onSignIn={() => setShowSettings(true)} style={{ marginTop: 10 }} />
           </div>
         )}
 
@@ -481,6 +483,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
       {isWide && (
         <div style={{ width: 316, flexShrink: 0, borderLeft: `1px solid ${T.border}`, background: T.bg1, padding: "22px 18px", overflowY: "auto" }}>
           <div style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, fontWeight: 400, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", margin: "2px 0 12px" }}>Departures</div>
+          {trips.length > 0 && <SyncStatusLine onSignIn={() => setShowSettings(true)} style={{ margin: "2px 0 12px" }} />}
           {trips.map(renderTripCard)}
           <button onClick={() => inputRef.current?.focus()}
             style={{ width: "100%", border: `1px dashed ${T.border2}`, borderRadius: T.r.md, background: "transparent", textAlign: "center", padding: "11px 0", fontSize: T.fs.body, color: T.muted, fontWeight: 700, cursor: "pointer", fontFamily: T.font }}>

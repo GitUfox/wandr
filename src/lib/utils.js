@@ -566,3 +566,23 @@ export function accountInitial(email) {
   const m = String(email || "").match(/[\p{L}\p{N}]/u);
   return m ? m[0].toUpperCase() : "•";
 }
+
+/**
+ * What the sync status line should say, from the account state and the link
+ * state. Pure — the component only renders the result.
+ *
+ * Returns null when there is nothing honest to say: accounts unconfigured, or
+ * signed in but no sync has finished yet this session (a guessed "Saved"
+ * would be a lie on the trust surface).
+ *
+ * kind: "local" | "offline" | "saving" | "retry" | "stalled" | "saved"
+ */
+export function syncStatus(account, online = true) {
+  if (!account?.configured) return null;
+  if (!account.email) return { kind: "local" };
+  if (!online) return { kind: "offline" };
+  if (account.syncing) return { kind: "saving" };
+  if (account.lastError) return { kind: account.retryPending ? "retry" : "stalled" };
+  if (account.lastSync > 0) return { kind: "saved", at: account.lastSync };
+  return null;
+}

@@ -233,6 +233,17 @@ export const ACCOUNT_COPY = {
   // The entire sync engine (fail-soft · debounced push · last-write-wins)
   // translated to human. The ONLY place the app explains sync.
   contract: "Trips save to this device instantly and to your account whenever you're online — if you edit on two devices, the newest change wins.",
+  // Sync status line (spec P0-3). "device", not "phone": the same line
+  // renders on desktop. Each promise here is kept by sync.js — statusOffline
+  // by the reconnect trigger, statusRetry by the capped retry. Do not add a
+  // promise the engine does not keep.
+  statusSaved:    "Saved to your account",
+  statusSaving:   "Saving to your account…",
+  statusOffline:  "Offline — saved on this device, will sync when you're back",
+  statusRetry:    "Saved on this device — sync will retry shortly",
+  statusStalled:  "Saved on this device — not synced yet",
+  statusLocal:    "On this device only",
+  statusLocalCta: "Sign in to back up",
   signOutTitle: "Sign out?",
   signOutBody:  "Your trips stay on this device. Your account keeps its own copy.",
 };

@@ -18,6 +18,7 @@ import WandrLogo from "./WandrLogo.jsx";
 import EditTripSheet from "./EditTripSheet.jsx";
 import SettingsSheet from "./SettingsSheet.jsx";
 import ProfileChip from "./ProfileChip.jsx";
+import SyncStatusLine from "./SyncStatusLine.jsx";
 import StardustBurst from "./StardustBurst.jsx";
 import Glyph from "./Glyphs.jsx";
 
@@ -797,6 +798,9 @@ export default function Dashboard({
               </div>
             );
           })()}
+          {/* Sync status — hidden while building: a skeleton trip is not
+              saved anywhere yet, so "Saved" would be untrue for it. */}
+          {!building && <SyncStatusLine onSignIn={() => setShowAccount(true)} style={{ marginTop: 12 }} />}
           {/* Tagline + highlights removed 2026-08-05 (design pick 3A): they
               restated what the itinerary shows, and cutting them let the whole
               meta build call die. Ticket → itinerary, nothing in between. */}

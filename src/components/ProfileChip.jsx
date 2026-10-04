@@ -25,6 +25,7 @@ export default function ProfileChip({ onOpen, noMotion = false }) {
     <>
       <style>{`
         .wchip-orbit{position:absolute;inset:0;border-radius:50%;border:1px solid ${T.border};animation:wchipspin 6s linear infinite}
+        .wchip-orbit.wchip-fast{animation-duration:1.4s}
         .wchip-orbit.wchip-still{animation:none;transform:rotate(135deg)}
         .wchip-ember{position:absolute;top:-3px;left:50%;margin-left:-2.5px;width:5px;height:5px;border-radius:50%;background:${T.accentHover};box-shadow:0 0 6px 1px ${T.accent}}
         @keyframes wchipspin{to{transform:rotate(360deg)}}
@@ -34,7 +35,7 @@ export default function ProfileChip({ onOpen, noMotion = false }) {
       {account.email ? (
         <button onClick={onOpen} aria-label="Your account" title={account.email} style={hit}>
           <span style={{ position: "relative", width: 34, height: 34, display: "block" }}>
-            <span className={noMotion ? "wchip-orbit wchip-still" : "wchip-orbit"}>
+            <span className={noMotion ? "wchip-orbit wchip-still" : account.syncing ? "wchip-orbit wchip-fast" : "wchip-orbit"}>
               <span className="wchip-ember" />
             </span>
             <span style={{ position: "absolute", inset: 3, borderRadius: "50%", background: T.bg3, border: `1px solid ${T.border2}`, color: T.ink, fontWeight: 800, fontSize: T.fs.body, display: "flex", alignItems: "center", justifyContent: "center" }}>

@@ -123,6 +123,7 @@ const state = {
   lastSync: 0,        // bumps after every completed sync — App refreshes on it
   lastError: "",      // friendly copy only, never raw errors (house rule)
   pendingLink: false, // magic link sent, awaiting click
+  retryPending: false, // a failed sync has an automatic retry scheduled
 };
 const listeners = new Set();
 
@@ -150,6 +151,11 @@ export async function initAccounts() {
     }
     if (event === "SIGNED_OUT") emit({ email: null });
   });
+  // The status line tells an offline traveler their changes "will sync when
+  // you're back". This listener is what keeps that promise.
+  if (typeof window !== "undefined") {
+    window.addEventListener("online", () => { if (state.email) fullSync(); });
+  }
 }
 
 export async function signIn(email) {
@@ -175,7 +181,9 @@ export async function signOut() {
   // pendingLink would show "Check your email" to a signed-out card, and a
   // stale lastSync would label the NEXT account's card with the previous
   // account's sync time. (Spec P0-6: no orphaned states after sign-out.)
-  emit({ email: null, pendingLink: false, lastSync: 0 });
+  clearTimeout(retryTimer);
+  retries = 0;
+  emit({ email: null, pendingLink: false, lastSync: 0, lastError: "", retryPending: false });
 }
 
 // ── Sync ──────────────────────────────────────────────────────────────────────
@@ -194,14 +202,23 @@ function toRow(t, userId) {
  * Two-way sync: pull, merge, apply deletions, push. Returns a summary or null.
  * Every failure path lands on a friendly lastError and an unchanged local app.
  */
+// A failed sync retries on its own, a few times, so "sync will retry shortly"
+// is true. Capped so a hard failure cannot loop forever; any later sync
+// (an edit, a reconnect, Sync now) starts the count again on success.
+const RETRY_MS = 30_000;
+const MAX_RETRIES = 3;
+let retries = 0;
+let retryTimer = null;
+
 export async function fullSync() {
   if (state.syncing) return null;
+  clearTimeout(retryTimer);
   const sb = await getSupabase();
   const { data: s } = (await sb?.auth.getSession()) || {};
   const user = s?.session?.user;
   if (!sb || !user) return null;
 
-  emit({ syncing: true, lastError: "" });
+  emit({ syncing: true, lastError: "", retryPending: false });
   try {
     const [{ data: remoteTrips, error: e1 }, { data: remoteProfile, error: e2 }] = await Promise.all([
       sb.from("trips").select("id,data,plan,saved_at"),
@@ -249,10 +266,16 @@ export async function fullSync() {
       if (error) throw error;
     }
 
+    retries = 0;
     emit({ syncing: false, lastSync: Date.now() });
     return { pulled: merged.length, pushed: pushIds.length, deleted: deleteRemote.length };
   } catch {
-    emit({ syncing: false, lastError: "Couldn't sync just now — your trips are safe on this device." });
+    const willRetry = retries < MAX_RETRIES;
+    if (willRetry) {
+      retries += 1;
+      retryTimer = setTimeout(() => { fullSync(); }, RETRY_MS);
+    }
+    emit({ syncing: false, retryPending: willRetry, lastError: "Couldn't sync just now — your trips are safe on this device." });
     return null;
   }
 }
