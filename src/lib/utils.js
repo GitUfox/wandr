@@ -556,3 +556,13 @@ export function findGroundedVenue(title, categories) {
   }
   return null;
 }
+
+/**
+ * The letter shown in the identity chip: the first letter or digit of the
+ * account email, uppercased. Falls back to a neutral dot so the chip never
+ * renders an empty disc.
+ */
+export function accountInitial(email) {
+  const m = String(email || "").match(/[\p{L}\p{N}]/u);
+  return m ? m[0].toUpperCase() : "•";
+}

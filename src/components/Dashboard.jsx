@@ -16,6 +16,8 @@ import BucketBoard from "./BucketBoard.jsx";
 import ItineraryEditor from "./ItineraryEditor.jsx";
 import WandrLogo from "./WandrLogo.jsx";
 import EditTripSheet from "./EditTripSheet.jsx";
+import SettingsSheet from "./SettingsSheet.jsx";
+import ProfileChip from "./ProfileChip.jsx";
 import StardustBurst from "./StardustBurst.jsx";
 import Glyph from "./Glyphs.jsx";
 
@@ -261,6 +263,7 @@ export default function Dashboard({
   const [editSheetStage, setEditSheetStage] = useState(null); // "full-itinerary" when opened via Remix, else null (picker)
   const [eventsDismissed, setEventsDismissed] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [showAccount, setShowAccount] = useState(false); // identity chip → account card
   const online = useOnline();
 
   // 8C stardust on "itinerary ready": fire once when a generation finishes
@@ -625,11 +628,13 @@ export default function Dashboard({
           {/* Brand bar — the mark is the way home (standard logo-to-home
               pattern). The trip is already persisted, so leaving is safe:
               it waits on the welcome shelf, one tap from resuming. */}
-          <div style={{ marginBottom:"1.25rem" }}>
+          <div style={{ marginBottom:"1.25rem", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
             <button onClick={onReset} aria-label="Back to home" title="Back to home"
               style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", display:"inline-block" }}>
               <WandrLogo size="sm" showTrail={false} globe="animated" />
             </button>
+            {/* Identity chip — same component and seat as the welcome corner. */}
+            <ProfileChip onOpen={() => setShowAccount(true)} noMotion={!!import.meta.env.VITE_NO_MOTION} />
           </div>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, flexWrap:"wrap", marginBottom:10 }}>
             <div>
@@ -1019,6 +1024,8 @@ export default function Dashboard({
         onEditPlan={onEditPlan}
         onEditTripDetails={onEditTripDetails}
       />
+      {/* Account card — opened by the identity chip. Same sheet as welcome. */}
+      <SettingsSheet open={showAccount} onClose={() => setShowAccount(false)} tripCount={trips.length} />
     </div>
   );
 }

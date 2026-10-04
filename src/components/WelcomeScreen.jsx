@@ -7,6 +7,7 @@ import { fetchDestinationSuggestions } from "../lib/places.js";
 import WandrLogo from "./WandrLogo.jsx";
 import ProfileSheet from "./ProfileSheet.jsx";
 import SettingsSheet from "./SettingsSheet.jsx";
+import ProfileChip from "./ProfileChip.jsx";
 import StardustBurst from "./StardustBurst.jsx";
 import Glyph from "./Glyphs.jsx";
 
@@ -286,17 +287,27 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
         }
       `}</style>
 
-      {/* Settings — device-bound app settings; future account-page home */}
-      <button onClick={() => setShowSettings(true)} aria-label="Settings"
-        style={{ position: "fixed", top: 16, right: (isWide ? 332 : 16) + 40, width: 32, height: 32, borderRadius: "50%", background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, fontSize: T.fs.ui, fontWeight: 700, cursor: "pointer", fontFamily: T.font, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
-        ⚙
-      </button>
+      {/* Corner cluster — ONE fixed flex row so the variable-width chip can
+          never collide with its neighbours. Order is board pick 2B: utilities
+          first, identity at the extreme corner (the Gmail/YouTube seat).
+          44px tall so the chip's touch target centers on the 32px circles. */}
+      <div style={{ position: "fixed", top: 10, right: isWide ? 332 : 16, height: 44, display: "flex", alignItems: "center", gap: 8, zIndex: 10 }}>
+        {/* Settings — device-bound app settings */}
+        <button onClick={() => setShowSettings(true)} aria-label="Settings"
+          style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, fontSize: T.fs.ui, fontWeight: 700, cursor: "pointer", fontFamily: T.font, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          ⚙
+        </button>
 
-      {/* Help affordance — unambiguous "?" that opens an About panel */}
-      <button onClick={() => setShowAbout(true)} aria-label="About Wandr"
-        style={{ position: "fixed", top: 16, right: isWide ? 332 : 16, width: 32, height: 32, borderRadius: "50%", background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, fontSize: T.fs.ui, fontWeight: 700, cursor: "pointer", fontFamily: T.font, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
-        ?
-      </button>
+        {/* Help affordance — unambiguous "?" that opens an About panel */}
+        <button onClick={() => setShowAbout(true)} aria-label="About Wandr"
+          style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, fontSize: T.fs.ui, fontWeight: 700, cursor: "pointer", fontFamily: T.font, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          ?
+        </button>
+
+        {/* Identity — opens the account card (Settings today, the merged
+            Profile sheet at spec P1-2). */}
+        <ProfileChip onOpen={() => setShowSettings(true)} noMotion={!!import.meta.env.VITE_NO_MOTION} />
+      </div>
 
       {/* About panel */}
       {showAbout && (
