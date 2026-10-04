@@ -115,7 +115,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [placeholderFade, setPlaceholderFade] = useState(true);
   const [showAbout, setShowAbout]           = useState(false);
-  const [showSettings, setShowSettings]     = useState(false);
+  const [showSettings, setShowSettings]     = useState(false); // false | "settings" (the ⚙) | "account" (chip, sync line)
   const [showProfile, setShowProfile]       = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [suggestions, setSuggestions]       = useState([]);
@@ -297,7 +297,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           wide). Desktop keeps it fixed beside the departures rail. */}
       <div style={{ position: isWide ? "fixed" : "absolute", top: 10, right: isWide ? 332 : 16, height: 44, display: "flex", alignItems: "center", gap: 8, zIndex: 10 }}>
         {/* Settings — device-bound app settings */}
-        <button onClick={() => setShowSettings(true)} aria-label="Settings"
+        <button onClick={() => setShowSettings("settings")} aria-label="Settings"
           style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, fontSize: T.fs.ui, fontWeight: 700, cursor: "pointer", fontFamily: T.font, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           ⚙
         </button>
@@ -310,7 +310,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
 
         {/* Identity — opens the account card (Settings today, the merged
             Profile sheet at spec P1-2). */}
-        <ProfileChip onOpen={() => setShowSettings(true)} noMotion={!!import.meta.env.VITE_NO_MOTION} />
+        <ProfileChip onOpen={() => setShowSettings("account")} />
       </div>
 
       {/* About panel */}
@@ -475,7 +475,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           <div style={{ marginBottom: "1.5rem" }}>
             <div style={{ fontSize: T.fs.label, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".16em", margin: "4px 0 8px" }}>My trips</div>
             {trips.map(renderTripCard)}
-            <SyncStatusLine onSignIn={() => setShowSettings(true)} style={{ marginTop: 10 }} />
+            <SyncStatusLine onSignIn={() => setShowSettings("account")} style={{ marginTop: 10 }} />
           </div>
         )}
 
@@ -486,7 +486,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
       {isWide && (
         <div style={{ width: 316, flexShrink: 0, borderLeft: `1px solid ${T.border}`, background: T.bg1, padding: "22px 18px", overflowY: "auto" }}>
           <div style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, fontWeight: 400, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", margin: "2px 0 12px" }}>Departures</div>
-          {trips.length > 0 && <SyncStatusLine onSignIn={() => setShowSettings(true)} style={{ margin: "2px 0 12px" }} />}
+          {trips.length > 0 && <SyncStatusLine onSignIn={() => setShowSettings("account")} style={{ margin: "2px 0 12px" }} />}
           {trips.map(renderTripCard)}
           <button onClick={() => inputRef.current?.focus()}
             style={{ width: "100%", border: `1px dashed ${T.border2}`, borderRadius: T.r.md, background: "transparent", textAlign: "center", padding: "11px 0", fontSize: T.fs.body, color: T.muted, fontWeight: 700, cursor: "pointer", fontFamily: T.font }}>
@@ -496,7 +496,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
       )}
 
       {/* Traveler profile editor (design pick 6A) */}
-      <SettingsSheet open={showSettings} onClose={() => setShowSettings(false)} tripCount={trips.length} />
+      <SettingsSheet open={!!showSettings} focusAccount={showSettings === "account"} onClose={() => setShowSettings(false)} tripCount={trips.length} />
 
       <ProfileSheet
         open={showProfile}

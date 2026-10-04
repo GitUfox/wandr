@@ -11,11 +11,11 @@
  * with the 32px ⚙ / ? circles beside it.
  */
 
-import { T } from "../lib/constants.js";
+import { T, NO_MOTION } from "../lib/constants.js";
 import { accountInitial } from "../lib/utils.js";
 import { useAccount } from "../hooks/useAccount.js";
 
-export default function ProfileChip({ onOpen, noMotion = false }) {
+export default function ProfileChip({ onOpen, noMotion = NO_MOTION }) {
   const account = useAccount();
   if (!account.configured) return null;
 

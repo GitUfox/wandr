@@ -1,5 +1,9 @@
 /**
- * SettingsSheet — app settings, opened from the ⚙ on the welcome screen.
+ * SettingsSheet — app settings and the account card. Three entry points on
+ * two screens: the ⚙ on welcome, the identity chip and sync status line on
+ * welcome (focusAccount), and the identity chip on the dashboard (focusAccount,
+ * showData off). Do not assume the welcome screen: a trip can be open, and a
+ * build or itinerary stream can be running, while this sheet is up.
  *
  * Local-first skeleton of the future account page: today it holds the
  * device-bound settings (time format, data, app status); when a backend
@@ -9,7 +13,7 @@
  * y:"100%" computes wrong on fixed-bottom elements (see CLAUDE.md).
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { T, FEATURES, ACCOUNT_COPY } from "../lib/constants.js";
 import { MAX_TRIPS } from "../lib/tripStore.js";
 import { getTimeFormat, saveSettings, clearAllWandrData } from "../lib/settings.js";
@@ -18,7 +22,15 @@ import { signIn, signOut, fullSync } from "../lib/sync.js";
 import { timeAgo } from "../lib/utils.js";
 import { placesActivated } from "../lib/places.js";
 
-export default function SettingsSheet({ open, onClose, tripCount = 0 }) {
+/**
+ * focusAccount — the caller's control promised an account action ("Sign in"):
+ *   scroll to the Account section and put the cursor in the email field.
+ * showData — false hides "Clear my data". The wipe reloads the app, so it is
+ *   offered only where no trip is open (welcome).
+ */
+export default function SettingsSheet({ open, onClose, tripCount = 0, focusAccount = false, showData = true }) {
+  const sheetRef = useRef(null);
+  const emailRef = useRef(null);
   const [timeFormat, setTimeFormat] = useState(getTimeFormat);
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
@@ -32,6 +44,13 @@ export default function SettingsSheet({ open, onClose, tripCount = 0 }) {
   useEffect(() => {
     if (!open) { setConfirmClear(false); setConfirmSignOut(false); }
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !focusAccount) return;
+    sheetRef.current?.scrollTo?.(0, 0);
+    // No-op when signed in or awaiting the link — the field is not rendered.
+    emailRef.current?.focus({ preventScroll: true });
+  }, [open, focusAccount]);
 
   async function handleSync() {
     const r = await fullSync();
@@ -64,7 +83,7 @@ export default function SettingsSheet({ open, onClose, tripCount = 0 }) {
     <>
       <div onClick={onClose}
         style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(2px)", zIndex: 100, opacity: open ? 1 : 0, transition: "opacity 0.22s ease", pointerEvents: open ? "auto" : "none" }} />
-      <div style={{
+      <div ref={sheetRef} style={{
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 101,
         maxWidth: 640, margin: "0 auto",
         background: T.bg1, borderRadius: `${T.r.lg}px ${T.r.lg}px 0 0`, border: `1px solid ${T.border2}`, borderBottom: "none",
@@ -155,7 +174,7 @@ export default function SettingsSheet({ open, onClose, tripCount = 0 }) {
           ) : (
             <div>
               <div style={{ display: "flex", gap: 8 }}>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                <input ref={emailRef} type="email" value={email} onChange={e => setEmail(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && emailValid && signIn(email.trim())}
                   placeholder="you@example.com" autoComplete="email"
                   style={{ flex: 1, minWidth: 0, padding: "9px 12px", fontSize: T.fs.body, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.sm, color: T.ink, outline: "none", fontFamily: T.font, colorScheme: "dark" }} />
@@ -219,6 +238,7 @@ export default function SettingsSheet({ open, onClose, tripCount = 0 }) {
         </div>
 
         {/* ── Data ── */}
+        {showData && (
         <div style={{ marginTop: 22 }}>
           <div style={label}>Your data</div>
           {!confirmClear ? (
@@ -248,6 +268,7 @@ export default function SettingsSheet({ open, onClose, tripCount = 0 }) {
             </div>
           )}
         </div>
+        )}
       </div>
     </>
   );

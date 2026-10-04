@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import { accountInitial } from "../lib/utils.js";
 
 // Identity chip (Profile spec P0-1, board picks 1B + 2B).
@@ -50,7 +51,41 @@ describe("ProfileChip", () => {
   });
 });
 
+// The chip must never be a control that does nothing. No DOM in this suite, so
+// call the component as a function (its one hook is mocked) and fire the
+// button's own handler.
+const findButton = (node) => {
+  if (!node || typeof node !== "object") return null;
+  if (node.type === "button") return node;
+  for (const child of [].concat(node.props?.children ?? [])) {
+    const hit = findButton(child);
+    if (hit) return hit;
+  }
+  return null;
+};
+
+describe("ProfileChip — the tap does something", () => {
+  it.each([["signed out", {}], ["signed in", { email: "k@example.com" }]])("%s: the button calls onOpen", (_, account) => {
+    mockAccount = { ...base, ...account };
+    const onOpen = vi.fn();
+    findButton(ProfileChip({ onOpen })).props.onClick();
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("both screens wire the chip to the account sheet, focused on the account", () => {
+    const dash = readFileSync("src/components/Dashboard.jsx", "utf8");
+    expect(dash).toContain("<ProfileChip onOpen={() => setShowAccount(true)} />");
+    expect(dash).toContain("<SettingsSheet open={showAccount} onClose={() => setShowAccount(false)} tripCount={trips.length} focusAccount showData={false} />");
+    const welcome = readFileSync("src/components/WelcomeScreen.jsx", "utf8");
+    expect(welcome).toContain('<ProfileChip onOpen={() => setShowSettings("account")} />');
+    expect(welcome).toContain('focusAccount={showSettings === "account"}');
+  });
+});
+
 describe("accountInitial", () => {
+  it("returns one character even when the uppercase form is two", () => {
+    expect(accountInitial("ßeta@example.com")).toBe("S");
+  });
   it("uppercases the first letter of the email", () => {
     expect(accountInitial("badhemi90@gmail.com")).toBe("B");
   });

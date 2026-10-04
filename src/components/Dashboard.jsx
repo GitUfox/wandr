@@ -639,7 +639,7 @@ export default function Dashboard({
               <WandrLogo size="sm" showTrail={false} globe="animated" />
             </button>
             {/* Identity chip — same component and seat as the welcome corner. */}
-            <ProfileChip onOpen={() => setShowAccount(true)} noMotion={!!import.meta.env.VITE_NO_MOTION} />
+            <ProfileChip onOpen={() => setShowAccount(true)} />
           </div>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, flexWrap:"wrap", marginBottom:10 }}>
             <div>
@@ -1032,8 +1032,10 @@ export default function Dashboard({
         onEditPlan={onEditPlan}
         onEditTripDetails={onEditTripDetails}
       />
-      {/* Account card — opened by the identity chip. Same sheet as welcome. */}
-      <SettingsSheet open={showAccount} onClose={() => setShowAccount(false)} tripCount={trips.length} />
+      {/* Account card — opened by the identity chip. Same sheet as welcome,
+          minus "Clear my data": the wipe reloads the app, which would destroy
+          a build or stream in flight. That action stays on the welcome screen. */}
+      <SettingsSheet open={showAccount} onClose={() => setShowAccount(false)} tripCount={trips.length} focusAccount showData={false} />
     </div>
   );
 }

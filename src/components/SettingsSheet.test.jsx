@@ -71,3 +71,16 @@ describe("SettingsSheet — signed-out card", () => {
     expect(render({ pendingLink: true })).toContain("Check your email");
   });
 });
+
+describe("SettingsSheet — Clear my data is offered only where no trip is open", () => {
+  it("shows the action by default (welcome)", () => {
+    expect(render({})).toContain("Clear my data");
+  });
+
+  it("hides the action when the caller turns showData off (dashboard)", () => {
+    mockAccount = { ...base };
+    const html = renderToStaticMarkup(<SettingsSheet open tripCount={1} onClose={() => {}} showData={false} />);
+    expect(html).not.toContain("Clear my data");
+    expect(html).toContain("Time format"); // the rest of the sheet is intact
+  });
+});

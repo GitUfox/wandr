@@ -560,11 +560,12 @@ export function findGroundedVenue(title, categories) {
 /**
  * The letter shown in the identity chip: the first letter or digit of the
  * account email, uppercased. Falls back to a neutral dot so the chip never
- * renders an empty disc.
+ * renders an empty disc. Always ONE character: some letters uppercase to two
+ * ("ß" → "SS"), which would overflow the disc.
  */
 export function accountInitial(email) {
   const m = String(email || "").match(/[\p{L}\p{N}]/u);
-  return m ? m[0].toUpperCase() : "•";
+  return m ? [...m[0].toUpperCase()][0] : "•";
 }
 
 /**

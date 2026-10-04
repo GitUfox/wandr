@@ -74,6 +74,11 @@ export const INPUT_CAPS = {
   editPrompt:   1000,  // EditTripSheet instruction textareas
 };
 
+// ── Motion harness flag ───────────────────────────────────────────────────────
+// VITE_NO_MOTION=1 parks every animation (the pane harness freezes rAF). ONE
+// read here so a component cannot forget the check at a new call site.
+export const NO_MOTION = !!import.meta.env?.VITE_NO_MOTION;
+
 // ── Design tokens ────────────────────────────────────────────────────────────
 export const T = {
   bg0:"#0d0d0d", bg1:"#171717", bg2:"#1f1f1f", bg3:"#2a2a2a",
