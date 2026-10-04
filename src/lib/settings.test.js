@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { loadSettings, saveSettings, getTimeFormat, clearAllWandrData, _resetSettingsCache } from "./settings.js";
+import { loadSettings, saveSettings, getTimeFormat, clearAllWandrData, subscribeSettings, _resetSettingsCache } from "./settings.js";
 import { formatTime, displayTime, resequenceTimes } from "./utils.js";
 
 class MemStorage {
@@ -107,5 +107,24 @@ describe("clearAllWandrData", () => {
   it("returns 0 when storage is unavailable", () => {
     delete globalThis.localStorage;
     expect(clearAllWandrData()).toBe(0);
+  });
+});
+
+describe("subscribeSettings — surfaces that render times must hear a change", () => {
+  it("notifies a subscriber on save, with the new format already readable", () => {
+    const seen = [];
+    const off = subscribeSettings(() => seen.push(getTimeFormat()));
+    saveSettings({ timeFormat: "12h" });
+    saveSettings({ timeFormat: "24h" });
+    off();
+    expect(seen).toEqual(["12h", "24h"]);
+  });
+
+  it("stops notifying after unsubscribe", () => {
+    let calls = 0;
+    const off = subscribeSettings(() => { calls++; });
+    off();
+    saveSettings({ timeFormat: "12h" });
+    expect(calls).toBe(0);
   });
 });

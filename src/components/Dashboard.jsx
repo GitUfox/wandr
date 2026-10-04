@@ -7,6 +7,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MODES, T, FEATURES, AI_DISCLAIMER } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
+import { useTimeFormat } from "../hooks/useTimeFormat.js";
 import { arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime, findGroundedVenue, countIdeas, tripDayIndex, parseTime, formatTime } from "../lib/utils.js";
 import { bucketTicketRow, bucketPrintBody, bucketPlainText } from "../lib/printBucket.js";
 import { parsePlan } from "../lib/planModel.js";
@@ -266,6 +267,9 @@ export default function Dashboard({
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [showAccount, setShowAccount] = useState(false); // identity chip → account card
   const online = useOnline();
+  // The Settings sheet opens from this screen (identity chip). Subscribing
+  // re-renders every time on screen when the 12h/24h format changes.
+  useTimeFormat();
 
   // 8C stardust on "itinerary ready": fire once when a generation finishes
   // successfully (loading→done with a parsed model — error text never sets

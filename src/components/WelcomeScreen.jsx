@@ -252,7 +252,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
   return (
     <div style={ isWide
       ? { minHeight: "100vh", width: "100%", display: "flex", alignItems: "stretch", background: T.bg0, fontFamily: T.font, position: "relative" }
-      : { minHeight: "100vh", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "2.5rem 1.5rem", background: T.bg0, fontFamily: T.font, position: "relative" } }>
+      : { minHeight: "100vh", width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4rem 1.5rem 2.5rem" /* top clears the 54px corner cluster */, background: T.bg0, fontFamily: T.font, position: "relative" } }>
       <style>{`
         @property --wbeam { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
         @keyframes wbeam { to { --wbeam: 360deg; } }
@@ -291,8 +291,11 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
       {/* Corner cluster — ONE fixed flex row so the variable-width chip can
           never collide with its neighbours. Order is board pick 2B: utilities
           first, identity at the extreme corner (the Gmail/YouTube seat).
-          44px tall so the chip's touch target centers on the 32px circles. */}
-      <div style={{ position: "fixed", top: 10, right: isWide ? 332 : 16, height: 44, display: "flex", alignItems: "center", gap: 8, zIndex: 10 }}>
+          44px tall so the chip's touch target centers on the 32px circles.
+          Mobile: absolute, so the row scrolls away with the page and never
+          covers content (the Sign in pill makes it about half the screen
+          wide). Desktop keeps it fixed beside the departures rail. */}
+      <div style={{ position: isWide ? "fixed" : "absolute", top: 10, right: isWide ? 332 : 16, height: 44, display: "flex", alignItems: "center", gap: 8, zIndex: 10 }}>
         {/* Settings — device-bound app settings */}
         <button onClick={() => setShowSettings(true)} aria-label="Settings"
           style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, fontSize: T.fs.ui, fontWeight: 700, cursor: "pointer", fontFamily: T.font, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>

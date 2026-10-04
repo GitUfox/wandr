@@ -116,9 +116,29 @@ export function recordDeletion(tripId) {
 
 // ── Session state (tiny subscribable store — no React in this module) ────────
 
+// The session lives in Supabase's own storage and is read asynchronously, so
+// a cold load cannot know who is signed in on the first render. The hint is
+// the last known account email, kept under a wandr_ key so "Clear my data"
+// removes it. It only seeds the first render; initAccounts corrects it.
+const HINT_KEY = "wandr_account_hint";
+
+export function readAccountHint() {
+  try {
+    const v = localStorage.getItem(HINT_KEY);
+    return typeof v === "string" && v.includes("@") ? v : null;
+  } catch { return null; }
+}
+
+export function writeAccountHint(email) {
+  try {
+    if (email) localStorage.setItem(HINT_KEY, email);
+    else localStorage.removeItem(HINT_KEY);
+  } catch { /* no storage — the hint is optional */ }
+}
+
 const state = {
   configured: accountsConfigured(),
-  email: null,
+  email: accountsConfigured() ? readAccountHint() : null,
   syncing: false,
   lastSync: 0,        // bumps after every completed sync — App refreshes on it
   lastError: "",      // friendly copy only, never raw errors (house rule)
@@ -129,7 +149,11 @@ const listeners = new Set();
 
 export function getAccount() { return { ...state }; }
 export function subscribeAccount(fn) { listeners.add(fn); return () => listeners.delete(fn); }
-function emit(patch) { Object.assign(state, patch); listeners.forEach(fn => fn(getAccount())); }
+function emit(patch) {
+  if ("email" in patch) writeAccountHint(patch.email);
+  Object.assign(state, patch);
+  listeners.forEach(fn => fn(getAccount()));
+}
 
 let inited = false;
 
@@ -143,6 +167,8 @@ export async function initAccounts() {
   if (data?.session?.user) {
     emit({ email: data.session.user.email, pendingLink: false });
     fullSync(); // adopt the account's library on load
+  } else if (state.email) {
+    emit({ email: null }); // the hint was stale — the session is gone
   }
   sb.auth.onAuthStateChange((event, session) => {
     if (event === "SIGNED_IN" && session?.user) {

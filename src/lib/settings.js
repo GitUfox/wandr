@@ -8,15 +8,20 @@
  * device-bound like the rest of the app.
  *
  * Module-level cache keeps reads cheap (formatTime consults this on every
- * call). The cache is process-wide, which is fine: settings change only via
- * saveSettings below, and the settings sheet lives on the welcome screen — no
- * surface that *renders* times can be open at the same moment.
+ * call). The cache is process-wide; settings change only via saveSettings
+ * below. The settings sheet also opens from the dashboard, where times are on
+ * screen, so saveSettings notifies subscribers — a surface that renders times
+ * subscribes (useTimeFormat) and re-renders on a change.
  */
 
 const KEY = "wandr_settings";
 const DEFAULTS = { v: 1, timeFormat: "24h" };
 
 let cache = null;
+const listeners = new Set();
+
+/** Called after every saveSettings. Returns the unsubscribe function. */
+export function subscribeSettings(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 
 export function loadSettings() {
   if (cache) return cache;
@@ -35,6 +40,7 @@ export function saveSettings(patch) {
   const next = { ...loadSettings(), ...patch, v: 1 };
   cache = next;
   try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* quota — keep in-memory */ }
+  listeners.forEach(fn => fn(next));
   return next;
 }
 

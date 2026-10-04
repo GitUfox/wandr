@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { mergeTrips, pickProfile } from "./sync.js";
+import { describe, it, expect, afterEach } from "vitest";
+import { mergeTrips, pickProfile, readAccountHint, writeAccountHint } from "./sync.js";
 
 // The merge core is where sync can destroy data — every rule gets a test.
 // Shapes mirror production: local trips carry savedAt (ISO, "Z"), remote rows
@@ -138,5 +138,41 @@ describe("pickProfile", () => {
 
   it("no profile anywhere → nothing to do", () => {
     expect(pickProfile(null, null)).toEqual({ winner: null, push: false });
+  });
+});
+
+describe("account hint — seeds the first render before the session loads", () => {
+  const store = new Map();
+  const mem = {
+    getItem: k => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: k => store.delete(k),
+  };
+  afterEach(() => { store.clear(); delete globalThis.localStorage; });
+
+  it("round-trips the email under a wandr_ key (Clear my data removes it)", () => {
+    globalThis.localStorage = mem;
+    writeAccountHint("kraig@example.com");
+    expect([...store.keys()]).toEqual(["wandr_account_hint"]);
+    expect(readAccountHint()).toBe("kraig@example.com");
+  });
+
+  it("sign-out (null email) removes the hint", () => {
+    globalThis.localStorage = mem;
+    writeAccountHint("kraig@example.com");
+    writeAccountHint(null);
+    expect(readAccountHint()).toBe(null);
+    expect(store.size).toBe(0);
+  });
+
+  it("ignores a value that is not an email", () => {
+    globalThis.localStorage = mem;
+    store.set("wandr_account_hint", "true");
+    expect(readAccountHint()).toBe(null);
+  });
+
+  it("is safe with no localStorage at all", () => {
+    expect(readAccountHint()).toBe(null);
+    expect(() => writeAccountHint("a@b.co")).not.toThrow();
   });
 });
