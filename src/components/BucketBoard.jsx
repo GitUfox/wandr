@@ -119,7 +119,7 @@ export default function BucketBoard({ trip, onTogglePick, onExport, onCopy, copi
           <div style={{ display: "flex", gap: 7, marginLeft: "auto" }}>
             {onCopy && (
               <button onClick={onCopy}
-                style={{ fontSize: T.fs.meta, fontWeight: 600, color: copied === "error" ? "#f08070" : copied ? T.ink : T.muted, background: copied ? T.bg3 : "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "5px 12px", cursor: "pointer", fontFamily: T.font, transition: "all .15s" }}>
+                style={{ fontSize: T.fs.meta, fontWeight: 600, color: copied === "error" ? T.danger : copied ? T.ink : T.muted, background: copied ? T.bg3 : "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "5px 12px", cursor: "pointer", fontFamily: T.font, transition: "all .15s" }}>
                 {copied === "error" ? "Copy failed" : copied ? "✓ Copied" : "Copy"}
               </button>
             )}

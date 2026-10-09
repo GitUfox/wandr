@@ -137,7 +137,7 @@ const iconBtn = {
    icons by shape ("the diamond, the arrow"), which means they never read as
    functions. Labels + 44px minimum height fix both complaints at once. */
 function ActionBtn({ glyph, label, onClick, danger, active, disabled, title }) {
-  const tone = danger ? "#f08070" : active ? T.accent : T.muted;
+  const tone = danger ? T.danger : active ? T.accent : T.muted;
   return (
     <button onClick={onClick} disabled={disabled} title={title || label}
       style={{
@@ -148,7 +148,7 @@ function ActionBtn({ glyph, label, onClick, danger, active, disabled, title }) {
         cursor: disabled ? "not-allowed" : "pointer", fontFamily: T.font, opacity: disabled ? .4 : 1,
       }}>
       <Glyph name={glyph} size={15} color={tone} />
-      <span style={{ fontSize: T.fs.micro, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", color: danger ? "#f08070" : T.hint }}>{label}</span>
+      <span style={{ fontSize: T.fs.micro, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", color: danger ? T.danger : T.hint }}>{label}</span>
     </button>
   );
 }

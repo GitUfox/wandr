@@ -151,7 +151,7 @@ export default function DateRangePicker({ d1, setD1, d2, setD2 }) {
 
       {/* Validation message */}
       {d1 && d2 && d2 <= d1 && (
-        <div style={{ fontSize: T.fs.body, color: "#f08070", padding: "6px 10px", background: "rgba(200,80,60,.1)", border: "1px solid rgba(200,80,60,.25)", borderRadius: T.r.sm, marginTop: 6 }}>
+        <div style={{ fontSize: T.fs.body, color: T.danger, padding: "6px 10px", background: "rgba(200,80,60,.1)", border: "1px solid rgba(200,80,60,.25)", borderRadius: T.r.sm, marginTop: 6 }}>
           Departure must be after arrival
         </div>
       )}

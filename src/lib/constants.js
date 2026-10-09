@@ -84,6 +84,7 @@ export const T = {
   bg0:"#0d0d0d", bg1:"#171717", bg2:"#1f1f1f", bg3:"#2a2a2a",
   border:"#333333", border2:"#444444",
   accent:"#c96442", accentHover:"#e07050",
+  danger:"#f08070", // error copy — the one red the UI uses
   ink:"#efefef", muted:"#a0a0a0", hint:"#555555",
   white:"#ffffff", font:"'Manrope',sans-serif",
 
@@ -249,6 +250,13 @@ export const ACCOUNT_COPY = {
   statusStalled:  "Saved on this device — not synced yet",
   statusLocal:    "On this device only",
   statusLocalCta: "Sign in to back up",
+  // Magic-link waiting room (spec P0-4). {email} and {n} are filled at render.
+  linkSent:          "Link sent to {email} — open it on this device and you're in.",
+  linkResendWaiting: "Resend in {n}s",
+  linkResendReady:   "Resend link",
+  linkWrongAddress:  "Wrong address?",
+  linkSpamHint:      "Still nothing? Check your spam folder — and that the address above is right.",
+  linkExpired:       "That sign-in link has expired — send yourself a fresh one.",
   signOutTitle: "Sign out?",
   signOutBody:  "Your trips stay on this device. Your account keeps its own copy.",
 };

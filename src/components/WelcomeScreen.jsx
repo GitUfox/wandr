@@ -9,6 +9,7 @@ import ProfileSheet from "./ProfileSheet.jsx";
 import SettingsSheet from "./SettingsSheet.jsx";
 import ProfileChip from "./ProfileChip.jsx";
 import SyncStatusLine from "./SyncStatusLine.jsx";
+import { useAccount } from "../hooks/useAccount.js";
 import StardustBurst from "./StardustBurst.jsx";
 import Glyph from "./Glyphs.jsx";
 
@@ -116,6 +117,10 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
   const [placeholderFade, setPlaceholderFade] = useState(true);
   const [showAbout, setShowAbout]           = useState(false);
   const [showSettings, setShowSettings]     = useState(false); // false | "settings" (the ⚙) | "account" (chip, sync line)
+  // An expired sign-in link lands here. Open the account card so the message
+  // and the resend are in front of the traveler, not behind the chip.
+  const account = useAccount();
+  useEffect(() => { if (account.linkExpired) setShowSettings("account"); }, [account.linkExpired]);
   const [showProfile, setShowProfile]       = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [suggestions, setSuggestions]       = useState([]);
@@ -219,7 +224,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
             <span style={{ fontSize: T.fs.ui, fontWeight: 800, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.destination}</span>
             {isActive && <span style={{ fontSize: T.fs.micro, fontWeight: 700, color: T.accent, border: `1px solid ${T.accent}`, borderRadius: T.r.pill, padding: "1px 6px", letterSpacing: ".06em", flexShrink: 0 }}>CURRENT</span>}
           </div>
-          <div style={{ fontFamily: T.fontMono, fontWeight: 400, fontSize: T.fs.micro, letterSpacing: ".02em", color: broken ? "#f08070" : T.muted, marginTop: 3 }}>{sub}</div>
+          <div style={{ fontFamily: T.fontMono, fontWeight: 400, fontSize: T.fs.micro, letterSpacing: ".02em", color: broken ? T.danger : T.muted, marginTop: 3 }}>{sub}</div>
         </button>
         <button onClick={() => setConfirmDeleteId(t.id)} aria-label={`Delete ${t.destination}`}
           style={{ width: 30, alignSelf: "stretch", fontSize: T.fs.ui, lineHeight: 1, color: T.hint, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, flexShrink: 0 }}>

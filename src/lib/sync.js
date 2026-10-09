@@ -136,6 +136,19 @@ export function writeAccountHint(email) {
   } catch { /* no storage — the hint is optional */ }
 }
 
+// The address a sign-in link was sent to. Persisted under a wandr_ key
+// because the link reloads the page: an expired link must still know which
+// address to offer for the resend.
+const PENDING_KEY = "wandr_pending_email";
+function readPending() {
+  try { const v = localStorage.getItem(PENDING_KEY); return v && v.includes("@") ? v : null; }
+  catch { return null; }
+}
+function writePending(email) {
+  try { email ? localStorage.setItem(PENDING_KEY, email) : localStorage.removeItem(PENDING_KEY); }
+  catch { /* optional */ }
+}
+
 const state = {
   configured: accountsConfigured(),
   email: accountsConfigured() ? readAccountHint() : null,
@@ -143,6 +156,9 @@ const state = {
   lastSync: 0,        // bumps after every completed sync — App refreshes on it
   lastError: "",      // friendly copy only, never raw errors (house rule)
   pendingLink: false, // magic link sent, awaiting click
+  pendingEmail: accountsConfigured() ? readPending() : null, // where the last link went
+  linkSentAt: 0,      // Date.now() of the last send — drives the resend countdown
+  linkExpired: false, // the traveler arrived on an expired or used link
   retryPending: false, // a failed sync has an automatic retry scheduled
 };
 const listeners = new Set();
@@ -163,16 +179,24 @@ export async function initAccounts() {
   inited = true;
   const sb = await getSupabase();
   if (!sb) return;
+  // An expired or already-used link lands here with the reason in the URL
+  // hash. Record it, then clear the hash so a reload does not repeat it.
+  if (readExpiredLink(typeof window !== "undefined" ? window.location : null)) {
+    emit({ linkExpired: true });
+    try { window.history.replaceState(null, "", window.location.pathname + window.location.search); } catch { /* ignore */ }
+  }
   const { data } = await sb.auth.getSession();
   if (data?.session?.user) {
-    emit({ email: data.session.user.email, pendingLink: false });
+    writePending(null);
+    emit({ email: data.session.user.email, pendingLink: false, pendingEmail: null, linkExpired: false });
     fullSync(); // adopt the account's library on load
   } else if (state.email) {
     emit({ email: null }); // the hint was stale — the session is gone
   }
   sb.auth.onAuthStateChange((event, session) => {
     if (event === "SIGNED_IN" && session?.user) {
-      emit({ email: session.user.email, pendingLink: false, lastError: "" });
+      writePending(null);
+      emit({ email: session.user.email, pendingLink: false, pendingEmail: null, linkExpired: false, lastError: "" });
       fullSync();
     }
     if (event === "SIGNED_OUT") emit({ email: null });
@@ -184,19 +208,62 @@ export async function initAccounts() {
   }
 }
 
+/**
+ * True when the current URL carries Supabase's expired-or-used-link error.
+ * Supabase appends it to the hash of the redirect target. Exported for tests.
+ */
+export function readExpiredLink(location) {
+  const hash = location?.hash || "";
+  if (!hash.includes("error")) return false;
+  const q = new URLSearchParams(hash.replace(/^#/, ""));
+  const code = q.get("error_code") || "";
+  const desc = (q.get("error_description") || "").toLowerCase();
+  return code === "otp_expired" || desc.includes("expired") || desc.includes("invalid");
+}
+
+/**
+ * Plain-words copy for a failed link send. The three causes a traveler can
+ * act on differently: wait out a rate limit, wait for the service, or just
+ * try again. Exported for tests. Never surfaces the raw error.
+ */
+export function signInErrorCopy(error) {
+  const msg = String(error?.message || "").toLowerCase();
+  const status = Number(error?.status) || 0;
+  if (status === 429 || msg.includes("rate limit") || msg.includes("security purposes")) {
+    const secs = Number((msg.match(/after (\d+) seconds?/) || [])[1]) || 0;
+    const mins = Math.max(1, Math.ceil(secs / 60));
+    return `Too many link requests — try again in ${mins} minute${mins === 1 ? "" : "s"}.`;
+  }
+  if (status >= 500 || msg.includes("fetch failed") || msg.includes("failed to fetch") || msg.includes("network") || msg.includes("bad gateway")) {
+    return "Can't reach the sign-in service right now — try again in a few minutes.";
+  }
+  return "Couldn't send the email just now — try again in a couple of minutes.";
+}
+
 export async function signIn(email) {
   const sb = await getSupabase();
   if (!sb) return false;
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.origin },
-  });
-  if (error) {
-    emit({ lastError: "Couldn't send the sign-in link. Please try again." });
+  let result;
+  try {
+    result = await sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin },
+    });
+  } catch (err) {
+    result = { error: err };
+  }
+  if (result?.error) {
+    emit({ lastError: signInErrorCopy(result.error) });
     return false;
   }
-  emit({ pendingLink: true, lastError: "" });
+  writePending(email);
+  emit({ pendingLink: true, pendingEmail: email, linkSentAt: Date.now(), linkExpired: false, lastError: "" });
   return true;
+}
+
+/** "Wrong address?" — back to the email field. The address stays for editing. */
+export function cancelPendingLink() {
+  emit({ pendingLink: false, lastError: "" });
 }
 
 /** Signs out of the account. The device's local copy of trips stays put. */
@@ -209,7 +276,8 @@ export async function signOut() {
   // account's sync time. (Spec P0-6: no orphaned states after sign-out.)
   clearTimeout(retryTimer);
   retries = 0;
-  emit({ email: null, pendingLink: false, lastSync: 0, lastError: "", retryPending: false });
+  writePending(null);
+  emit({ email: null, pendingLink: false, pendingEmail: null, linkExpired: false, lastSync: 0, lastError: "", retryPending: false });
 }
 
 // ── Sync ──────────────────────────────────────────────────────────────────────

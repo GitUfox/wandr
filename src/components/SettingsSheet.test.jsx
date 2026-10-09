@@ -67,8 +67,8 @@ describe("SettingsSheet — signed-out card", () => {
     expect(html).not.toContain("Last synced");
   });
 
-  it("shows the waiting state after a link is sent", () => {
-    expect(render({ pendingLink: true })).toContain("Check your email");
+  it("shows the waiting room after a link is sent", () => {
+    expect(render({ pendingLink: true, pendingEmail: "k@x.co", linkSentAt: Date.now() })).toContain("Link sent to ");
   });
 });
 
@@ -82,5 +82,45 @@ describe("SettingsSheet — Clear my data is offered only where no trip is open"
     const html = renderToStaticMarkup(<SettingsSheet open tripCount={1} onClose={() => {}} showData={false} />);
     expect(html).not.toContain("Clear my data");
     expect(html).toContain("Time format"); // the rest of the sheet is intact
+  });
+});
+
+describe("SettingsSheet — magic-link waiting room (spec P0-4)", () => {
+  const sent = { pendingLink: true, pendingEmail: "kraig@example.com", linkSentAt: Date.now() };
+
+  it("names the address the link went to", () => {
+    const html = render(sent);
+    expect(html).toContain("Link sent to ");
+    expect(html).toContain("kraig@example.com");
+    expect(html).toContain("open it on this device and you're in");
+  });
+
+  it("locks resend behind a countdown right after a send", () => {
+    const html = render(sent);
+    expect(html).toMatch(/Resend in \d+s/);
+    expect(html).toContain("disabled");
+    expect(html).not.toContain(">Resend link<");
+  });
+
+  it("unlocks resend once the wait has passed", () => {
+    const html = render({ ...sent, linkSentAt: Date.now() - 31_000 });
+    expect(html).toContain(">Resend link<");
+  });
+
+  it("offers Wrong address? while waiting", () => {
+    expect(render(sent)).toContain(">Wrong address?<");
+  });
+
+  it("expired link: explains, prefills the address, offers a fresh link", () => {
+    const html = render({ pendingLink: false, pendingEmail: "kraig@example.com", linkExpired: true });
+    expect(html).toContain("That sign-in link has expired — send yourself a fresh one.");
+    expect(html).toContain('value="kraig@example.com"');
+    expect(html).toContain("Send a fresh link");
+  });
+
+  it("send failure copy shows in the waiting room and the form, never raw", () => {
+    const copy = "Can't reach the sign-in service right now — try again in a few minutes.";
+    expect(render({ ...sent, lastError: copy })).toContain(copy);
+    expect(render({ lastError: copy })).toContain(copy);
   });
 });

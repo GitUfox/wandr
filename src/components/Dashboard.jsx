@@ -20,6 +20,7 @@ import EditTripSheet from "./EditTripSheet.jsx";
 import SettingsSheet from "./SettingsSheet.jsx";
 import ProfileChip from "./ProfileChip.jsx";
 import SyncStatusLine from "./SyncStatusLine.jsx";
+import { useAccount } from "../hooks/useAccount.js";
 import StardustBurst from "./StardustBurst.jsx";
 import Glyph from "./Glyphs.jsx";
 
@@ -266,6 +267,8 @@ export default function Dashboard({
   const [eventsDismissed, setEventsDismissed] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [showAccount, setShowAccount] = useState(false); // identity chip → account card
+  const account = useAccount();
+  useEffect(() => { if (account.linkExpired) setShowAccount(true); }, [account.linkExpired]); // expired sign-in link
   const online = useOnline();
   // The Settings sheet opens from this screen (identity chip). Subscribing
   // re-renders every time on screen when the 12h/24h format changes.
@@ -809,7 +812,7 @@ export default function Dashboard({
               restated what the itinerary shows, and cutting them let the whole
               meta build call die. Ticket → itinerary, nothing in between. */}
           {debugMsg && (
-            <div style={{ marginTop:10, padding:"6px 10px", background:"rgba(200,80,60,.12)", border:"1px solid rgba(200,80,60,.3)", borderRadius:T.r.sm, fontSize:T.fs.meta, color:"#f08070" }}>
+            <div style={{ marginTop:10, padding:"6px 10px", background:"rgba(200,80,60,.12)", border:"1px solid rgba(200,80,60,.3)", borderRadius:T.r.sm, fontSize:T.fs.meta, color:T.danger }}>
               {"Couldn't load full trip data — some sections may be missing. You can still generate your itinerary below."}
               <div style={{ marginTop:4, opacity:0.7 }}>{debugMsg}</div>
             </div>
@@ -935,7 +938,7 @@ export default function Dashboard({
                     {!planLoading && planText && (
                       <>
                         <button onClick={copyPlan}
-                          style={{ fontSize:T.fs.meta, fontWeight:600, color:copied==="error"?"#f08070":copied?T.ink:T.muted, background:copied?T.bg3:"transparent", border:`1px solid ${T.border}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                          style={{ fontSize:T.fs.meta, fontWeight:600, color:copied==="error"?T.danger:copied?T.ink:T.muted, background:copied?T.bg3:"transparent", border:`1px solid ${T.border}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                           {copied === "error" ? "Copy failed" : copied ? "✓ Copied" : "Copy"}
                         </button>
                         <button onClick={exportToPdf}
@@ -956,8 +959,8 @@ export default function Dashboard({
               )}
               {/* Patch error banner (day-edit failure — plan text is preserved) */}
               {patchError && !planLoading && (
-                <div style={{ display:"flex", alignItems:"center", gap:9, padding:"10px 14px", background:"rgba(180,60,40,.12)", border:"1px solid rgba(180,60,40,.3)", borderRadius:T.r.md, marginBottom:10, fontSize:T.fs.body, color:"#f08070" }}>
-                  <Glyph name="warning" size={14} color="#f08070" />
+                <div style={{ display:"flex", alignItems:"center", gap:9, padding:"10px 14px", background:"rgba(180,60,40,.12)", border:"1px solid rgba(180,60,40,.3)", borderRadius:T.r.md, marginBottom:10, fontSize:T.fs.body, color:T.danger }}>
+                  <Glyph name="warning" size={14} color={T.danger} />
                   <span>{patchError}</span>
                 </div>
               )}

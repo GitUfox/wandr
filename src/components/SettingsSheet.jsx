@@ -18,7 +18,7 @@ import { T, FEATURES, ACCOUNT_COPY } from "../lib/constants.js";
 import { MAX_TRIPS } from "../lib/tripStore.js";
 import { getTimeFormat, saveSettings, clearAllWandrData } from "../lib/settings.js";
 import { useAccount } from "../hooks/useAccount.js";
-import { signIn, signOut, fullSync } from "../lib/sync.js";
+import { signIn, signOut, fullSync, cancelPendingLink } from "../lib/sync.js";
 import { timeAgo } from "../lib/utils.js";
 import { placesActivated } from "../lib/places.js";
 
@@ -35,9 +35,38 @@ export default function SettingsSheet({ open, onClose, tripCount = 0, focusAccou
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const account = useAccount();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => account.pendingEmail || "");
   const [justSynced, setJustSynced] = useState(null); // {pushed, pulled} flash
+  const [resends, setResends] = useState(0);
+  const [now, setNow] = useState(Date.now);
   const emailValid = /.+@.+\..+/.test(email.trim());
+
+  // Waiting room (spec P0-4). Resend unlocks RESEND_AFTER_MS after the last
+  // send: Supabase's mailer is slow and rate-limited, so the UI absorbs that
+  // wait instead of letting a traveler hammer the button.
+  const RESEND_AFTER_MS = 30_000;
+  const resendIn = Math.max(0, Math.ceil((account.linkSentAt + RESEND_AFTER_MS - now) / 1000));
+  useEffect(() => {
+    if (!open || !account.pendingLink || resendIn === 0) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [open, account.pendingLink, resendIn]);
+
+  // "Wrong address?" and an expired link both return to the field with the
+  // address that was used, so a typo is a one-character fix, not a retype.
+  useEffect(() => {
+    if (!account.pendingLink && account.pendingEmail && !email) setEmail(account.pendingEmail);
+  }, [account.pendingLink, account.pendingEmail]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function send(addr) {
+    const ok = await signIn(addr);
+    if (ok) setNow(Date.now());
+    return ok;
+  }
+  async function resend() {
+    if (resendIn > 0) return;
+    if (await send(account.pendingEmail)) setResends(n => n + 1);
+  }
 
   // The sheet never unmounts (CSS slide, same as EditTripSheet) — any armed
   // confirm must disarm on close or it greets the next open mid-question.
@@ -168,26 +197,49 @@ export default function SettingsSheet({ open, onClose, tripCount = 0, focusAccou
               </div>
             </div>
           ) : account.pendingLink ? (
-            <div style={{ fontSize: T.fs.body, color: T.ink, lineHeight: 1.55 }}>
-              Check your email — tap the sign-in link on this device and you're in.
+            <div>
+              <div style={{ fontSize: T.fs.body, color: T.ink, lineHeight: 1.55 }}>
+                {ACCOUNT_COPY.linkSent.split("{email}")[0]}
+                <span style={{ fontWeight: 700 }}>{account.pendingEmail}</span>
+                {ACCOUNT_COPY.linkSent.split("{email}")[1]}
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center", flexWrap: "wrap" }}>
+                <button onClick={resend} disabled={resendIn > 0} aria-live="polite"
+                  style={{ fontSize: T.fs.body, fontWeight: 700, color: resendIn > 0 ? T.hint : T.white, background: resendIn > 0 ? T.bg3 : T.accent, border: "none", borderRadius: T.r.sm, padding: "8px 14px", cursor: resendIn > 0 ? "default" : "pointer", fontFamily: T.font, minWidth: 118, fontVariantNumeric: "tabular-nums" }}>
+                  {resendIn > 0 ? ACCOUNT_COPY.linkResendWaiting.replace("{n}", resendIn) : ACCOUNT_COPY.linkResendReady}
+                </button>
+                <button onClick={cancelPendingLink}
+                  style={{ fontSize: T.fs.body, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "8px 14px", cursor: "pointer", fontFamily: T.font }}>
+                  {ACCOUNT_COPY.linkWrongAddress}
+                </button>
+              </div>
+              {resends >= 2 && (
+                <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 8, lineHeight: 1.5 }}>{ACCOUNT_COPY.linkSpamHint}</div>
+              )}
+              {account.lastError && (
+                <div style={{ fontSize: T.fs.meta, color: T.danger, marginTop: 6 }}>{account.lastError}</div>
+              )}
             </div>
           ) : (
             <div>
+              {account.linkExpired && (
+                <div style={{ fontSize: T.fs.body, color: T.ink, lineHeight: 1.55, marginBottom: 10 }}>{ACCOUNT_COPY.linkExpired}</div>
+              )}
               <div style={{ display: "flex", gap: 8 }}>
                 <input ref={emailRef} type="email" value={email} onChange={e => setEmail(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && emailValid && signIn(email.trim())}
+                  onKeyDown={e => e.key === "Enter" && emailValid && send(email.trim())}
                   placeholder="you@example.com" autoComplete="email"
                   style={{ flex: 1, minWidth: 0, padding: "9px 12px", fontSize: T.fs.body, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.sm, color: T.ink, outline: "none", fontFamily: T.font, colorScheme: "dark" }} />
-                <button onClick={() => emailValid && signIn(email.trim())} disabled={!emailValid}
+                <button onClick={() => emailValid && send(email.trim())} disabled={!emailValid}
                   style={{ fontSize: T.fs.body, fontWeight: 700, color: emailValid ? T.white : T.hint, background: emailValid ? T.accent : T.bg3, border: "none", borderRadius: T.r.sm, padding: "8px 14px", cursor: emailValid ? "pointer" : "default", fontFamily: T.font, whiteSpace: "nowrap" }}>
-                  Email me a link
+                  {account.linkExpired ? "Send a fresh link" : "Email me a link"}
                 </button>
               </div>
               <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 8, lineHeight: 1.5 }}>
                 No password — we email you a sign-in link. Syncs your trips and profile across devices.
               </div>
               {account.lastError && (
-                <div style={{ fontSize: T.fs.meta, color: "#f08070", marginTop: 6 }}>{account.lastError}</div>
+                <div style={{ fontSize: T.fs.meta, color: T.danger, marginTop: 6 }}>{account.lastError}</div>
               )}
             </div>
           )}
