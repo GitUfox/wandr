@@ -32,6 +32,10 @@ try {
 
   if (res.ok && body.ok) {
     console.log(`✅ Upstash pinged — ${body.pingedAt} (${body.roundTripMs}ms round-trip)`);
+    const sb = body.supabase || {};
+    if (sb.skipped) console.log("ℹ️  Supabase ping skipped — project not configured on the server");
+    else if (sb.ok) console.log(`✅ Supabase pinged — status ${sb.status}`);
+    else console.error(`❌ Supabase ping failed — ${sb.status || sb.error}. Is the project paused?`);
   } else if (res.status === 401) {
     console.error("❌ Rejected — CRON_SECRET here doesn't match the one in Vercel.");
     process.exit(1);

@@ -1,6 +1,10 @@
 /**
- * Upstash keepalive — a daily Redis round-trip so the free-tier database is
- * never flagged inactive and deactivated.
+ * Keepalive — one daily round-trip to each free-tier datastore so neither is
+ * flagged inactive and shut down.
+ *
+ * Supabase pauses a Free-plan project after 7 days with no API requests. It
+ * happened on 2026-10-08: the project host lost its DNS record and every
+ * sign-in failed. One REST request per day is enough activity to prevent it.
  *
  * Wandr's only other Redis traffic is per-IP rate limiting, which fires only
  * when someone actually builds a trip. On a low-traffic personal app that can
@@ -17,6 +21,9 @@
  *                             lever for burning the Upstash command quota.
  *   UPSTASH_REDIS_REST_URL  — required (already set for rate limiting)
  *   UPSTASH_REDIS_REST_TOKEN— required (already set for rate limiting)
+ *   VITE_SUPABASE_URL       — optional. Without it the Supabase ping is skipped.
+ *   VITE_SUPABASE_ANON_KEY  — optional. Publishable key; RLS makes the query
+ *                             return no rows, the request still counts as use.
  */
 
 import { timingSafeEqual } from "crypto";
@@ -47,6 +54,22 @@ export function isAuthorizedCron(req, secret) {
   // length itself is not a meaningful leak for a random secret.
   if (provided.length !== expected.length) return false;
   return timingSafeEqual(provided, expected);
+}
+
+/**
+ * One REST request against the trips table. Anonymous, so RLS returns an
+ * empty list. Exported for tests. Returns { ok, status } or { skipped: true }.
+ */
+export async function pingSupabase(url, key, fetchImpl = fetch) {
+  if (!url || !key) return { skipped: true };
+  try {
+    const r = await fetchImpl(`${url}/rest/v1/trips?select=id&limit=1`, {
+      headers: { apikey: key, authorization: `Bearer ${key}` },
+    });
+    return { ok: r.ok, status: r.status };
+  } catch (err) {
+    return { ok: false, error: err?.cause?.code || err?.message || "fetch failed" };
+  }
 }
 
 export default async function handler(req, res) {
@@ -86,8 +109,11 @@ export default async function handler(req, res) {
       return;
     }
 
+    const supabase = await pingSupabase(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
+    if (supabase.ok === false) console.error("[wandr keepalive] Supabase ping failed:", supabase.status || supabase.error);
+
     console.log(`[wandr keepalive] ok — ${stamp} (${roundTripMs}ms)`);
-    res.status(200).json({ ok: true, pingedAt: stamp, roundTripMs });
+    res.status(200).json({ ok: true, pingedAt: stamp, roundTripMs, supabase });
   } catch (err) {
     console.error("[wandr keepalive] Redis error:", err.message);
     res.status(502).json({ error: "Couldn't reach the datastore." });
