@@ -8,7 +8,7 @@ import { useState, useEffect, useRef } from "react";
 import { MODES, T, FEATURES, AI_DISCLAIMER } from "../lib/constants.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { useTimeFormat } from "../hooks/useTimeFormat.js";
-import { arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime, findGroundedVenue, countIdeas, tripDayIndex, parseTime, formatTime } from "../lib/utils.js";
+import { showSaveTripCard, arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime, findGroundedVenue, countIdeas, tripDayIndex, parseTime, formatTime } from "../lib/utils.js";
 import { bucketTicketRow, bucketPrintBody, bucketPlainText } from "../lib/printBucket.js";
 import { parsePlan } from "../lib/planModel.js";
 import { TEAM_SHORT } from "../lib/mlbTeams.js";
@@ -20,6 +20,7 @@ import EditTripSheet from "./EditTripSheet.jsx";
 import SettingsSheet from "./SettingsSheet.jsx";
 import ProfileChip from "./ProfileChip.jsx";
 import SyncStatusLine from "./SyncStatusLine.jsx";
+import SaveTripCard, { readSaveCardDismissed, writeSaveCardDismissed } from "./SaveTripCard.jsx";
 import { useAccount } from "../hooks/useAccount.js";
 import StardustBurst from "./StardustBurst.jsx";
 import Glyph from "./Glyphs.jsx";
@@ -269,6 +270,10 @@ export default function Dashboard({
   const [showAccount, setShowAccount] = useState(false); // identity chip → account card
   const account = useAccount();
   useEffect(() => { if (account.linkExpired) setShowAccount(true); }, [account.linkExpired]); // expired sign-in link
+  // Save-this-trip card (spec P0-2): once per device. Sign-in retires it too.
+  const [saveCardDismissed, setSaveCardDismissed] = useState(readSaveCardDismissed);
+  const showSaveCard = showSaveTripCard({ trip, account, dismissed: saveCardDismissed });
+  function dismissSaveCard() { writeSaveCardDismissed(); setSaveCardDismissed(true); }
   const online = useOnline();
   // The Settings sheet opens from this screen (identity chip). Subscribing
   // re-renders every time on screen when the 12h/24h format changes.
@@ -820,6 +825,11 @@ export default function Dashboard({
         </div>
 
         <div style={{ padding:"1.25rem", background:T.bg0, minHeight:400 }}>
+
+          {/* One-time "Save this trip" sign-in ask (spec P0-2) */}
+          {showSaveCard && (
+            <SaveTripCard onSignIn={() => { dismissSaveCard(); setShowAccount(true); }} onDismiss={dismissSaveCard} />
+          )}
 
           {/* One-time "save these as your defaults?" prompt (first-time users) */}
           {showProfilePrompt && (

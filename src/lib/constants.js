@@ -257,6 +257,13 @@ export const ACCOUNT_COPY = {
   linkWrongAddress:  "Wrong address?",
   linkSpamHint:      "Still nothing? Check your spam folder — and that the address above is right.",
   linkExpired:       "That sign-in link has expired — send yourself a fresh one.",
+  // Save-this-trip card (spec P0-2). Shown once, after the first build.
+  // Kraig's copy: the trip IS already saved on the device, so the title is
+  // literal and the body says what sign-in adds.
+  saveTitle:   "Save this trip",
+  saveBody:    "It's saved on this device. Sign in and it's on your phone and laptop too. One email, no password.",
+  saveAction:  "Sign in",
+  saveDismiss: "Maybe later",
   signOutTitle: "Sign out?",
   signOutBody:  "Your trips stay on this device. Your account keeps its own copy.",
 };

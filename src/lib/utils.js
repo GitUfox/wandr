@@ -587,3 +587,14 @@ export function syncStatus(account, online = true) {
   if (account.lastSync > 0) return { kind: "saved", at: account.lastSync };
   return null;
 }
+
+/**
+ * Whether the save-this-trip card (spec P0-2) should show. Pure.
+ * Once per device: never again after a dismiss or a sign-in, never on a
+ * skeleton or failed trip, never on builds without accounts.
+ */
+export function showSaveTripCard({ trip, account, dismissed }) {
+  if (!trip || trip._building || trip._error) return false;
+  if (!account?.configured || account.email) return false;
+  return !dismissed;
+}
