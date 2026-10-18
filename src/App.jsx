@@ -15,6 +15,7 @@ import WelcomeScreen from "./components/WelcomeScreen.jsx";
 import InterviewFlow from "./components/InterviewFlow.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import PackingList from "./components/PackingList.jsx";
 
 const GF = "https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap";
 
@@ -330,6 +331,9 @@ export default function Wandr() {
       if (isBucket && opts.replaceId && trip?.bucketPicks) {
         result.bucketPicks = carryBucketPicks(trip.bucketPicks, result.categories);
       }
+      // A Trip Details rebuild keeps the traveler's packing list — it is theirs,
+      // not the model's. Counts refit to the new nights at render (applyNights).
+      if (opts.replaceId && trip?.packing) result.packing = trip.packing;
       // A rebuild invalidates that trip's existing plan; a brand-new trip has
       // none. Either way the incoming trip starts with no plan attached.
       clearSavedPlan(opts.replaceId || undefined);
@@ -367,6 +371,19 @@ export default function Wandr() {
     const picks = { ...(trip.bucketPicks || {}) };
     if (picks[key]) delete picks[key]; else picks[key] = true;
     const updated = { ...trip, bucketPicks: picks };
+    setTrip(updated);
+    setTripStore(persistTrip(updated, { replaceId: trip.id }));
+    scheduleSyncPush();
+  }
+
+  /**
+   * Packing list (1C+2C, 2026-10-17): the screen hands back a whole new
+   * trip.packing; this is the ONE write path. Same mechanics as the bucket
+   * picks — persistTrip(replaceId) keeps id + position, the trip row syncs.
+   */
+  function updatePacking(next) {
+    if (!trip?.id || trip._building) return;
+    const updated = { ...trip, packing: next };
     setTrip(updated);
     setTripStore(persistTrip(updated, { replaceId: trip.id }));
     scheduleSyncPush();
@@ -612,10 +629,24 @@ export default function Wandr() {
                   onTweakActivity={(dayIdx, actId, instruction) => tweakActivity(dayIdx, actId, instruction, trip)}
                   tweakingId={tweakingId}
                   onTogglePick={toggleBucketPick}
+                  onOpenPacking={() => setScreen("packing")}
                   onReset={resetAll}
                   showProfilePrompt={!!trip && !trip._error && !trip._building && !savedProfile && !profilePromptDismissed}
                   onSaveProfile={handleSaveProfile}
                   onDismissProfilePrompt={handleDismissProfilePrompt}
+                />
+              </ErrorBoundary>
+            </Page>
+          )}
+
+          {screen === "packing" && trip && (
+            <Page key="packing">
+              <ErrorBoundary>
+                <PackingList
+                  trip={trip}
+                  trips={allTrips}
+                  onChange={updatePacking}
+                  onBack={() => setScreen("dashboard")}
                 />
               </ErrorBoundary>
             </Page>

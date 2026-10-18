@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { T, DEST_PLACEHOLDERS, INPUT_CAPS } from "../lib/constants.js";
 import { parseISODate, countIdeas } from "../lib/utils.js";
+import { packingNudge } from "../lib/packing.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { useIsWide } from "../hooks/useIsWide.js";
 import { fetchDestinationSuggestions } from "../lib/places.js";
@@ -197,7 +198,9 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
       ? "build didn't finish — tap to rebuild"
       : isBucketTrip
         ? [`${ideas} ${ideas === 1 ? "idea" : "ideas"}`, picked ? `${picked} picked` : ""].filter(Boolean).join(" · ")
-        : [stub && `${stub.mon} ${stub.day}`, departsIn(start)].filter(Boolean).join(" · ") || "planning";
+        // Packing nudge (3C): the same packingNudge() line the dashboard row
+        // shows — "25 to pack" / "Last call · 6" — only inside the 7-day window.
+        : [stub && `${stub.mon} ${stub.day}`, departsIn(start), packingNudge(t)?.short].filter(Boolean).join(" · ") || "planning";
     if (confirming) {
       return (
         <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, border: `1px solid ${T.border2}`, borderRadius: T.r.md, background: T.bg1, padding: "12px 14px", marginBottom: 8 }}>

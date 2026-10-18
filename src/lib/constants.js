@@ -72,6 +72,8 @@ export const INPUT_CAPS = {
   stay:          160,
   when:           80,  // bucket "when, roughly?" — a season phrase, not an essay
   editPrompt:   1000,  // EditTripSheet instruction textareas
+  packingItem:    60,  // PackingList add-item input
+  packingShelf:   40,  // PackingList new-shelf input
 };
 
 // ── Motion harness flag ───────────────────────────────────────────────────────

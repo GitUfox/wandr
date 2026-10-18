@@ -24,6 +24,7 @@ import SaveTripCard, { readSaveCardDismissed, writeSaveCardDismissed } from "./S
 import { useAccount } from "../hooks/useAccount.js";
 import StardustBurst from "./StardustBurst.jsx";
 import Glyph from "./Glyphs.jsx";
+import { packingNudge, packingTotals } from "../lib/packing.js";
 
 /* TiltedEarthMark — the static tilted-earth construction: 23.5° sphere, one
    meridian, CURVED latitude arcs (straight chords are what read as a
@@ -257,6 +258,7 @@ export default function Dashboard({
   onTweakActivity,
   tweakingId,
   onTogglePick,
+  onOpenPacking,
   onReset,
   showProfilePrompt,
   onSaveProfile,
@@ -882,6 +884,33 @@ export default function Dashboard({
               </div>
             </div>
           )}
+
+          {/* Packing row (1C entry + 3C nudge, 2026-10-17). Always the way to
+              the packing screen for dated trips; inside the 7-day window it
+              carries the ONE nudge line packingNudge() also gives the welcome
+              shelf stub, so the two surfaces can never disagree. Accent
+              treatment while the nudge is live, quiet otherwise. Bucket trips
+              have no dates and no packing. */}
+          {!building && !isBucket && onOpenPacking && (() => {
+            const nudge = packingNudge(trip);
+            const started = !!trip.packing?.shelves?.length;
+            const pt = packingTotals(trip.packing);
+            const hot = !!nudge && nudge.kind !== "closed";
+            const label = nudge ? nudge.long : started ? `Packing · ${pt.packed} / ${pt.total}` : "Packing list";
+            const hint = nudge || started ? null : "Seeded from this trip: dates, nights, interests";
+            return (
+              <button onClick={onOpenPacking} data-testid="packing-row"
+                style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"11px 14px", marginBottom:12, borderRadius:T.r.md, textAlign:"left", cursor:"pointer", fontFamily:T.font,
+                  background: hot ? "rgba(201,100,66,.09)" : T.bg1, border:`1px solid ${hot ? "rgba(201,100,66,.32)" : T.border}` }}>
+                <Glyph name="trip" size={14} color={hot ? T.accent : T.muted} />
+                <span style={{ flex:1, minWidth:0 }}>
+                  <span style={{ display:"block", fontSize:T.fs.body, fontWeight:hot ? 700 : 600, color:hot ? T.ink : T.muted }}>{label}</span>
+                  {hint && <span style={{ display:"block", fontSize:T.fs.meta, color:T.hint, marginTop:1 }}>{hint}</span>}
+                </span>
+                <span style={{ fontFamily:T.fontMono, fontSize:T.fs.micro, letterSpacing:".12em", textTransform:"uppercase", color:T.accent, fontWeight:400, flexShrink:0 }}>Open</span>
+              </button>
+            );
+          })()}
 
           {/* Right Now mode (1A): on trip days, today leads with the one verb.
               Needs a parsed plan that actually covers today; hidden while the
