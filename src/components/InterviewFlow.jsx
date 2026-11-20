@@ -10,7 +10,10 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { STEPS, T, INPUT_CAPS } from "../lib/constants.js";
 import { MLB_TEAMS } from "../lib/mlbTeams.js";
+import { chipSt, fieldSt, labelSt, optionalSt, primaryBtnSt } from "../lib/styles.js";
 import DateRangePicker from "./DateRangePicker.jsx";
+import TripinLogo from "./TripinLogo.jsx";
+import StationSymbol from "./StationSymbol.jsx";
 
 // Interest chips that reveal the favorite-team picker (§7 personalization).
 const BASEBALL_TAGS = ["Baseball", "Spring-training"];
@@ -23,12 +26,32 @@ import InterestsPicker from "./InterestsPicker.jsx";
 // wrapper's bottom margin doesn't throw off vertical centering).
 const INPUT_MIC = { top: 5, bottom: "auto", right: 8, width: 28, height: 28 };
 
-const inputSt = {
-  width:"100%", padding:"10px 14px", border:`1px solid ${T.border2}`, borderRadius:T.r.md,
-  background:T.bg3, color:T.ink, outline:"none", fontSize:T.fs.ui, fontFamily:T.font,
-  marginBottom:"1.25rem", colorScheme:"dark", boxSizing:"border-box",
-};
+const inputSt = { ...fieldSt, marginBottom:"1.25rem" };
 
+/**
+ * ProgressLine: the interview as one line with a station per step.
+ * Done steps are filled, the current step is the large ring, later steps are
+ * small rings. HTML layout on purpose: an SVG stretched to the column width
+ * would distort the circles.
+ */
+export function ProgressLine({ num, total }) {
+  const frac = total > 1 ? (num - 1) / (total - 1) : 0;
+  return (
+    <div role="progressbar" aria-label={`Step ${num} of ${total}`} aria-valuemin={1} aria-valuemax={total} aria-valuenow={num}
+      style={{ position:"relative", height:28 }}>
+      <div style={{ position:"absolute", left:10, right:10, top:9, height:10, background:T.border }}>
+        <div style={{ width:`${Math.round(frac * 100)}%`, height:"100%", background:T.line[0], transition:"width .3s ease" }} />
+      </div>
+      <div style={{ position:"relative", height:"100%", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        {Array.from({ length: total }, (_, i) => (
+          <StationSymbol key={i}
+            kind={i + 1 < num ? "done" : "stop"}
+            size={i + 1 === num ? 28 : i + 1 < num ? 20 : 18} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const STEP_VARIANTS = {
   enter:  (dir) => ({ x: dir > 0 ? 32 : -32, opacity: 0 }),
@@ -69,7 +92,6 @@ export default function InterviewFlow({
   // six — continue mode skips four of them.
   const total = stepTotal || STEPS.length;
   const num   = stepNumber || step + 1;
-  const pct   = Math.round(((num - 1) / total) * 100);
   const [expanded, setExpanded] = useState(new Set());
 
   function toggleChip(o) {
@@ -84,23 +106,21 @@ export default function InterviewFlow({
   return (
     <div style={{ minHeight:"100vh", width:"100%", background:T.bg0, fontFamily:T.font }}>
       <style>{`html,body,#root{background:${T.bg0}!important;margin:0;padding:0;min-height:100vh;width:100%} *{box-sizing:border-box}
-        /* Chips bold on select; reserve the bold width up front so toggling
-           weight never changes the chip size (no flex-wrap reflow). */
-        .wandr-chip{position:relative}
-        .wandr-chip::after{content:attr(data-label);display:block;height:0;overflow:hidden;visibility:hidden;font-weight:700;pointer-events:none}`}</style>
+`}</style>
       <div style={{ maxWidth:560, margin:"0 auto", padding:"2rem 1.5rem", minHeight:"100vh" }}>
 
         {/* Breadcrumb + progress bar. The mark is the way home, but answers
             live only in memory until a build succeeds — so past step 1 the
             exit goes through a confirm; on step 1 there's nothing to lose. */}
-        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:"2.25rem" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", minHeight:44, marginBottom:18 }}>
           <button onClick={() => (step > 0 ? setConfirmHome(true) : onWelcome())} aria-label="Back to home"
-            style={{ fontSize:T.fs.body, color:T.hint, padding:0, background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>Tripin</button>
-          <div style={{ fontSize:T.fs.body, color:T.border }}>/</div>
-          <div style={{ flex:1, height:2, background:T.bg3, borderRadius:1 }}>
-            <div style={{ width:`${pct}%`, height:"100%", background:T.accent, borderRadius:1, transition:"width .4s ease" }} />
-          </div>
-          <span style={{ fontSize:T.fs.meta, color:T.hint, minWidth:36, textAlign:"right" }}>{num} / {total}</span>
+            style={{ minHeight:44, padding:0, background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center" }}>
+            <TripinLogo size="xs" />
+          </button>
+          <span style={{ fontSize:T.fs.ui, fontWeight:700, color:T.ink }}>Step {num} of {total}</span>
+        </div>
+        <div style={{ marginBottom:"2rem" }}>
+          <ProgressLine num={num} total={total} />
         </div>
 
         {/* Leave-setup confirm — backdrop tap stays (the safe default). */}
@@ -108,18 +128,18 @@ export default function InterviewFlow({
           <div onClick={() => setConfirmHome(false)}
             style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.6)", zIndex:20, display:"flex", alignItems:"center", justifyContent:"center", padding:"1.5rem" }}>
             <div onClick={e => e.stopPropagation()}
-              style={{ width:"100%", maxWidth:340, background:T.bg1, border:`1px solid ${T.border2}`, borderRadius:T.r.lg, padding:"1.4rem 1.5rem" }}>
-              <div style={{ fontSize:T.fs.title, fontWeight:800, color:T.ink, marginBottom:6 }}>Leave this trip setup?</div>
+              style={{ width:"100%", maxWidth:340, background:T.bg1, border:`3px solid ${T.ink}`, borderRadius:T.r.lg, padding:"1.4rem 1.5rem" }}>
+              <div style={{ fontSize:T.fs.title, fontWeight:900, letterSpacing:"-.02em", color:T.ink, marginBottom:6 }}>Leave this trip setup?</div>
               <div style={{ fontSize:T.fs.body, color:T.muted, lineHeight:1.55, marginBottom:16 }}>
                 Your answers so far won't be saved.
               </div>
               <div style={{ display:"flex", gap:8 }}>
                 <button onClick={() => setConfirmHome(false)}
-                  style={{ flex:1, padding:"11px 0", borderRadius:T.r.md, fontSize:T.fs.ui, fontWeight:700, color:T.white, background:T.accent, border:"none", cursor:"pointer", fontFamily:T.font }}>
+                  style={{ flex:1, minHeight:48, borderRadius:T.r.pill, fontSize:T.fs.ui, fontWeight:900, color:T.white, background:T.ink, border:"none", cursor:"pointer", fontFamily:T.font }}>
                   Keep planning
                 </button>
                 <button onClick={() => { setConfirmHome(false); onWelcome(); }}
-                  style={{ flex:1, padding:"11px 0", borderRadius:T.r.md, fontSize:T.fs.ui, fontWeight:600, color:T.muted, background:"transparent", border:`1px solid ${T.border}`, cursor:"pointer", fontFamily:T.font }}>
+                  style={{ flex:1, minHeight:48, borderRadius:T.r.pill, fontSize:T.fs.ui, fontWeight:700, color:T.ink, background:"transparent", border:`2px solid ${T.ink}`, cursor:"pointer", fontFamily:T.font }}>
                   Leave
                 </button>
               </div>
@@ -142,7 +162,7 @@ export default function InterviewFlow({
           transition={STEP_TRANSITION}
         >
 
-        <div style={{ fontSize:22 /* off-ramp: interview question hero — sits between title(17) and hero(28); mapping to title visibly demotes it */, fontWeight:700, lineHeight:1.25, marginBottom:S.sub?6:"1.5rem", color:T.ink }}>{S.q}</div>
+        <h1 style={{ margin:0, fontFamily:T.fontHero, fontSize:T.fs.question, fontWeight:900, lineHeight:1, letterSpacing:"-.04em", marginBottom:S.sub?10:"1.5rem", color:T.ink }}>{S.q}</h1>
         {S.sub && <p style={{ fontSize:T.fs.body, color:T.muted, marginBottom:"1.5rem", lineHeight:1.6 }}>{S.sub}</p>}
 
         {/* ── Text ── */}
@@ -157,13 +177,13 @@ export default function InterviewFlow({
 
             {/* Getting around */}
             <div>
-              <div style={{ fontSize:T.fs.label, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>Getting around</div>
-              <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+              <div style={labelSt}>Getting around</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
                 {["Car", "Transit / Rideshare", "Walking / Cycling"].map(o => {
                   const sel = logTransport === o;
                   return (
-                    <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogTransport(p => p === o ? "" : o)}
-                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accentSoft:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                    <button key={o} aria-pressed={sel} onClick={() => setLogTransport(p => p === o ? "" : o)}
+                      style={chipSt(sel)}>
                       {o}
                     </button>
                   );
@@ -173,13 +193,13 @@ export default function InterviewFlow({
 
             {/* Pace */}
             <div>
-              <div style={{ fontSize:T.fs.label, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>Pace</div>
-              <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+              <div style={labelSt}>Pace</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
                 {["Slow", "Balanced", "Fast"].map(o => {
                   const sel = logPace === o;
                   return (
-                    <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogPace(p => p === o ? "" : o)}
-                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accentSoft:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                    <button key={o} aria-pressed={sel} onClick={() => setLogPace(p => p === o ? "" : o)}
+                      style={chipSt(sel)}>
                       {o}
                     </button>
                   );
@@ -189,13 +209,13 @@ export default function InterviewFlow({
 
             {/* Rhythm — when the day starts/ends (distinct from Pace = how much per day) */}
             <div>
-              <div style={{ fontSize:T.fs.label, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>Rhythm</div>
-              <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+              <div style={labelSt}>Rhythm</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
                 {["Early riser", "Flexible", "Night owl"].map(o => {
                   const sel = logRhythm === o;
                   return (
-                    <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogRhythm(p => p === o ? "" : o)}
-                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accentSoft:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                    <button key={o} aria-pressed={sel} onClick={() => setLogRhythm(p => p === o ? "" : o)}
+                      style={chipSt(sel)}>
                       {o}
                     </button>
                   );
@@ -205,13 +225,13 @@ export default function InterviewFlow({
 
             {/* What are you after? */}
             <div>
-              <div style={{ fontSize:T.fs.label, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:8 }}>What are you after?</div>
-              <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+              <div style={labelSt}>What are you after?</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
                 {["Famous sights", "Hidden gems", "Mix of both"].map(o => {
                   const sel = logFocus === o;
                   return (
-                    <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogFocus(p => p === o ? "" : o)}
-                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accentSoft:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                    <button key={o} aria-pressed={sel} onClick={() => setLogFocus(p => p === o ? "" : o)}
+                      style={chipSt(sel)}>
                       {o}
                     </button>
                   );
@@ -221,8 +241,8 @@ export default function InterviewFlow({
 
             {/* Where are you staying — optional */}
             <div>
-              <div style={{ fontSize:T.fs.label, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:5 }}>
-                Where are you staying? <span style={{ fontWeight:400, letterSpacing:"normal", textTransform:"none", color:T.hint, opacity:.6 }}>· optional</span>
+              <div style={labelSt}>
+                Where are you staying? <span style={optionalSt}>· optional</span>
               </div>
               <input type="text" value={logStay} onChange={e => setLogStay(e.target.value)}
                 placeholder="Times Square · Downtown · West Village · Countryside" maxLength={INPUT_CAPS.stay}
@@ -243,7 +263,7 @@ export default function InterviewFlow({
               <div style={{ marginTop:2, marginBottom:"1.25rem" }}>
                 {/* Dedicated avoid field — fed to the AVOID prompt instruction as a hard exclusion */}
                 <div>
-                  <div style={{ fontSize:T.fs.meta, fontWeight:700, color:T.hint, textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 }}>Anything to avoid?</div>
+                  <div style={labelSt}>Anything to avoid?</div>
                   <div style={{ position:"relative" }}>
                     <input type="text" value={avoidText || ""} onChange={e => setAvoidText(e.target.value)}
                       placeholder="e.g. crowds · seafood · long hikes · touristy spots" maxLength={INPUT_CAPS.avoid}
@@ -263,26 +283,26 @@ export default function InterviewFlow({
             the free-text answer only flavors curation. Still step 1 of 6. */}
         {S.type === "daterange" && tripStyle === "bucket" && (
           <div style={{ marginBottom:"1.25rem" }}>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:7, marginBottom:12 }}>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:12 }}>
               {[["now", "Going now"], ["later", "Not yet"]].map(([val, label]) => {
                 const sel = bucketNow === val;
                 return (
-                  <button key={val} className="wandr-chip" data-label={label} onClick={() => setBucketNow(sel ? "" : val)}
-                    style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accent:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.white:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                  <button key={val} aria-pressed={sel} onClick={() => setBucketNow(sel ? "" : val)}
+                    style={chipSt(sel)}>
                     {label}
                   </button>
                 );
               })}
             </div>
             {bucketNow === "now" && (
-              <div className="fade-up" style={{ fontSize:T.fs.body, color:T.hint, lineHeight:1.5 }}>
+              <div className="fade-up" style={{ fontSize:T.fs.body, color:T.muted, lineHeight:1.5 }}>
                 We'll lean the list toward what's great this time of year.
               </div>
             )}
             {bucketNow === "later" && (
               <div className="fade-up">
-                <div style={{ fontSize:T.fs.label, textTransform:"uppercase", letterSpacing:".12em", color:T.hint, marginBottom:5 }}>
-                  When, roughly? <span style={{ fontWeight:400, letterSpacing:"normal", textTransform:"none", opacity:.6 }}>· optional</span>
+                <div style={labelSt}>
+                  When, roughly? <span style={optionalSt}>· optional</span>
                 </div>
                 <input type="text" value={bucketWhen} onChange={e => setBucketWhen(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && isValid && onAdvance()}
@@ -298,12 +318,12 @@ export default function InterviewFlow({
 
         {/* ── Chips only ── */}
         {S.type === "chips" && (
-          <div style={{ display:"flex", flexWrap:"wrap", gap:7, marginBottom:"1.25rem" }}>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:"1.25rem" }}>
             {S.opts.map(o => {
               const sel = chips.includes(o);
               return (
-                <button key={o} className="wandr-chip" data-label={o} onClick={() => toggleChip(o)}
-                  style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accent:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.white:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                <button key={o} aria-pressed={sel} onClick={() => toggleChip(o)}
+                  style={chipSt(sel)}>
                   {o}
                 </button>
               );
@@ -334,12 +354,12 @@ export default function InterviewFlow({
             ) : (
               /* Flat chips (party step) */
               <>
-                <div style={{ display:"flex", flexWrap:"wrap", gap:7, marginBottom:10 }}>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:16 }}>
                   {S.opts.map(o => {
                     const sel = chips.includes(o);
                     return (
-                      <button key={o} className="wandr-chip" data-label={o} onClick={() => toggleChip(o)}
-                        style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accent:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.white:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                      <button key={o} aria-pressed={sel} onClick={() => toggleChip(o)}
+                        style={chipSt(sel)}>
                         {o}
                       </button>
                     );
@@ -347,14 +367,14 @@ export default function InterviewFlow({
                 </div>
                 {/* Kids sub-question — shown when a group is selected (not Solo) */}
                 {S.id === "party" && chips.length > 0 && !chips.includes("Solo") && (
-                  <div style={{ marginBottom:10, padding:"12px 14px", background:T.bg2, borderRadius:T.r.md, border:`1px solid ${T.border}` }}>
-                    <div style={{ fontSize:T.fs.body, fontWeight:700, color:T.muted, marginBottom:8 }}>Any kids?</div>
-                    <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                  <div style={{ margin:"6px 0 14px", paddingTop:14, borderTop:`1px solid ${T.border}` }}>
+                    <div style={labelSt}>Any kids?</div>
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
                       {["No kids", "Under 5", "5 to 12", "Teens"].map(o => {
                         const sel = kids === o;
                         return (
-                          <button key={o} className="wandr-chip" data-label={o} onClick={() => setKids(k => k === o ? "" : o)}
-                            style={{ padding:"6px 12px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accentSoft:T.bg3, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                          <button key={o} aria-pressed={sel} onClick={() => setKids(k => k === o ? "" : o)}
+                            style={chipSt(sel)}>
                             {o}
                           </button>
                         );
@@ -389,15 +409,15 @@ export default function InterviewFlow({
         </AnimatePresence>
 
         {/* ── Navigation ── */}
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:".5rem" }}>
-          <button onClick={step > 0 ? onBack : onWelcome} style={{ fontSize:T.fs.body, color:T.hint, padding:"8px 0", background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>← Back</button>
-          <button onClick={onAdvance} disabled={!isValid}
-            style={{ background:isValid?T.accent:T.bg3, color:isValid?T.white:T.hint, padding:"10px 26px", borderRadius:T.r.md, fontSize:T.fs.body, fontWeight:700, cursor:isValid?"pointer":"default", border:"none", fontFamily:T.font, transition:"all .15s" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:16, marginTop:"1rem" }}>
+          <button onClick={step > 0 ? onBack : onWelcome}
+            style={{ minHeight:56, padding:"0 4px", fontSize:T.fs.ui, fontWeight:700, color:T.ink, background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>← Back</button>
+          <button onClick={onAdvance} disabled={!isValid} style={{ ...primaryBtnSt(isValid), flex:1 }}>
             {step === STEPS.length - 1 ? (tripStyle === "bucket" ? "Build my list →" : "Build my trip →") : "Continue →"}
           </button>
         </div>
         {S.id === "notes" && (
-          <p style={{ fontSize:T.fs.meta, color:T.hint, textAlign:"center", marginTop:12 }}>Optional — tap Continue to skip</p>
+          <p style={{ fontSize:T.fs.body, color:T.muted, textAlign:"center", marginTop:12 }}>Optional — tap Continue to skip</p>
         )}
 
       </div>

@@ -9,34 +9,36 @@
  *   onChange — setter, called with the chosen tier value
  */
 import { BUDGET_TIERS, T } from "../lib/constants.js";
+import StationSymbol from "./StationSymbol.jsx";
 
+// Transit Diagram (direction E): the tiers are ROWS on one ruled list, not
+// cards. The station symbol is the selection mark (ring = open, disc = picked).
 export default function BudgetTiers({ value, onChange }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {BUDGET_TIERS.map(({ value: v, label, price, desc }) => {
+    <div style={{ display: "flex", flexDirection: "column", borderBottom: `1px solid ${T.border}` }}>
+      {BUDGET_TIERS.map(({ value: v, label, price, desc }, i) => {
         const sel = value === v;
         return (
           <button
             key={v}
             type="button"
+            aria-pressed={sel}
             onClick={() => onChange(v)}
             style={{
-              display: "flex", alignItems: "center", gap: 12,
-              padding: "11px 14px", borderRadius: T.r.md,
-              background: sel ? T.accentSoft : T.bg1,
-              border: sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
-              cursor: "pointer", fontFamily: T.font, textAlign: "left",
-              transition: "all .15s",
+              display: "flex", alignItems: "center", gap: 14, minHeight: 68,
+              padding: "10px 0", background: "transparent", border: "none",
+              borderTop: i === 0 ? `3px solid ${T.ink}` : `1px solid ${T.border}`,
+              cursor: "pointer", fontFamily: T.font, textAlign: "left", color: T.ink,
             }}
           >
+            <StationSymbol kind={sel ? "done" : "stop"} size={24} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: T.fs.body, fontWeight: 700, color: sel ? T.accent : T.ink, marginBottom: 1 }}>
+              <div style={{ fontSize: T.fs.ui, fontWeight: sel ? 900 : 700, color: T.ink, marginBottom: 2 }}>
                 {label}
-                {price && <span style={{ fontWeight: 400, fontSize: T.fs.body, color: sel ? T.accentInk : T.hint, marginLeft: 8 }}>{price}</span>}
+                {price && <span style={{ fontWeight: 500, fontSize: T.fs.body, color: T.muted, marginLeft: 8 }}>{price}</span>}
               </div>
-              <div style={{ fontSize: T.fs.meta, color: sel ? T.accentInk : T.hint }}>{desc}</div>
+              <div style={{ fontSize: T.fs.body, color: T.muted }}>{desc}</div>
             </div>
-            {sel && <span style={{ fontSize: T.fs.ui, color: T.accent }}>✓</span>}
           </button>
         );
       })}

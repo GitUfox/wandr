@@ -6,6 +6,7 @@
  */
 import { useState } from "react";
 import { T } from "../lib/constants.js";
+import { labelSt } from "../lib/styles.js";
 
 const DAYS   = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -126,13 +127,13 @@ export default function DateRangePicker({ d1, setD1, d2, setD2 }) {
           const active = open && phase === p;
           return (
             <div key={label}>
-              <div style={{ fontSize: T.fs.label, textTransform: "uppercase", letterSpacing: ".12em", color: T.hint, marginBottom: 5 }}>{label}</div>
+              <div style={labelSt}>{label}</div>
               <button
                 onClick={() => open && phase === p ? setOpen(false) : openForPhase(p)}
                 style={{
-                  width: "100%", padding: "10px 14px", borderRadius: T.r.md, background: active ? T.accentSoft : T.bg3,
-                  border: active ? `1.5px solid ${T.accent}` : `1px solid ${T.border2}`,
-                  color: iso ? T.ink : T.hint, fontSize: T.fs.ui, fontFamily: T.font,
+                  width: "100%", minHeight: 52, padding: "0 16px", borderRadius: T.r.md, background: active ? T.accentSoft : T.bg1,
+                  border: `2px solid ${active ? T.accent : T.ink}`,
+                  color: iso ? T.ink : T.muted, fontSize: T.fs.ui, fontWeight: iso ? 700 : 400, fontFamily: T.font,
                   textAlign: "left", cursor: "pointer", transition: "all .15s",
                 }}>
                 {fmt(iso) || ph}
@@ -144,35 +145,35 @@ export default function DateRangePicker({ d1, setD1, d2, setD2 }) {
 
       {/* Nights badge */}
       {nights && nights > 0 && !open && (
-        <div style={{ fontSize: T.fs.meta, color: T.accent, marginBottom: 8 }}>
+        <div style={{ fontSize: T.fs.ui, fontWeight: 700, color: T.ink, margin: "10px 0 8px" }}>
           {nights} night{nights !== 1 ? "s" : ""}
         </div>
       )}
 
       {/* Validation message */}
       {d1 && d2 && d2 <= d1 && (
-        <div style={{ fontSize: T.fs.body, color: T.danger, padding: "6px 10px", background: "rgba(200,80,60,.1)", border: "1px solid rgba(200,80,60,.25)", borderRadius: T.r.sm, marginTop: 6 }}>
+        <div style={{ fontSize: T.fs.body, color: T.danger, padding: "6px 10px", background: T.accentSoft, border: `1px solid ${T.danger}`, borderRadius: T.r.sm, marginTop: 6 }}>
           Departure must be after arrival
         </div>
       )}
 
       {/* Calendar */}
       {open && (
-        <div style={{ background: T.bg1, border: `1px solid ${T.border}`, borderRadius: T.r.md, padding: "16px", userSelect: "none" }}>
+        <div style={{ background: T.bg1, border: `2px solid ${T.ink}`, borderRadius: T.r.md, padding: "16px", userSelect: "none" }}>
 
           {/* Month nav */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <button onClick={prevMonth} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: T.fs.title, padding: "0 8px", fontFamily: T.font, lineHeight: 1 }}>‹</button>
-            <div style={{ fontSize: T.fs.body, fontWeight: 700, color: T.ink, letterSpacing: ".01em" }}>
+            <button onClick={prevMonth} style={{ background: "none", border: "none", color: T.ink, cursor: "pointer", fontSize: 26, minWidth: 44, minHeight: 44, padding: 0, fontFamily: T.font, lineHeight: 1 }}>‹</button>
+            <div style={{ fontSize: T.fs.ui, fontWeight: 900, color: T.ink }}>
               {MONTHS[view.month]} {view.year}
             </div>
-            <button onClick={nextMonth} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: T.fs.title, padding: "0 8px", fontFamily: T.font, lineHeight: 1 }}>›</button>
+            <button onClick={nextMonth} style={{ background: "none", border: "none", color: T.ink, cursor: "pointer", fontSize: 26, minWidth: 44, minHeight: 44, padding: 0, fontFamily: T.font, lineHeight: 1 }}>›</button>
           </div>
 
           {/* Day headers */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 6 }}>
             {DAYS.map(d => (
-              <div key={d} style={{ textAlign: "center", fontSize: T.fs.label, fontWeight: 700, color: T.hint, letterSpacing: ".06em", padding: "2px 0" }}>{d}</div>
+              <div key={d} style={{ textAlign: "center", fontSize: T.fs.meta, fontWeight: 700, color: T.muted, padding: "2px 0" }}>{d}</div>
             ))}
           </div>
 
@@ -196,15 +197,15 @@ export default function DateRangePicker({ d1, setD1, d2, setD2 }) {
               let borderRadius = "8px";
 
               if (isSelected) {
-                bg = T.accent;
+                bg = T.ink;
                 color = T.white;
                 fontWeight = 700;
               } else if (inRange) {
-                bg = "rgba(227,38,47,.18)";
+                bg = T.accentSoft;
                 color = T.ink;
                 borderRadius = "0";
               } else if (isHovered && phase === "end" && rangeStart && !isPast) {
-                bg = "rgba(227,38,47,.12)";
+                bg = T.bg2;
               }
 
               // Rounded ends of range
@@ -219,16 +220,16 @@ export default function DateRangePicker({ d1, setD1, d2, setD2 }) {
                   onMouseEnter={() => phase === "end" && !isPast && setHovered(day)}
                   onMouseLeave={() => setHovered(null)}
                   style={{
-                    position: "relative", textAlign: "center", padding: "7px 0",
+                    position: "relative", textAlign: "center", padding: "6px 0",
                     background: bg, borderRadius, cursor: isPast ? "default" : "pointer",
                     transition: "background .1s",
                   }}
                 >
                   <span style={{
                     display: "inline-flex", alignItems: "center", justifyContent: "center",
-                    width: 28, height: 28, borderRadius: "50%",
+                    width: 32, height: 32, borderRadius: "50%",
                     fontSize: T.fs.body, color, fontWeight, fontFamily: T.font,
-                    border: isToday && !isSelected ? `1px solid ${T.border2}` : "none",
+                    border: isToday && !isSelected ? `2px solid ${T.ink}` : "none",
                   }}>
                     {day.getDate()}
                   </span>
@@ -239,18 +240,18 @@ export default function DateRangePicker({ d1, setD1, d2, setD2 }) {
 
           {/* Footer */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
-            <div style={{ fontSize: T.fs.meta, color: T.hint }}>
+            <div style={{ fontSize: T.fs.body, color: T.muted }}>
               {phase === "start" ? "Pick your arrival date" : "Now pick your departure"}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
               {(d1 || d2) && (
                 <button onClick={() => { setD1(""); setD2(""); setPhase("start"); }}
-                  style={{ fontSize: T.fs.meta, color: T.muted, background: "none", border: "none", cursor: "pointer", fontFamily: T.font }}>
+                  style={{ minHeight: 44, padding: "0 8px", fontSize: T.fs.body, fontWeight: 700, color: T.ink, background: "none", border: "none", cursor: "pointer", fontFamily: T.font }}>
                   Clear
                 </button>
               )}
               <button onClick={() => { setOpen(false); setHovered(null); }}
-                style={{ fontSize: T.fs.meta, color: T.accent, background: "none", border: "none", cursor: "pointer", fontFamily: T.font, fontWeight: 700 }}>
+                style={{ minHeight: 44, padding: "0 8px", fontSize: T.fs.body, color: T.accentInk, background: "none", border: "none", cursor: "pointer", fontFamily: T.font, fontWeight: 900 }}>
                 Done
               </button>
             </div>

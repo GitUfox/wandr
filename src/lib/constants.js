@@ -139,8 +139,9 @@ export const T = {
   // 2026-09-02: hero 28→33 with the Instrument Serif swap — serif 400 needs
   // the extra size to hold the presence Manrope 800 had at 28.
   // 2026-11-20 Transit Diagram: display = the one question headline per screen
-  // ("Where to?", the interview question). One use per screen.
-  fs: { micro:10, label:11.5, meta:12.5, body:13.5, ui:15, title:18, hero:33, display:54 },
+  // ("Where to?"). question = the interview question (long lines, so smaller).
+  // One use per screen for each.
+  fs: { micro:10, label:11.5, meta:12.5, body:13.5, ui:15, title:18, hero:33, question:40, display:54 },
 
   // Radius tokens (S2): control 6 · card/input 12 · sheet/ticket 16 · pill 100.
   r: { sm:6, md:12, lg:16, pill:100 },
