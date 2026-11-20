@@ -8,14 +8,14 @@
  *   3. Every bottom sheet uses the shared backdrop and edge.
  *   4. The sign-in chip marker has no glow.
  *
- * PENDING lists the screens that are not rebuilt yet. Remove a file from it
- * in the same commit that rebuilds the screen.
+ * PENDING lists files that are exempt. Every live screen is rebuilt, so the
+ * list holds only the parked LoadingScreen. Do not add a live screen to it.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
 
 const DIR = "src/components";
-const PENDING = new Set(["PackingList.jsx", "LoadingScreen.jsx"]);
+const PENDING = new Set(["LoadingScreen.jsx"]); // parked, unused, kept on disk
 const files = readdirSync(DIR).filter(f => f.endsWith(".jsx") && !f.includes(".test.") && !PENDING.has(f));
 const read = f => readFileSync(`${DIR}/${f}`, "utf8");
 

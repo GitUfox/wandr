@@ -43,13 +43,25 @@ describe("before the list exists — the seed card", () => {
 describe("with a list — the ticket and the shelves", () => {
   const p = seedPacking(trip(), null);
   const html = render({ trip: trip({ packing: p }) });
-  it("ticket: packed / to go stubs, the destination, the percent, the trip line", () => {
+  it("header: packed / to go counts, the destination, the percent, the trip line", () => {
     expect(html).toContain(">Packed<");
     expect(html).toContain(">To go<");
-    expect(html).toContain(">Lisbon</h1>");
+    expect(html).toContain(">Packing</h1>");
+    expect(html).toContain("Lisbon");
     expect(html).toContain(">0%<");
     expect(html).toContain("4 nights");
-    expect(html).toContain("OCT 24");
+    expect(html).toContain("Oct 24");                // sentence case on screen
+    expect(html).not.toContain("OCT 24");
+  });
+  it("progress is one labelled line with a station at the packed position", () => {
+    expect(html).toContain('role="progressbar"');
+    expect(html).toContain('aria-valuenow="0"');
+    expect(html).toContain("left:0%");
+  });
+  it("has no ticket, ember or burst (retired with the Transit Diagram redesign)", () => {
+    expect(html).not.toContain("wpk-ember");
+    expect(html).not.toContain("radial-gradient");
+    expect(html).not.toContain("text-transform:uppercase");
   });
   it("shelves use the day face with mono counts, and items carry their tags", () => {
     expect(html).toContain("font-weight:900");      // day-role headers: Figtree at 900 (Transit Diagram)
