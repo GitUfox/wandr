@@ -5,7 +5,8 @@
  * Everything else — trip data, plan state — comes from App.jsx via props.
  */
 import { useState, useEffect, useRef } from "react";
-import { MODES, T, FEATURES, AI_DISCLAIMER } from "../lib/constants.js";
+import { MODES, T, FEATURES, AI_DISCLAIMER, NO_MOTION } from "../lib/constants.js";
+import { chipSt, fieldSt, primaryBtnSt } from "../lib/styles.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { useTimeFormat } from "../hooks/useTimeFormat.js";
 import { showSaveTripCard, arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime, findGroundedVenue, countIdeas, tripDayIndex, parseTime, formatTime } from "../lib/utils.js";
@@ -22,7 +23,7 @@ import ProfileChip from "./ProfileChip.jsx";
 import SyncStatusLine from "./SyncStatusLine.jsx";
 import SaveTripCard, { readSaveCardDismissed, writeSaveCardDismissed } from "./SaveTripCard.jsx";
 import { useAccount } from "../hooks/useAccount.js";
-import StardustBurst from "./StardustBurst.jsx";
+import StationSymbol from "./StationSymbol.jsx";
 import Glyph from "./Glyphs.jsx";
 import { packingNudge, packingTotals } from "../lib/packing.js";
 
@@ -68,7 +69,7 @@ function RollingMsg({ text }) {
     const t = setTimeout(() => setPrev(null), 320);
     return () => clearTimeout(t);
   }, [text]);
-  const msgStyle = { fontSize:T.fs.meta, color:T.hint };
+  const msgStyle = { fontSize:T.fs.body, color:T.muted };
   return (
     <span style={{ position:"relative", display:"inline-block" }}>
       {/* key remounts the span on every message change, re-firing the rise-in */}
@@ -91,7 +92,7 @@ function GhostDays({ nights }) {
   return (
     <div aria-hidden="true">
       {layouts.slice(0, count).map(([titleW, lines], i) => (
-        <div key={i} className="wghost" style={{ background:T.bg1, border:`1px solid ${T.border}`, borderRadius:T.r.md, padding:"13px 15px", marginBottom:10, animation:"wghostbreathe 3.2s ease-in-out infinite", animationDelay:`${i * 0.5}s` }}>
+        <div key={i} className="wghost" style={{ borderTop:`3px solid ${T.border}`, padding:"14px 0 8px", marginBottom:14, animation:"wghostbreathe 3.2s ease-in-out infinite", animationDelay:`${i * 0.5}s` }}>
           <div className="wghost-bar" style={barStyle({ width:titleW, height:11, marginBottom:3, background:shimGrey })} />
           {lines.map((w, j) => (
             <div key={j} style={{ display:"flex", gap:9, alignItems:"center", marginTop:8 }}>
@@ -159,50 +160,52 @@ function TodayPanel({ todayInfo, day, dayIdx, online, planLoading, onRework, rew
   const clean = s => String(s || "").replace(/\*\*/g, "").trim();
 
   return (
-    <div key={undoAt} style={{ padding:"13px 15px 14px", background:T.bg1, border:"1px solid rgba(227,38,47,.45)", borderRadius:T.r.md, marginBottom:12, animation: undoAt ? "wonce 1.1s ease" : "none" }}>
-      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-        <span style={{ width:7, height:7, borderRadius:"50%", background:T.accentHover, flexShrink:0, animation:"pulse 2s ease-in-out infinite" }} />
-        <span style={{ fontFamily:T.fontMono, fontSize:T.fs.micro, fontWeight:700, letterSpacing:".12em", textTransform:"uppercase", color:T.accentHover }}>
+    <div key={undoAt} style={{ padding:"14px 16px 16px", background:T.bg1, border:`3px solid ${T.ink}`, borderRadius:T.r.md, marginBottom:16 }}>
+      <div style={{ display:"flex", alignItems:"baseline", flexWrap:"wrap", gap:"2px 10px" }}>
+        <span style={{ fontFamily:T.fontDay, fontSize:T.fs.title, fontWeight:900, letterSpacing:"-.02em", color:T.ink }}>
           Today · Day {todayInfo.dayNum} of {todayInfo.totalDays}
         </span>
-        <span style={{ fontSize:T.fs.meta, color:T.hint }}>{dateLine}</span>
+        <span style={{ fontSize:T.fs.body, color:T.muted }}>{dateLine}</span>
       </div>
 
       {upNext ? (
-        <div style={{ marginTop:10 }}>
-          <div style={{ fontFamily:T.fontMono, fontSize:T.fs.micro, fontWeight:700, letterSpacing:".12em", textTransform:"uppercase", color:T.hint, marginBottom:3 }}>Up next</div>
-          <div style={{ display:"flex", gap:9, alignItems:"baseline" }}>
-            <span style={{ fontFamily:T.fontMono, fontSize:T.fs.label, fontWeight:700, color:T.accent, fontVariantNumeric:"tabular-nums", flexShrink:0, letterSpacing:"-.02em" }}>{displayTime(clean(upNext.time))}</span>
-            <span style={{ fontSize:T.fs.ui, fontWeight:800, color:T.ink }}>{clean(upNext.title)}</span>
+        <div style={{ marginTop:12 }}>
+          <div style={{ fontSize:T.fs.body, fontWeight:700, color:T.muted, marginBottom:4 }}>Up next</div>
+          <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+            <StationSymbol kind="stop" size={24} />
+            <span style={{ flex:1, minWidth:0, fontSize:T.fs.ui, fontWeight:700, color:T.ink }}>{clean(upNext.title)}</span>
+            <span style={{ fontFamily:T.fontMono, fontSize:T.fs.ui, fontWeight:900, color:T.ink, fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap", flexShrink:0 }}>{displayTime(clean(upNext.time))}</span>
           </div>
           {upcoming.length > 1 && (
-            <div style={{ fontSize:T.fs.meta, color:T.muted, marginTop:3 }}>then {upcoming.length - 1} more {upcoming.length - 1 === 1 ? "stop" : "stops"} today</div>
+            <div style={{ fontSize:T.fs.body, color:T.muted, marginTop:6 }}>then {upcoming.length - 1} more {upcoming.length - 1 === 1 ? "stop" : "stops"} today</div>
           )}
         </div>
       ) : (
-        <div style={{ marginTop:10, fontSize:T.fs.body, color:T.muted }}>All scheduled stops for today are done.</div>
+        <div style={{ marginTop:12, fontSize:T.fs.body, color:T.muted }}>All scheduled stops for today are done.</div>
       )}
 
       {pending && planLoading ? (
-        <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:12, fontSize:T.fs.body, color:T.accent, fontWeight:700 }}>
-          <span style={{ width:13, height:13, border:`1.5px solid ${T.border}`, borderTopColor:T.accent, borderRadius:"50%", display:"inline-block", animation:"spin .7s linear infinite" }} />
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:14, fontSize:T.fs.ui, color:T.ink, fontWeight:700 }}>
+          <span style={{ width:14, height:14, border:`2px solid ${T.border}`, borderTopColor:T.ink, borderRadius:"50%", display:"inline-block", animation:"spin .7s linear infinite" }} />
           Reworking your {daypart}…
         </div>
       ) : upNext && (
         <>
-          <button onClick={() => online && !planLoading && setOpen(o => !o)} disabled={!online || planLoading}
+          <button onClick={() => online && !planLoading && setOpen(o => !o)} disabled={!online || planLoading} aria-expanded={open}
             title={online ? undefined : "Reworking your day needs a connection"}
-            style={{ width:"100%", marginTop:12, padding:"12px 0", borderRadius:T.r.md, background:open ? T.bg3 : T.accent, color:open ? T.muted : T.white, fontSize:T.fs.ui, fontWeight:800, border:"none", cursor:online && !planLoading ? "pointer" : "not-allowed", opacity:online ? 1 : .5, fontFamily:T.font, transition:"background .2s" }}>
+            style={open
+              ? { ...primaryBtnSt(true), width:"100%", marginTop:14, background:"transparent", color:T.ink, border:`2px solid ${T.ink}` }
+              : { ...primaryBtnSt(true), width:"100%", marginTop:14, cursor:online && !planLoading ? "pointer" : "not-allowed", opacity:online ? 1 : .5 }}>
             {open ? "Never mind" : `Change my ${daypart}`}
           </button>
-          <div style={{ maxHeight:open ? 230 : 0, opacity:open ? 1 : 0, overflow:"hidden", transition:"max-height .28s ease, opacity .22s ease" }}>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:11 }}>
+          <div style={{ maxHeight:open ? 300 : 0, opacity:open ? 1 : 0, overflow:"hidden", transition:NO_MOTION ? "none" : "max-height .28s ease, opacity .22s ease" }}>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:12 }}>
               {RIGHT_NOW_CHIPS.map(chip => {
                 const on = reasons.includes(chip.id);
                 return (
-                  <button key={chip.id} onClick={() => toggleReason(chip.id)}
-                    style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:T.fs.meta, fontWeight:700, color:on ? T.accentHover : T.muted, background:on ? "rgba(227,38,47,.08)" : T.bg2, border:`1px solid ${on ? T.accent : T.border}`, borderRadius:T.r.pill, padding:"7px 13px", cursor:"pointer", fontFamily:T.font }}>
-                    {chip.glyph && <Glyph name={chip.glyph} size={11} color="currentColor" />}
+                  <button key={chip.id} aria-pressed={on} onClick={() => toggleReason(chip.id)}
+                    style={{ ...chipSt(on, { small:true }), display:"inline-flex", alignItems:"center", gap:6 }}>
+                    {chip.glyph && <Glyph name={chip.glyph} size={12} color="currentColor" />}
                     {chip.label}
                   </button>
                 );
@@ -210,21 +213,21 @@ function TodayPanel({ todayInfo, day, dayIdx, online, planLoading, onRework, rew
             </div>
             <input value={note} onChange={e => setNote(e.target.value)} maxLength={280}
               onKeyDown={e => e.key === "Enter" && submit()}
+              aria-label="Anything else"
               placeholder="Anything else? e.g. we're near the university now"
-              style={{ width:"100%", marginTop:9, padding:"9px 12px", border:`1px solid ${T.border}`, borderRadius:T.r.sm, background:T.bg2, color:T.ink, outline:"none", fontSize:T.fs.body, fontFamily:T.font, boxSizing:"border-box" }} />
-            <button onClick={submit} disabled={!online}
-              style={{ width:"100%", marginTop:9, padding:"11px 0", borderRadius:T.r.md, background:T.accent, color:T.white, fontSize:T.fs.body, fontWeight:800, border:"none", cursor:"pointer", fontFamily:T.font }}>
-              Rework from <span style={{ fontFamily:T.fontMono, fontWeight:700, fontSize:T.fs.meta, letterSpacing:"-.02em" }}>{displayTime(fromTime)}</span> →
+              style={{ ...fieldSt, marginTop:10, fontSize:T.fs.body }} />
+            <button onClick={submit} disabled={!online} style={{ ...primaryBtnSt(true), width:"100%", marginTop:10, background:T.ink }}>
+              Rework from <span style={{ fontVariantNumeric:"tabular-nums" }}>{displayTime(fromTime)}</span> →
             </button>
           </div>
         </>
       )}
 
       {showUndo && reworkUndo && (
-        <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:11, background:T.bg3, border:`1px solid ${T.border2}`, borderRadius:T.r.pill, padding:"7px 8px 7px 14px", fontSize:T.fs.meta, color:T.muted }}>
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:12, background:T.bg2, borderRadius:T.r.pill, padding:"6px 6px 6px 16px", fontSize:T.fs.body, color:T.ink }}>
           <span>Rest of today reworked</span>
           <button onClick={onUndoRework}
-            style={{ marginLeft:"auto", color:T.accentHover, fontWeight:800, fontSize:T.fs.meta, padding:"4px 12px", border:`1px solid ${T.accent}`, borderRadius:T.r.pill, background:"transparent", cursor:"pointer", fontFamily:T.font }}>
+            style={{ marginLeft:"auto", minHeight:40, color:T.ink, fontWeight:900, fontSize:T.fs.body, padding:"0 16px", border:`2px solid ${T.ink}`, borderRadius:T.r.pill, background:T.bg1, cursor:"pointer", fontFamily:T.font }}>
             Undo
           </button>
         </div>
@@ -232,6 +235,77 @@ function TodayPanel({ todayInfo, day, dayIdx, online, planLoading, onRework, rew
     </div>
   );
 }
+
+/* ── TripStrip: the trip as a strip of day lines ─────────────────────────────
+   Transit Diagram (direction E). This replaces the boarding-pass ticket and
+   its ember rail. A dated trip is one color bar per day (T.line, in day
+   order) between the two dates. On a trip day, a station ring sits on today's
+   bar (Right Now mode, 1A), so the strip is also the progress bar for the
+   trip you are on. A bucket list has no dates: it shows one station symbol
+   per idea, filled when picked. The stubs (nights, budget, party) are the
+   same data the PDF prints, so the two cannot drift. Static: no motion here. */
+const MAX_STRIP_DAYS = 14, MAX_STRIP_IDEAS = 18;
+// ticketDate() gives "NOV 19" for the PDF. The screen shows "Nov 19".
+const sentenceMonth = s => String(s || "").replace(/[A-Z]{2,}/g, m => m[0] + m.slice(1).toLowerCase());
+
+export function TripStrip({ dep, ret, nights, todayInfo, isBucket, ideaCount = 0, pickedCount = 0, building, stubs = [] }) {
+  const dateSt = { fontFamily:T.fontMono, fontSize:T.fs.title, fontWeight:900, letterSpacing:"-.02em", color:T.ink, fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" };
+  const totalDays = todayInfo?.totalDays || (nights ? nights + 1 : 0);
+  const bars = Math.min(totalDays, MAX_STRIP_DAYS);
+  const todayBar = todayInfo ? Math.min(todayInfo.dayNum, bars) - 1 : -1;
+  const dots = Math.min(ideaCount, MAX_STRIP_IDEAS);
+  return (
+    <div>
+      {isBucket && (
+        <>
+          <div style={dateSt}>{building ? "Curating…" : `${ideaCount} ${ideaCount === 1 ? "idea" : "ideas"} · ${pickedCount} picked`}</div>
+          {!building && dots > 0 && (
+            <div aria-hidden="true" style={{ display:"flex", flexWrap:"wrap", gap:5, marginTop:10 }}>
+              {Array.from({ length: dots }, (_, i) => <StationSymbol key={i} kind={i < pickedCount ? "done" : "stop"} size={16} />)}
+            </div>
+          )}
+        </>
+      )}
+      {dep && ret && (
+        <>
+          <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", gap:12 }}>
+            <span style={dateSt}>{sentenceMonth(dep)}</span>
+            <span style={dateSt}>{sentenceMonth(ret)}</span>
+          </div>
+          {bars > 0 && (
+            <div role="img" aria-label={todayInfo ? `Day ${todayInfo.dayNum} of ${todayInfo.totalDays}` : `${totalDays} days`}
+              style={{ display:"flex", gap:3, marginTop:10 }}>
+              {Array.from({ length: bars }, (_, i) => (
+                <span key={i} style={{ position:"relative", flex:1, height:12, background:T.line[i % T.line.length] }}>
+                  {i === todayBar && (
+                    <span style={{ position:"absolute", left:"50%", top:"50%", transform:"translate(-50%,-50%)" }}>
+                      <StationSymbol kind="stop" size={26} />
+                    </span>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+      {stubs.length > 0 && (
+        <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 22px", marginTop:12 }}>
+          {stubs.map(([l, v]) => (
+            <span key={l} style={{ fontSize:T.fs.body, color:T.muted }}>
+              {l} <strong style={{ fontWeight:900, color:T.ink }}>{v}</strong>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Header action: an outlined pill.
+const hdrBtn = {
+  minHeight:40, padding:"0 16px", borderRadius:T.r.pill, border:`2px solid ${T.ink}`,
+  background:"transparent", color:T.ink, fontSize:T.fs.body, fontWeight:700, fontFamily:T.font, cursor:"pointer",
+};
 
 export default function Dashboard({
   trip,
@@ -281,15 +355,9 @@ export default function Dashboard({
   // re-renders every time on screen when the 12h/24h format changes.
   useTimeFormat();
 
-  // 8C stardust on "itinerary ready": fire once when a generation finishes
-  // successfully (loading→done with a parsed model — error text never sets
-  // planModel, so failures don't sparkle).
-  const [readyBurst, setReadyBurst] = useState(0);
-  const wasLoadingRef = useRef(false);
-  useEffect(() => {
-    if (wasLoadingRef.current && !planLoading && planModel) setReadyBurst(b => b + 1);
-    wasLoadingRef.current = planLoading;
-  }, [planLoading, planModel]);
+  // The "itinerary ready" stardust burst (8C) left with the Transit Diagram
+  // redesign. The arrival moment returns in the motion step, as a line that
+  // draws from stop to stop.
 
   // Only render the switcher when there's somewhere to switch to.
   const otherTrips = trips.filter(t => t.id !== trip?.id);
@@ -617,17 +685,11 @@ export default function Dashboard({
         html,body,#root{background:${T.bg0}!important;margin:0;padding:0;min-height:100vh;width:100%}
         @keyframes blink{50%{opacity:0}}
         @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes pulse{50%{box-shadow:0 0 0 6px rgba(227,38,47,.06)}}
         @keyframes wrollin{from{opacity:0;transform:translateY(6px)}}
         @keyframes wrollout{to{opacity:0;transform:translateY(-6px)}}
         @keyframes wghostbreathe{0%,100%{opacity:.45}50%{opacity:.8}}
         @keyframes wghostshim{to{background-position:-220% 0}}
-        @keyframes wtravel{0%{transform:translateX(-52px);opacity:0}8%{opacity:1}72%{transform:translateX(52px);opacity:1}82%{transform:translateX(52px);opacity:0}100%{transform:translateX(52px);opacity:0}}
-        @keyframes wpark{50%{transform:scale(1.25)}}
-        @keyframes wparkring{0%{transform:scale(.5);opacity:.7}70%,100%{transform:scale(1.9);opacity:0}}
-        @keyframes wonce{0%{box-shadow:0 0 0 0 rgba(227,38,47,0)}25%{box-shadow:0 0 0 5px rgba(227,38,47,.28)}100%{box-shadow:0 0 0 0 rgba(227,38,47,0)}}
-        @keyframes warrive{0%,66%{transform:scale(.35);opacity:0}74%{transform:scale(1);opacity:.8}92%{transform:scale(2.1);opacity:0}100%{transform:scale(2.1);opacity:0}}
-        @media (prefers-reduced-motion:reduce){.wroll-in,.wroll-out,.wghost,.wghost-bar,.wtravel,.warrive,.wpark,.wparkring{animation:none!important}.wtravel{opacity:1!important}}
+        @media (prefers-reduced-motion:reduce){.wroll-in,.wroll-out,.wghost,.wghost-bar{animation:none!important}}
         *{box-sizing:border-box}
       `}</style>
 
@@ -635,180 +697,76 @@ export default function Dashboard({
       {/* ── Main dashboard ── */}
       <div style={{ maxWidth:760, margin:"0 auto" }} className="no-print">
 
-        {/* Header */}
-        <div style={{ background:`radial-gradient(120% 90% at 18% 0%, rgba(227,38,47,.13), transparent 55%), ${T.bg1}`, borderBottom:`1px solid ${T.border}`, padding:"1.75rem 1.75rem 1.5rem" }}>
-          {/* Brand bar — the mark is the way home (standard logo-to-home
-              pattern). The trip is already persisted, so leaving is safe:
-              it waits on the welcome shelf, one tap from resuming. */}
-          <div style={{ marginBottom:"1.25rem", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+        {/* Header. Transit Diagram (direction E): no card, no ticket. The
+            destination is the headline and the trip is a strip of day lines.
+            The mark is the way home (standard logo-to-home pattern). The trip
+            is already persisted, so leaving is safe: it waits on the welcome
+            list, one tap from resuming. */}
+        <div style={{ padding:"10px 1.5rem 1.25rem", borderBottom:`3px solid ${T.ink}` }}>
+          <div style={{ minHeight:44, marginBottom:18, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
             <button onClick={onReset} aria-label="Back to home" title="Back to home"
-              style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", display:"inline-block" }}>
-              <TripinLogo size="sm" />
+              style={{ minHeight:44, background:"transparent", border:"none", padding:0, cursor:"pointer", display:"flex", alignItems:"center" }}>
+              <TripinLogo size="xs" />
             </button>
             {/* Identity chip — same component and seat as the welcome corner. */}
             <ProfileChip onOpen={() => setShowAccount(true)} />
           </div>
-          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, flexWrap:"wrap", marginBottom:10 }}>
-            <div>
-              <div style={{ fontFamily:T.fontMono, fontSize:T.fs.micro, letterSpacing:".12em", textTransform:"uppercase", color:T.accent, fontWeight:700, marginBottom:5 }}>{isBucket ? "My bucket list" : "My trip"}</div>
-              {/* 1B editorial hero — the one Instrument Serif slot on screen. */}
-              <div style={{ fontFamily:T.fontHero, fontSize:T.fs.hero, fontWeight:900, color:T.ink, lineHeight:1.05, letterSpacing:"-.03em" }}>{destMain}</div>
-              {destRegion && (
-                <div style={{ fontFamily:T.fontMono, fontSize:T.fs.label, color:T.hint, fontWeight:700, letterSpacing:".08em", textTransform:"uppercase", marginTop:4 }}>{destRegion}</div>
-              )}
-            </div>
-            <div style={{ display:"flex", gap:7, alignItems:"flex-start" }}>
-              {!online && (
-                <span title="Your saved trip is readable offline. Building or editing needs a connection."
-                  style={{ fontSize:T.fs.label, fontWeight:700, color:T.muted, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:T.r.pill, padding:"4px 9px", whiteSpace:"nowrap" }}>
-                  ● Offline
-                </span>
-              )}
-              {otherTrips.length > 0 && (
-                <div style={{ position:"relative" }}>
-                  <button onClick={() => setSwitcherOpen(v => !v)}
-                    style={{ fontSize:T.fs.meta, color:T.muted, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:T.r.sm, padding:"5px 10px", cursor:"pointer", fontFamily:T.font }}>
-                    Switch ▾
-                  </button>
-                  {switcherOpen && (
-                    <>
-                      {/* Click-away closes the menu — no dead-end open state. */}
-                      <div onClick={() => setSwitcherOpen(false)} style={{ position:"fixed", inset:0, zIndex:30 }} />
-                      <div className="fade-up"
-                        style={{ position:"absolute", top:"calc(100% + 4px)", right:0, zIndex:31, minWidth:190, background:T.bg1, border:`1px solid ${T.border}`, borderRadius:T.r.md, overflow:"hidden", boxShadow:"0 8px 24px rgba(0,0,0,.5)" }}>
-                        {otherTrips.map((t, i) => (
-                          <button key={t.id}
-                            onClick={() => { setSwitcherOpen(false); onSwitchTrip?.(t.id); }}
-                            style={{ display:"block", width:"100%", textAlign:"left", padding:"9px 12px", background:"transparent", border:"none", borderTop: i === 0 ? "none" : `1px solid ${T.border}`, cursor:"pointer", fontFamily:T.font }}>
-                            <div style={{ fontSize:T.fs.body, fontWeight:700, color:T.ink }}>{t.destination}</div>
-                            <div style={{ fontSize:T.fs.label, color:T.hint, marginTop:1 }}>
-                              {t.tripStyle === "bucket"
-                                ? `${countIdeas(t.categories)} ideas`
-                                : [t.answers?.dates?.start, t.answers?.dates?.end].every(Boolean)
-                                  ? `${fmtDate(t.answers.dates.start)} → ${fmtDate(t.answers.dates.end)}`
-                                  : `${t.nights || "?"} nights`}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-              <button
-                onClick={() => { if (online && !building) { setEditSheetStage(isBucket ? "trip-details" : null); setEditSheetOpen(true); } }}
-                disabled={!online || building}
-                title={!online ? "Editing needs a connection" : building ? "One sec — still curating this trip" : undefined}
-                style={{ fontSize:T.fs.meta, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:online&&!building?"pointer":"not-allowed", opacity:online&&!building?1:.45, fontFamily:T.font, fontWeight:600 }}
-              >
-                Edit trip
-              </button>
-              <button onClick={onReset} style={{ fontSize:T.fs.meta, color:T.muted, background:T.bg3, border:`1px solid ${T.border}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:"pointer", fontFamily:T.font }}>New trip</button>
-            </div>
+          <div style={{ fontSize:T.fs.body, fontWeight:700, color:T.muted, marginBottom:4 }}>{isBucket ? "My bucket list" : "My trip"}</div>
+          <h1 style={{ margin:0, fontFamily:T.fontHero, fontSize:T.fs.display, fontWeight:900, color:T.ink, lineHeight:.95, letterSpacing:"-.04em", overflowWrap:"anywhere" }}>{destMain}</h1>
+          {destRegion && (
+            <div style={{ fontSize:T.fs.ui, fontWeight:500, color:T.muted, marginTop:6 }}>{destRegion}</div>
+          )}
+          <div style={{ marginTop:18 }}>
+            <TripStrip dep={dep} ret={ret} nights={trip.nights} todayInfo={todayInfo} isBucket={isBucket}
+              ideaCount={ideaCount} pickedCount={pickedCount} building={building} stubs={tripStubs} />
           </div>
-          {/* Boarding-pass ticket — dates + vitals as one object (design pick 1B).
-              trip.season (the full sentence) now lives only in the PDF export;
-              the stub shows a short derived label instead. */}
-          {(() => {
-            const stubLabel = { fontFamily:T.fontMono, fontSize:T.fs.micro, letterSpacing:".12em", textTransform:"uppercase", color:T.hint, fontWeight:700 };
-            const notch = { position:"absolute", width:22, height:22, borderRadius:"50%", background:T.bg1, border:`1px solid ${T.border2}`, top:-11 };
-            const stubs = tripStubs;
-            // One rail, two tickets: Depart→Return (itinerary) and
-            // Ideas→Picked (bucket) seat this exact center, extracted so the
-            // two variants can never drift. Ticket center notes (design pick
-            // 2A, 2026-08-11): the ticket's earth retired — the logo keeps the
-            // real globe, the PDF keeps its static twin. The ember departs the
-            // hollow left ring, streams the dotted rail, arrives right with a
-            // soft pulse, and runs ALWAYS — one traveler on the rail in every
-            // state, curating included. Pulse pivot is baked into an attribute
-            // translate() group — CSS transform-origin on SVG children drifts.
-            const railCenter = (
-              <div style={{ position:"relative", flex:1, height:26, minWidth:48 }}>
-                <svg viewBox="0 0 120 26" style={{ display:"block", width:"100%", height:26, overflow:"visible" }} aria-hidden="true">
-                  <line x1="14" y1="13" x2="106" y2="13" stroke={T.border2} strokeWidth="1.6" strokeDasharray="0.1 5" strokeLinecap="round" />
-                  <circle cx="8" cy="13" r="2.4" fill="none" stroke={T.muted} strokeWidth="1.3" />
-                  <circle cx="112" cy="13" r="2.4" fill={T.accent} />
-                  <g transform="translate(112,13)">
-                    <circle className="warrive" r="3" fill="none" stroke={T.accent} strokeWidth="1.2" opacity="0" style={{ animation:"warrive 3.4s ease-out infinite" }} />
-                  </g>
-                  {/* Right Now (1A): on trip days the ember stops commuting and
-                      PARKS at today's position along the rail, breathing — the
-                      rail becomes a progress bar for the trip you're on. Pivot
-                      baked into the translate() group (SVG transform-origin
-                      drifts). Other days: the ember travels A → B as shipped;
-                      it rests mid-rail when animation is off (reduced motion /
-                      VITE_NO_MOTION harness). */}
-                  {todayInfo ? (
-                    <g transform={`translate(${todayInfo.totalDays === 1 ? 60 : 8 + 104 * (todayInfo.dayNum - 1) / (todayInfo.totalDays - 1)},13)`}>
-                      <circle r="4.5" fill={T.accentHover} opacity=".18" />
-                      <circle className="wpark" r="2.6" fill={T.accentHover} style={{ animation:"wpark 2.4s ease-in-out infinite" }} />
-                      <circle className="wparkring" r="4" fill="none" stroke={T.accentHover} strokeWidth="1" opacity="0" style={{ animation:"wparkring 2.4s ease-out infinite" }} />
-                    </g>
-                  ) : (
-                    <g className="wtravel" style={{ animation:"wtravel 3.4s ease-in-out infinite" }}>
-                      <line x1="49" y1="13" x2="56.5" y2="13" stroke={T.accentHover} strokeWidth="1.5" strokeLinecap="round" opacity=".45" />
-                      <circle cx="60" cy="13" r="4.5" fill={T.accentHover} opacity=".18" />
-                      <circle cx="60" cy="13" r="2.4" fill={T.accentHover} />
-                    </g>
-                  )}
-                </svg>
-              </div>
-            );
-            return (
-              <div style={{ position:"relative", marginTop:4, background:T.bg2, border:`1px solid ${T.border2}`, borderRadius:T.r.lg, overflow:"hidden" }}>
-                <div style={{ position:"absolute", right:12, top:14, bottom:14, width:13, background:`repeating-linear-gradient(180deg, ${T.border2} 0 2px, transparent 2px 5px)`, opacity:.5, borderRadius:2 }} />
-                {/* Bucket ticket (1F mode): Depart/Return have no meaning, so
-                    the rail's endpoints become the list's own journey — IDEAS
-                    curated → PICKED by the traveler. Same ember, same rail. */}
-                {isBucket && (
+          <div style={{ display:"flex", flexWrap:"wrap", gap:8, alignItems:"center", marginTop:16 }}>
+            <button
+              onClick={() => { if (online && !building) { setEditSheetStage(isBucket ? "trip-details" : null); setEditSheetOpen(true); } }}
+              disabled={!online || building}
+              title={!online ? "Editing needs a connection" : building ? "One sec — still curating this trip" : undefined}
+              style={{ ...hdrBtn, cursor:online&&!building?"pointer":"not-allowed", opacity:online&&!building?1:.45 }}
+            >
+              Edit trip
+            </button>
+            {otherTrips.length > 0 && (
+              <div style={{ position:"relative" }}>
+                <button onClick={() => setSwitcherOpen(v => !v)} aria-expanded={switcherOpen} style={hdrBtn}>
+                  Switch ▾
+                </button>
+                {switcherOpen && (
                   <>
-                    <div style={{ display:"flex", alignItems:"center", gap:14, padding:"15px 38px 13px 18px" }}>
-                      <div>
-                        <div style={stubLabel}>Ideas</div>
-                        <div style={{ fontFamily:T.fontMono, fontSize:17 /* off-ramp: matches the DEPART/RETURN numeral tier (19→17 with the mono swap — Martian reads a size heavier) */, fontWeight:700, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{building ? "…" : ideaCount}</div>
-                      </div>
-                      {railCenter}
-                      <div style={{ textAlign:"right" }}>
-                        <div style={stubLabel}>Picked</div>
-                        <div style={{ fontFamily:T.fontMono, fontSize:17 /* off-ramp: matches the DEPART/RETURN numeral tier (19→17 with the mono swap) */, fontWeight:700, color:pickedCount ? T.ink : T.hint, fontVariantNumeric:"tabular-nums" }}>{building ? "…" : pickedCount}</div>
-                      </div>
-                    </div>
-                    <div style={{ position:"relative", borderTop:`1.5px dashed ${T.border2}`, margin:"0 26px" }}>
-                      <div style={{ ...notch, left:-37 }} />
-                      <div style={{ ...notch, right:-37 }} />
+                    {/* Click-away closes the menu — no dead-end open state. */}
+                    <div onClick={() => setSwitcherOpen(false)} style={{ position:"fixed", inset:0, zIndex:30 }} />
+                    <div className="fade-up"
+                      style={{ position:"absolute", top:"calc(100% + 6px)", left:0, zIndex:31, minWidth:220, background:T.bg1, border:`2px solid ${T.ink}`, borderRadius:T.r.md, overflow:"hidden" }}>
+                      {otherTrips.map((t, i) => (
+                        <button key={t.id}
+                          onClick={() => { setSwitcherOpen(false); onSwitchTrip?.(t.id); }}
+                          style={{ display:"block", width:"100%", minHeight:52, textAlign:"left", padding:"8px 14px", background:"transparent", border:"none", borderTop: i === 0 ? "none" : `1px solid ${T.border}`, cursor:"pointer", fontFamily:T.font }}>
+                          <div style={{ fontSize:T.fs.ui, fontWeight:900, color:T.ink }}>{t.destination}</div>
+                          <div style={{ fontSize:T.fs.meta, color:T.muted, marginTop:1 }}>
+                            {t.tripStyle === "bucket"
+                              ? `${countIdeas(t.categories)} ideas`
+                              : [t.answers?.dates?.start, t.answers?.dates?.end].every(Boolean)
+                                ? `${fmtDate(t.answers.dates.start)} → ${fmtDate(t.answers.dates.end)}`
+                                : `${t.nights || "?"} nights`}
+                          </div>
+                        </button>
+                      ))}
                     </div>
                   </>
                 )}
-                {dep && ret && (
-                  <>
-                    <div style={{ display:"flex", alignItems:"center", gap:14, padding:"15px 38px 13px 18px" }}>
-                      <div>
-                        <div style={stubLabel}>Depart</div>
-                        <div style={{ fontFamily:T.fontMono, fontSize:17 /* off-ramp: ticket DEPART/RETURN dates — the printed-pass tier (19→17 with the mono swap; Martian 400 reads a size heavier than Manrope 800) */, fontWeight:700, color:T.ink, fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{dep}</div>
-                      </div>
-                      {railCenter}
-                      <div style={{ textAlign:"right" }}>
-                        <div style={stubLabel}>Return</div>
-                        <div style={{ fontFamily:T.fontMono, fontSize:17 /* off-ramp: ticket DEPART/RETURN dates — the printed-pass tier (19→17 with the mono swap) */, fontWeight:700, color:T.ink, fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{ret}</div>
-                      </div>
-                    </div>
-                    <div style={{ position:"relative", borderTop:`1.5px dashed ${T.border2}`, margin:"0 26px" }}>
-                      <div style={{ ...notch, left:-37 }} />
-                      <div style={{ ...notch, right:-37 }} />
-                    </div>
-                  </>
-                )}
-                <div style={{ display:"flex", flexWrap:"wrap", gap:18, padding:"12px 38px 15px 18px" }}>
-                  {stubs.map(([l, v]) => (
-                    <div key={l}>
-                      <div style={stubLabel}>{l}</div>
-                      <div style={{ fontSize:T.fs.body, fontWeight:700, color:T.ink, marginTop:1 }}>{v}</div>
-                    </div>
-                  ))}
-                </div>
               </div>
-            );
-          })()}
+            )}
+            <button onClick={onReset} style={hdrBtn}>New trip</button>
+            {!online && (
+              <span title="Your saved trip is readable offline. Building or editing needs a connection."
+                style={{ fontSize:T.fs.body, fontWeight:700, color:T.muted, whiteSpace:"nowrap" }}>
+                Offline
+              </span>
+            )}
+          </div>
           {/* Sync status — hidden while building: a skeleton trip is not
               saved anywhere yet, so "Saved" would be untrue for it. */}
           {!building && <SyncStatusLine onSignIn={() => setShowAccount(true)} style={{ marginTop: 12 }} />}
@@ -816,14 +774,14 @@ export default function Dashboard({
               restated what the itinerary shows, and cutting them let the whole
               meta build call die. Ticket → itinerary, nothing in between. */}
           {debugMsg && (
-            <div style={{ marginTop:10, padding:"6px 10px", background:"rgba(200,80,60,.12)", border:"1px solid rgba(200,80,60,.3)", borderRadius:T.r.sm, fontSize:T.fs.meta, color:T.danger }}>
+            <div style={{ marginTop:10, padding:"6px 10px", background:T.accentSoft, border:`1px solid ${T.danger}`, borderRadius:T.r.sm, fontSize:T.fs.body, color:T.danger }}>
               {"Couldn't load full trip data — some sections may be missing. You can still generate your itinerary below."}
               <div style={{ marginTop:4, opacity:0.7 }}>{debugMsg}</div>
             </div>
           )}
         </div>
 
-        <div style={{ padding:"1.25rem", background:T.bg0, minHeight:400 }}>
+        <div style={{ padding:"1.25rem 1.5rem", background:T.bg0, minHeight:400 }}>
 
           {/* One-time "Save this trip" sign-in ask (spec P0-2) */}
           {showSaveCard && (
@@ -832,16 +790,16 @@ export default function Dashboard({
 
           {/* One-time "save these as your defaults?" prompt (first-time users) */}
           {showProfilePrompt && (
-            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", background:T.accentSoft, border:`1px solid ${T.accent}`, borderRadius:T.r.md, marginBottom:12 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", background:T.bg1, border:`2px solid ${T.ink}`, borderRadius:T.r.md, marginBottom:16 }}>
               <div style={{ flex:1, fontSize:T.fs.body, color:T.ink, lineHeight:1.4 }}>
-                Save these as your <strong style={{ color:T.accent }}>defaults</strong>? Skip the questions next time.
+                Save these as your <strong>defaults</strong>? Skip the questions next time.
               </div>
               <button onClick={onSaveProfile}
-                style={{ padding:"7px 14px", borderRadius:T.r.md, fontSize:T.fs.body, fontWeight:700, color:T.white, background:T.accent, border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>
+                style={{ minHeight:40, padding:"0 16px", borderRadius:T.r.pill, fontSize:T.fs.body, fontWeight:900, color:T.white, background:T.ink, border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>
                 Save
               </button>
               <button onClick={onDismissProfilePrompt}
-                style={{ padding:"7px 4px", fontSize:T.fs.body, fontWeight:600, color:T.hint, background:"none", border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>
+                style={{ minHeight:40, padding:"0 6px", fontSize:T.fs.body, fontWeight:700, color:T.muted, background:"none", border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>
                 Not now
               </button>
             </div>
@@ -849,10 +807,10 @@ export default function Dashboard({
 
           {/* Happening during your trip — real MLB games at the destination (§7) */}
           {Array.isArray(tripGames) && tripGames.length > 0 && !eventsDismissed && (
-            <div style={{ padding:"13px 15px", background:T.bg1, border:`1px solid ${T.border2}`, borderRadius:T.r.md, marginBottom:12 }}>
+            <div style={{ padding:"13px 15px", background:T.bg1, border:`2px solid ${T.ink}`, borderRadius:T.r.md, marginBottom:16 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:9 }}>
-                <Glyph name="ticket" size={15} color={T.accent} />
-                <span style={{ flex:1, fontSize:T.fs.body, fontWeight:800, color:T.ink }}>Happening during your trip</span>
+                <Glyph name="ticket" size={16} color={T.ink} />
+                <span style={{ flex:1, fontSize:T.fs.ui, fontWeight:900, color:T.ink }}>Happening during your trip</span>
                 <button onClick={() => setEventsDismissed(true)} title="Dismiss"
                   style={{ padding:"2px 6px", fontSize:T.fs.body, color:T.hint, background:"none", border:"none", cursor:"pointer", fontFamily:T.font, flexShrink:0 }}>✕</button>
               </div>
@@ -861,22 +819,22 @@ export default function Dashboard({
                   const favShort = g.yours ? TEAM_SHORT[g.role === "away" ? g.away : g.home] : null;
                   return (
                     <div key={i} style={{ display:"flex", alignItems:"baseline", gap:8, fontSize:T.fs.body,
-                      ...(g.yours ? { borderLeft:`2px solid ${T.accent}`, paddingLeft:9, marginLeft:-2 } : {}) }}>
-                      <span style={{ color:T.accent, fontWeight:700, flexShrink:0, width:64 }}>{formatShortDate(g.date)}</span>
+                      ...(g.yours ? { borderLeft:`6px solid ${T.line[0]}`, paddingLeft:9 } : {}) }}>
+                      <span style={{ color:T.ink, fontWeight:900, flexShrink:0, width:64, fontVariantNumeric:"tabular-nums" }}>{formatShortDate(g.date)}</span>
                       <span style={{ lineHeight:1.4 }}>
                         {g.yours && (
-                          <span style={{ display:"block", color:T.accent, fontWeight:800, marginBottom:1 }}>
+                          <span style={{ display:"block", color:T.accentInk, fontWeight:900, marginBottom:1 }}>
                             Your {favShort} {g.role === "away" ? "are in town" : "are home"}
                           </span>
                         )}
-                        <span style={{ color:T.ink }}>{g.away} <span style={{ color:T.hint }}>@</span> {g.home}</span>
+                        <span style={{ color:T.ink }}>{g.away} <span style={{ color:T.muted }}>@</span> {g.home}</span>
                         {g.venue && <span style={{ color:T.muted }}> · {g.venue}</span>}
                       </span>
                     </div>
                   );
                 })}
                 {tripGames.length > 4 && (
-                  <div style={{ fontSize:T.fs.meta, color:T.hint, marginTop:1 }}>+{tripGames.length - 4} more</div>
+                  <div style={{ fontSize:T.fs.body, color:T.muted, marginTop:1 }}>+{tripGames.length - 4} more</div>
                 )}
               </div>
             </div>
@@ -897,14 +855,14 @@ export default function Dashboard({
             const hint = nudge || started ? null : "Seeded from this trip: dates, nights, interests";
             return (
               <button onClick={onOpenPacking} data-testid="packing-row"
-                style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"11px 14px", marginBottom:12, borderRadius:T.r.md, textAlign:"left", cursor:"pointer", fontFamily:T.font,
-                  background: hot ? "rgba(227,38,47,.09)" : T.bg1, border:`1px solid ${hot ? "rgba(227,38,47,.32)" : T.border}` }}>
-                <Glyph name="trip" size={14} color={hot ? T.accent : T.muted} />
+                style={{ width:"100%", minHeight:60, display:"flex", alignItems:"center", gap:12, padding:"10px 12px", marginBottom:16, textAlign:"left", cursor:"pointer", fontFamily:T.font,
+                  background: hot ? T.accentSoft : "transparent", border:"none", borderTop:`1px solid ${T.border}`, borderBottom:`1px solid ${T.border}` }}>
+                <Glyph name="trip" size={18} color={T.ink} />
                 <span style={{ flex:1, minWidth:0 }}>
-                  <span style={{ display:"block", fontSize:T.fs.body, fontWeight:hot ? 700 : 600, color:hot ? T.ink : T.muted }}>{label}</span>
-                  {hint && <span style={{ display:"block", fontSize:T.fs.meta, color:T.hint, marginTop:1 }}>{hint}</span>}
+                  <span style={{ display:"block", fontSize:T.fs.ui, fontWeight:hot ? 900 : 700, color:T.ink }}>{label}</span>
+                  {hint && <span style={{ display:"block", fontSize:T.fs.body, color:T.muted, marginTop:1 }}>{hint}</span>}
                 </span>
-                <span style={{ fontFamily:T.fontMono, fontSize:T.fs.micro, letterSpacing:".12em", textTransform:"uppercase", color:T.accent, fontWeight:700, flexShrink:0 }}>Open</span>
+                <span style={{ fontSize:T.fs.body, color:T.accentInk, fontWeight:900, flexShrink:0 }}>Open →</span>
               </button>
             );
           })()}
@@ -933,9 +891,9 @@ export default function Dashboard({
                   build the itinerary auto-starts, so the CTA is never seen. */}
               {building ? (
                 <>
-                  <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:10, rowGap:8, padding:"4px 2px 12px", borderBottom:`1px solid ${T.border}`, marginBottom:12 }}>
-                    <span style={{ width:7, height:7, borderRadius:"50%", background:T.accent, boxShadow:"0 0 0 3px rgba(227,38,47,.14)", flexShrink:0, animation:"pulse 1.2s ease-in-out infinite" }} />
-                    <span style={{ fontSize:T.fs.body, fontWeight:800, color:T.ink }}>{isBucket ? "Curating your ideas" : "Curating your trip"}</span>
+                  <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:10, rowGap:8, padding:"4px 0 14px", marginBottom:8 }}>
+                    <span style={{ width:14, height:14, border:`2px solid ${T.border}`, borderTopColor:T.ink, borderRadius:"50%", flexShrink:0, animation:"spin .7s linear infinite" }} />
+                    <span style={{ fontFamily:T.fontDay, fontSize:T.fs.title, fontWeight:900, letterSpacing:"-.02em", color:T.ink }}>{isBucket ? "Curating your ideas" : "Curating your trip"}</span>
                     <RollingMsg text={buildingMsg || "finding the good stuff…"} />
                   </div>
                   <GhostDays nights={trip.nights} />
@@ -949,36 +907,34 @@ export default function Dashboard({
                 const hero = MODES[0];
                 return (
                   <button onClick={() => online && onGenerate(hero.id)} disabled={!online}
-                    style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"14px 16px", borderRadius:T.r.md, background:T.bg1, border:`1px solid ${T.border2}`, cursor:online?"pointer":"not-allowed", opacity:online?1:.5, fontFamily:T.font, marginBottom:8, textAlign:"left", transition:"all .15s" }}>
+                    style={{ width:"100%", display:"flex", alignItems:"center", gap:14, padding:"14px 16px", borderRadius:T.r.md, background:T.bg1, border:`3px solid ${T.ink}`, cursor:online?"pointer":"not-allowed", opacity:online?1:.5, fontFamily:T.font, marginBottom:8, textAlign:"left" }}>
                     <div style={{ flex:1 }}>
-                      <div style={{ fontSize:T.fs.ui, fontWeight:800, color:T.ink, marginBottom:2 }}>{hero.label}</div>
+                      <div style={{ fontFamily:T.fontDay, fontSize:T.fs.title, fontWeight:900, letterSpacing:"-.02em", color:T.ink, marginBottom:2 }}>{hero.label}</div>
                       <div style={{ fontSize:T.fs.body, color:T.muted }}>{online ? hero.desc : "Needs a connection"}</div>
                     </div>
-                    <div style={{ fontSize:T.fs.meta, fontWeight:700, color:T.hint, background:T.bg3, padding:"4px 10px", borderRadius:T.r.pill, flexShrink:0 }}>
+                    <div style={{ fontSize:T.fs.body, fontWeight:900, color:T.white, background:T.accent, padding:"10px 16px", borderRadius:T.r.pill, flexShrink:0 }}>
                       Generate →
                     </div>
                   </button>
                 );
               })() : (
-                <div style={{ position:"relative", display:"flex", flexWrap:"wrap", alignItems:"center", gap:10, rowGap:8, padding:"4px 2px 12px", borderBottom:`1px solid ${T.border}`, marginBottom:12 }}>
-                  <StardustBurst burstKey={readyBurst} origin={{ left: 4, top: "40%" }} />
-                  <span style={{ width:7, height:7, borderRadius:"50%", background:T.accent, boxShadow:"0 0 0 3px rgba(227,38,47,.14)", flexShrink:0, animation:planLoading?"pulse 1.2s ease-in-out infinite":"pulse 2.4s ease-in-out infinite" }} />
-                  <span style={{ fontSize:T.fs.body, fontWeight:800, color:T.ink }}>Full itinerary</span>
-                  <span style={{ fontSize:T.fs.meta, color:T.hint }}>
+                <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:10, rowGap:8, padding:"4px 0 14px", marginBottom:8 }}>
+                  {planLoading && <span style={{ width:14, height:14, border:`2px solid ${T.border}`, borderTopColor:T.ink, borderRadius:"50%", flexShrink:0, animation:"spin .7s linear infinite" }} />}
+                  <h2 style={{ margin:0, fontFamily:T.fontDay, fontSize:T.fs.title, fontWeight:900, letterSpacing:"-.02em", color:T.ink }}>Full itinerary</h2>
+                  <span style={{ fontSize:T.fs.body, color:T.muted }}>
                     {planLoading ? "writing your days…" : generatedAt ? `generated ${timeAgo(generatedAt)}` : ""}
                   </span>
                   {/* One toolbar for every itinerary action (audit R3) —
                       Copy/Export used to float in their own row inside the
                       plan card, leaving a dead band of empty space. */}
-                  <div style={{ display:"flex", gap:7, marginLeft:"auto" }}>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, width:"100%" }}>
                     {!planLoading && planText && (
                       <>
                         <button onClick={copyPlan}
-                          style={{ fontSize:T.fs.meta, fontWeight:600, color:copied==="error"?T.danger:copied?T.ink:T.muted, background:copied?T.bg3:"transparent", border:`1px solid ${T.border}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                          style={{ ...hdrBtn, color:copied==="error"?T.danger:T.ink, background:copied?T.bg2:"transparent" }}>
                           {copied === "error" ? "Copy failed" : copied ? "✓ Copied" : "Copy"}
                         </button>
-                        <button onClick={exportToPdf}
-                          style={{ fontSize:T.fs.meta, fontWeight:600, color:T.muted, background:"transparent", border:`1px solid ${T.border}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:"pointer", fontFamily:T.font }}>
+                        <button onClick={exportToPdf} style={hdrBtn}>
                           Export PDF
                         </button>
                       </>
@@ -987,7 +943,7 @@ export default function Dashboard({
                       onClick={() => { if (online && !planLoading) { setEditSheetStage("full-itinerary"); setEditSheetOpen(true); } }}
                       disabled={!online || planLoading}
                       title={online ? "Rework this itinerary — with your direction" : "Needs a connection"}
-                      style={{ fontSize:T.fs.meta, fontWeight:600, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:online&&!planLoading?"pointer":"not-allowed", opacity:online&&!planLoading?1:.45, fontFamily:T.font }}>
+                      style={{ ...hdrBtn, cursor:online&&!planLoading?"pointer":"not-allowed", opacity:online&&!planLoading?1:.45 }}>
                       ↻ Regenerate
                     </button>
                   </div>
@@ -995,7 +951,7 @@ export default function Dashboard({
               )}
               {/* Patch error banner (day-edit failure — plan text is preserved) */}
               {patchError && !planLoading && (
-                <div style={{ display:"flex", alignItems:"center", gap:9, padding:"10px 14px", background:"rgba(180,60,40,.12)", border:"1px solid rgba(180,60,40,.3)", borderRadius:T.r.md, marginBottom:10, fontSize:T.fs.body, color:T.danger }}>
+                <div style={{ display:"flex", alignItems:"center", gap:9, padding:"10px 14px", background:T.accentSoft, border:`1px solid ${T.danger}`, borderRadius:T.r.md, marginBottom:12, fontSize:T.fs.body, color:T.danger }}>
                   <Glyph name="warning" size={14} color={T.danger} />
                   <span>{patchError}</span>
                 </div>
@@ -1005,10 +961,10 @@ export default function Dashboard({
                   are things to look at. Hidden while streaming, when the day
                   count is legitimately mid-flight. */}
               {FEATURES.planCheck && !planLoading && planIssues.length > 0 && (
-                <div style={{ padding:"11px 14px", background:"rgba(227,38,47,.09)", border:`1px solid rgba(227,38,47,.32)`, borderRadius:T.r.md, marginBottom:10 }}>
+                <div style={{ padding:"12px 14px", background:T.bg1, border:`2px solid ${T.ink}`, borderRadius:T.r.md, marginBottom:16 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
-                    <Glyph name="warning" size={13} color={T.accent} />
-                    <span style={{ fontSize:T.fs.label, fontWeight:700, color:T.accent, letterSpacing:".06em", textTransform:"uppercase" }}>
+                    <Glyph name="warning" size={15} color={T.ink} />
+                    <span style={{ fontSize:T.fs.ui, fontWeight:900, color:T.ink }}>
                       {planIssues.length === 1 ? "One thing to check" : `${planIssues.length} things to check`}
                     </span>
                   </div>
@@ -1020,7 +976,7 @@ export default function Dashboard({
                   <button
                     onClick={() => { if (online && !planLoading) { setEditSheetStage("full-itinerary"); setEditSheetOpen(true); } }}
                     disabled={!online || planLoading}
-                    style={{ marginTop:9, fontSize:T.fs.meta, fontWeight:600, color:T.accent, background:"transparent", border:`1px solid ${T.accent}`, borderRadius:T.r.sm, padding:"5px 12px", cursor:online&&!planLoading?"pointer":"not-allowed", opacity:online&&!planLoading?1:.45, fontFamily:T.font }}>
+                    style={{ ...hdrBtn, marginTop:10, cursor:online&&!planLoading?"pointer":"not-allowed", opacity:online&&!planLoading?1:.45 }}>
                     Rebuild this itinerary
                   </button>
                 </div>
@@ -1028,7 +984,7 @@ export default function Dashboard({
               {/* Loading spinner */}
               {planLoading && !planText && (
                 <div style={{ display:"flex", alignItems:"center", gap:9, padding:"1.25rem 0", fontSize:T.fs.body, color:T.muted }}>
-                  <div style={{ width:18, height:18, border:`1.5px solid ${T.border}`, borderTopColor:T.accent, borderRadius:"50%", animation:"spin .7s linear infinite" }} />
+                  <div style={{ width:18, height:18, border:`2px solid ${T.border}`, borderTopColor:T.ink, borderRadius:"50%", animation:"spin .7s linear infinite" }} />
                   Writing your {MODES.find(m => m.id === planMode)?.label?.toLowerCase()}…
                 </div>
               )}
@@ -1048,7 +1004,7 @@ export default function Dashboard({
                     <span style={{ display:"inline-block", width:7, height:14, background:T.accent, marginLeft:3, animation:"blink 1s step-end infinite", borderRadius:1 }} />
                   )}
                   {!planLoading && (
-                    <div style={{ marginTop:"1.25rem", paddingTop:"1rem", borderTop:`1px solid ${T.border}`, fontSize:T.fs.meta, color:T.hint, lineHeight:1.6 }}>
+                    <div style={{ marginTop:"1.25rem", paddingTop:"1rem", borderTop:`1px solid ${T.border}`, fontSize:T.fs.body, color:T.muted, lineHeight:1.6 }}>
                       {AI_DISCLAIMER}
                     </div>
                   )}

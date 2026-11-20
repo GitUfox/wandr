@@ -6,29 +6,78 @@
  * doesn't fight the tap controls), and a "Move" picker to send an activity to
  * another day. Food renders read-only; tips attach to the activity they name
  * (matchTipToActivity, same as the PDF) with the rest day-level read-only.
- * Phase 3 (design pick 3B, 2026-08-11): actions moved off the cramped corner
- * overlay — tap a card to select it and a labeled action bar (Tweak / Move /
- * Edit / Remove, 44px targets) reveals at its foot. One card selected at a
- * time; reading mode stays clean. Plain CSS transitions, no framer.
+ * Phase 3 (design pick 3B, 2026-08-11): tap a stop to select it and a labeled
+ * action bar (Tweak / Move / Edit / Remove) reveals at its foot. One stop
+ * selected at a time; reading mode stays clean. Plain CSS transitions.
+ *
+ * TRANSIT DIAGRAM (redesign direction E, 2026-11-20): a day is a LINE and a
+ * stop is a STATION. Each day takes one color from T.line, in day order. The
+ * stops sit on a thick vertical line in that color. The station symbol says
+ * what kind of stop it is: ring = stop, ring with a center = book ahead,
+ * bar = the last stop of the day. Stops are rows, not cards.
  *
  * All mutations lift to useGenerate, which re-serializes planText and persists,
  * so copy / PDF export / reload all stay in sync.
  */
 import { useState, useEffect } from "react";
 import { Reorder, useDragControls } from "framer-motion";
-import { T } from "../lib/constants.js";
+import { T, NO_MOTION } from "../lib/constants.js";
+import { chipSt, fieldSt } from "../lib/styles.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { BUCKETS, bucketOf, timeSortKey, formatTime, displayTime, splitDetails, matchTipToActivity, findGroundedVenue } from "../lib/utils.js";
 import Glyph from "./Glyphs.jsx";
+import StationSymbol from "./StationSymbol.jsx";
 
 const clean = s => (s || "").replace(/\*\*/g, "").trim();
 
-/* ── Fact chips (design pick 4A, with the 4C legacy bridge) ──────────────────
+/** The line color for a day. Day 6 and later wrap. */
+export const dayLineColor = dayIdx => T.line[dayIdx % T.line.length];
+
+/** Which station symbol a stop gets. Booking wins over "last stop". */
+export function stationKind(details, isLast) {
+  if (splitDetails(details).facts.some(f => f.kind === "booking")) return "book";
+  return isLast ? "end" : "stop";
+}
+
+// Station column: the symbol is 26px in a 30px column. LINE_LEFT centers the
+// 10px day line under it. STATION_Y is the symbol's center from the top of a
+// stop row (10 padding + 1 + half of 26). Keep these numbers in step.
+const STATION = 26, STATION_COL = 30, LINE_W = 10;
+const ROW_PAD_LEFT = 2, STATION_Y = 24;
+const LINE_LEFT = ROW_PAD_LEFT + (STATION_COL - LINE_W) / 2;
+
+/**
+ * The day line is drawn per stop, one segment per row, so it starts at the
+ * first station and ends at the last one for any row height. (One long bar
+ * behind the list cannot know where the last station sits.)
+ */
+function lineSegmentSt(color, isFirst, isLast) {
+  const top = isFirst ? STATION_Y : 0;
+  return {
+    position: "absolute", left: LINE_LEFT, width: LINE_W, background: color, top,
+    ...(isLast ? { height: STATION_Y - top } : { bottom: 0 }),
+  };
+}
+
+const timeSt = { fontFamily: T.fontMono, fontSize: T.fs.ui, fontWeight: 900, color: T.ink, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", flexShrink: 0 };
+const smallBtn = {
+  minHeight: 40, padding: "0 14px", borderRadius: T.r.pill, cursor: "pointer",
+  fontFamily: T.font, fontSize: T.fs.body, fontWeight: 700, lineHeight: 1,
+};
+const solidBtn   = { ...smallBtn, color: T.white, background: T.ink, border: `2px solid ${T.ink}` };
+const outlineBtn = { ...smallBtn, color: T.ink, background: "transparent", border: `2px solid ${T.ink}` };
+const dangerBtn  = { ...smallBtn, color: T.white, background: T.accent, border: `2px solid ${T.accent}` };
+const smallField = { ...fieldSt, padding: "9px 12px", fontSize: T.fs.body };
+const subhead    = { fontSize: T.fs.body, fontWeight: 900, color: T.ink };
+
+/* ── Facts (design pick 4A, with the 4C legacy bridge) ───────────────────────
    splitDetails() turns the stored Details string into a description line plus
    standardized fact tokens at RENDER TIME only — the string itself is never
    rewritten, so edit/copy/PDF/sync all keep carrying the raw cell. Grammar
-   plans split on " · "; legacy sentence-blobs get chips derived from the
-   prose (which keeps the facts too — a regex can miss). */
+   plans split on " · "; legacy sentence-blobs get facts derived from the
+   prose (which keeps the facts too — a regex can miss).
+   Transit Diagram: facts are one plain text line with a glyph each, not
+   boxed chips. A booking fact takes the accent ink. */
 const FACT_GLYPH = { cost: "coin", duration: "clock", hours: "doors", booking: "bookmark", note: "info" };
 
 function DetailsBlock({ details, tips, mapUrl, indent = 0 }) {
@@ -36,44 +85,35 @@ function DetailsBlock({ details, tips, mapUrl, indent = 0 }) {
   if (!desc && !facts.length && !tips?.length && !mapUrl) return null;
   return (
     <>
-      {desc && <div style={{ fontFamily: T.fontProse, fontWeight:400, fontSize: T.fs.body, color: T.muted, lineHeight: 1.5, marginLeft: indent }}>{desc}</div>}
+      {desc && <div style={{ fontFamily: T.fontProse, fontWeight: 400, fontSize: T.fs.body, color: T.muted, lineHeight: 1.5, marginLeft: indent }}>{desc}</div>}
       {/* Attached tip reads as part of the description, so it sits above the
-          fact chips — chips close the card (Kraig, 2026-08-11). */}
+          facts — facts close the stop (Kraig, 2026-08-11). */}
       <TipLines tips={tips} indent={indent} />
       {(facts.length > 0 || mapUrl) && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6, marginLeft: indent }}>
-          {facts.map((f, i) => {
-            const hot = f.kind === "booking";
-            return (
-              <span key={i} style={{
-                display: "inline-flex", alignItems: "center", gap: 5,
-                fontSize: T.fs.label, fontWeight: 700, lineHeight: 1.3, fontVariantNumeric: "tabular-nums",
-                color: hot ? T.accentHover : T.muted,
-                background: hot ? "rgba(227,38,47,.08)" : T.bg2,
-                border: `1px solid ${hot ? "rgba(227,38,47,.4)" : T.border}`,
-                borderRadius: T.r.sm, padding: "3px 8px",
-              }}>
-                <Glyph name={FACT_GLYPH[f.kind] || "info"} size={11} color="currentColor" />
-                {f.text}
-              </span>
-            );
-          })}
-          {/* Map chip (pick A) — verified venues only, pinned to Google's own
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px", marginTop: 6, marginLeft: indent }}>
+          {facts.map((f, i) => (
+            <span key={i} style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              fontSize: T.fs.meta, fontWeight: 700, lineHeight: 1.4, fontVariantNumeric: "tabular-nums",
+              color: f.kind === "booking" ? T.accentInk : T.muted,
+            }}>
+              <Glyph name={FACT_GLYPH[f.kind] || "info"} size={12} color="currentColor" />
+              {f.text}
+            </span>
+          ))}
+          {/* Map link (pick A) — verified venues only, pinned to Google's own
               Place ID. An <a>, not a button: long-press/cmd-click must work.
-              stopPropagation keeps the card's tap-to-select untouched. */}
+              stopPropagation keeps the stop's tap-to-select untouched. */}
           {mapUrl && (
             <a href={mapUrl} target="_blank" rel="noopener noreferrer"
               aria-label="Open in Google Maps"
               onClick={e => e.stopPropagation()}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 5,
-                fontSize: T.fs.label, fontWeight: 700, lineHeight: 1.3,
-                color: T.accentHover, textDecoration: "none",
-                background: "rgba(227,38,47,.10)",
-                border: "1px solid rgba(227,38,47,.55)",
-                borderRadius: T.r.sm, padding: "3px 8px",
+                fontSize: T.fs.meta, fontWeight: 900, lineHeight: 1.4,
+                color: T.accentInk, textDecoration: "underline", textUnderlineOffset: 3,
               }}>
-              <Glyph name="pin" size={11} color="currentColor" />
+              <Glyph name="pin" size={12} color="currentColor" />
               Map
             </a>
           )}
@@ -83,11 +123,11 @@ function DetailsBlock({ details, tips, mapUrl, indent = 0 }) {
   );
 }
 
-/* ── Slot-chip time picker (design pick 3A) ──────────────────────────────────
+/* ── Slot time picker (design pick 3A) ───────────────────────────────────────
    Tap a slot instead of typing. 30-minute grain grouped by daypart — the
-   grain an itinerary actually uses. Chips are 24-hour (the app-wide format).
+   grain an itinerary actually uses. Slots are 24-hour (the app-wide format).
    An off-grid value ("09:15", a legacy "9:15 AM", a range) keeps showing on
-   the trigger and survives Save untouched unless a chip is picked, so
+   the trigger and survives Save untouched unless a slot is picked, so
    AI-written times are never mangled. */
 const DAYPARTS = [
   { label: "Morning",   from: 6 * 60,  to: 11 * 60 + 30 },
@@ -97,25 +137,19 @@ const DAYPARTS = [
 
 function TimeSlotPicker({ value, onPick }) {
   return (
-    <div style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.md, padding: "10px 12px 4px", marginBottom: 8 }}>
+    <div style={{ background: T.bg1, border: `2px solid ${T.ink}`, borderRadius: T.r.md, padding: "12px 12px 4px", marginBottom: 8 }}>
       {DAYPARTS.map(p => {
         const slots = [];
         for (let m = p.from; m <= p.to; m += 30) slots.push(formatTime(m));
         return (
-          <div key={p.label} style={{ marginBottom: 9 }}>
-            <div style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, letterSpacing: ".12em", textTransform: "uppercase", color: T.hint, fontWeight:700, marginBottom: 6 }}>{p.label}</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+          <div key={p.label} style={{ marginBottom: 10 }}>
+            <div style={{ ...subhead, marginBottom: 6 }}>{p.label}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {slots.map(t => {
                 const on = t === value;
                 return (
-                  <button key={t} onClick={() => onPick(t)}
-                    style={{
-                      fontFamily: T.fontMono, fontSize: T.fs.meta, fontWeight:700, fontVariantNumeric: "tabular-nums",
-                      width: 62, padding: "6px 0", textAlign: "center", borderRadius: T.r.md, cursor: "pointer",
-                      color: on ? T.white : T.muted,
-                      background: on ? T.accent : T.bg2,
-                      border: `1px solid ${on ? T.accent : T.border}`,
-                    }}>
+                  <button key={t} aria-pressed={on} onClick={() => onPick(t)}
+                    style={{ ...chipSt(on, { small: true }), width: 66, padding: 0, textAlign: "center", fontVariantNumeric: "tabular-nums" }}>
                     {t}
                   </button>
                 );
@@ -128,46 +162,41 @@ function TimeSlotPicker({ value, onPick }) {
   );
 }
 
-const iconBtn = {
-  background: "transparent", border: "none", cursor: "pointer",
-  fontFamily: T.font, fontSize: T.fs.body, padding: "3px 6px", borderRadius: T.r.sm, lineHeight: 1,
-};
-
-/* 3B action-bar button: big labeled target — Kraig described the old overlay
+/* 3B action-bar button: a labeled target. Kraig described the old overlay
    icons by shape ("the diamond, the arrow"), which means they never read as
-   functions. Labels + 44px minimum height fix both complaints at once. */
+   functions. Labels + a 48px height fix both complaints at once. */
 function ActionBtn({ glyph, label, onClick, danger, active, disabled, title }) {
-  const tone = danger ? T.danger : active ? T.accent : T.muted;
+  const tone = active ? T.white : danger ? T.danger : T.ink;
   return (
-    <button onClick={onClick} disabled={disabled} title={title || label}
+    <button onClick={onClick} disabled={disabled} title={title || label} aria-pressed={active || undefined}
       style={{
-        flex: 1, minHeight: 44, display: "flex", flexDirection: "column", alignItems: "center",
+        flex: 1, minHeight: 48, display: "flex", flexDirection: "column", alignItems: "center",
         justifyContent: "center", gap: 3, padding: "6px 4px",
-        background: active ? "rgba(227,38,47,.08)" : T.bg2,
-        border: `1px solid ${active ? T.accent : T.border}`, borderRadius: T.r.sm,
+        background: active ? T.ink : T.bg1,
+        border: `2px solid ${T.ink}`, borderRadius: T.r.md,
         cursor: disabled ? "not-allowed" : "pointer", fontFamily: T.font, opacity: disabled ? .4 : 1,
       }}>
       <Glyph name={glyph} size={15} color={tone} />
-      <span style={{ fontSize: T.fs.micro, fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", color: danger ? T.danger : T.hint }}>{label}</span>
+      <span style={{ fontSize: T.fs.meta, fontWeight: 700, color: tone }}>{label}</span>
     </button>
   );
 }
 
-/* Attached tip line — a tip that names this activity renders inside its card
-   (same matcher as the PDF's 2B day cards, so the two surfaces agree). */
+/* Attached tip line — a tip that names this stop renders inside it (same
+   matcher as the PDF's 2B day cards, so the two surfaces agree). */
 function TipLines({ tips, indent = 0 }) {
   if (!tips?.length) return null;
   return tips.map((tip, i) => (
-    <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start", marginTop: 6, marginLeft: indent, fontFamily: T.fontProse, fontWeight:400, fontSize: T.fs.meta, color: T.muted, lineHeight: 1.5 }}>
-      <span style={{ flexShrink: 0, marginTop: 1 }}><Glyph name="info" size={11} color={T.accent} /></span>
+    <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start", marginTop: 6, marginLeft: indent, fontFamily: T.fontProse, fontWeight: 400, fontSize: T.fs.meta, color: T.muted, lineHeight: 1.5 }}>
+      <span style={{ flexShrink: 0, marginTop: 2 }}><Glyph name="info" size={12} color={T.ink} /></span>
       <span>{tip}</span>
     </div>
   ));
 }
 
-function ActivityBlock({ a, tips, mapUrl, dayIdx, days, isTweaking, selected, onToggleSelect, onEditActivity, onDeleteActivity, onMoveActivity, onTweakActivity }) {
-  // The ✦ tweak is the only per-activity action that calls the AI; inline edit,
-  // move and delete are all local, so they stay available offline.
+function ActivityBlock({ a, tips, mapUrl, dayIdx, days, isFirst, isLast, isTweaking, selected, onToggleSelect, onEditActivity, onDeleteActivity, onMoveActivity, onTweakActivity }) {
+  // The AI tweak is the only per-activity action that calls the AI; inline
+  // edit, move and delete are all local, so they stay available offline.
   const online = useOnline();
   const controls = useDragControls();
   const [editing, setEditing]       = useState(false);
@@ -209,103 +238,111 @@ function ActivityBlock({ a, tips, mapUrl, dayIdx, days, isTweaking, selected, on
     setPickerOpen(false);
   }
 
-  const inputSt = {
-    width: "100%", padding: "7px 10px", border: `1px solid ${T.border2}`, borderRadius: T.r.sm,
-    background: T.bg2, color: T.ink, outline: "none", fontSize: T.fs.body, fontFamily: T.font,
-    boxSizing: "border-box",
-  };
-
   const otherDays = days.filter(d => d.idx !== dayIdx);
+  const barOpen = selected && !isTweaking;
 
   return (
     <Reorder.Item value={a} as="div" dragListener={false} dragControls={controls}
-      style={{ position: "relative", background: T.bg1, border: `1px solid ${editing || selected ? T.accent : T.border}`, borderRadius: T.r.md, padding: editing ? "11px 12px" : "10px 10px 10px 4px", marginBottom: 8, listStyle: "none", transition: "border-color .2s ease" }}>
+      style={{
+        position: "relative", listStyle: "none", borderRadius: T.r.md,
+        // Editing: an opaque panel (it covers the day line on purpose).
+        // Selected: an inset ring with NO fill, so the day line stays visible.
+        ...(editing
+          ? { background: T.bg1, border: `2px solid ${T.ink}`, padding: 12, margin: "6px 0" }
+          : { padding: `10px 8px 10px ${ROW_PAD_LEFT}px`, boxShadow: selected ? `inset 0 0 0 2px ${T.ink}` : "none" }),
+      }}>
+      {!editing && <span aria-hidden="true" data-line-segment="" style={lineSegmentSt(dayLineColor(dayIdx), isFirst, isLast)} />}
 
       {editing ? (
         <>
           <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
             <button onClick={() => setPickerOpen(v => !v)}
               title="Pick a time"
-              style={{ ...inputSt, width: 110, flexShrink: 0, color: T.accent, fontWeight: 700, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+              style={{ ...smallField, width: 116, flexShrink: 0, fontWeight: 900, cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{clean(time) || "Set time"}</span>
-              <span style={{ color: T.hint, fontSize: T.fs.label, flexShrink: 0 }}>{pickerOpen ? "▴" : "▾"}</span>
+              <span style={{ color: T.muted, fontSize: T.fs.label, flexShrink: 0 }}>{pickerOpen ? "▴" : "▾"}</span>
             </button>
             <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Place / activity" autoFocus
-              style={{ ...inputSt, fontWeight: 700 }} />
+              aria-label="Place or activity" style={{ ...smallField, fontWeight: 700 }} />
           </div>
           {pickerOpen && (
             <TimeSlotPicker value={clean(time)} onPick={t => { setTime(t); setPickerOpen(false); }} />
           )}
           <textarea value={details} onChange={e => setDetails(e.target.value)} placeholder="Details — what it is · ~€15 · 2h · opens 09:00 · book ahead" rows={3}
-            style={{ ...inputSt, lineHeight: 1.5, resize: "vertical", marginBottom: 8 }} />
-          <div style={{ display: "flex", gap: 7, justifyContent: "flex-end" }}>
-            <button onClick={cancel} style={{ ...iconBtn, fontSize: T.fs.body, color: T.muted, padding: "6px 12px", border: `1px solid ${T.border}` }}>Cancel</button>
-            <button onClick={save} style={{ ...iconBtn, fontSize: T.fs.body, fontWeight: 700, color: T.white, background: T.accent, padding: "6px 14px" }}>Save</button>
+            aria-label="Details" style={{ ...smallField, lineHeight: 1.5, resize: "vertical", marginBottom: 8 }} />
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button onClick={cancel} style={outlineBtn}>Cancel</button>
+            <button onClick={save} style={solidBtn}>Save</button>
           </div>
         </>
       ) : (
         <>
-          {/* Tap anywhere on the card to select it (3B) — inner controls stop
+          {/* Tap anywhere on the stop to select it (3B) — inner controls stop
               propagation so acting never re-toggles the selection. */}
           <div onClick={() => onToggleSelect(a.id)} role="button" tabIndex={0} aria-expanded={selected}
             onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleSelect(a.id); } }}
-            style={{ display: "flex", gap: 6, alignItems: "flex-start", cursor: "pointer", outline: "none" }}>
-            {/* Drag handle — the only drag trigger, so taps elsewhere stay clickable */}
-            <span onPointerDown={e => controls.start(e)} onClick={e => e.stopPropagation()} title="Drag to reorder"
-              style={{ cursor: "grab", touchAction: "none", color: T.hint, fontSize: T.fs.ui, padding: "2px 4px", flexShrink: 0, userSelect: "none", lineHeight: 1.2 }}>⠿</span>
-            <div style={{ width: 66 /* fits "10:00 AM" in Martian Mono at label size — 58 wrapped 8-char 12h times */, flexShrink: 0, fontFamily: T.fontMono, fontSize: T.fs.label, color: T.accent, fontWeight:700, letterSpacing: "-.02em", paddingTop: 3 }}>{displayTime(clean(a.time))}</div>
-            <div style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
-              <div style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.35, marginBottom: 2 }}>{clean(a.title)}</div>
+            style={{ display: "flex", gap: 12, alignItems: "flex-start", cursor: "pointer", outline: "none" }}>
+            <span style={{ position: "relative", width: STATION_COL, flexShrink: 0, display: "flex", justifyContent: "center", paddingTop: 1 }}>
+              <StationSymbol kind={stationKind(a.details, isLast)} size={STATION} />
+            </span>
+            <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+              <div style={{ fontSize: T.fs.ui, color: T.ink, fontWeight: 700, lineHeight: 1.3, marginBottom: 2 }}>{clean(a.title)}</div>
               {(a.details || tips?.length > 0 || mapUrl) && <DetailsBlock details={a.details} tips={tips} mapUrl={mapUrl} />}
               {/* Move picker — choose a destination day */}
               {moving && otherDays.length > 0 && (
-                <div onClick={e => e.stopPropagation()} style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", marginTop: 8 }}>
-                  <span style={{ fontSize: T.fs.label, color: T.hint }}>Move to:</span>
+                <div onClick={e => e.stopPropagation()} style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 10 }}>
+                  <span style={{ fontSize: T.fs.body, fontWeight: 700, color: T.ink }}>Move to:</span>
                   {otherDays.map(d => (
                     <button key={d.idx} onClick={() => { onMoveActivity(dayIdx, a.id, d.idx); setMoving(false); }}
-                      style={{ ...iconBtn, fontSize: T.fs.meta, color: T.accent, border: `1px solid ${T.accent}`, padding: "3px 9px" }}>
+                      style={{ ...chipSt(false, { small: true }), borderBottom: `6px solid ${dayLineColor(d.idx)}` }}>
                       Day {d.idx + 1}
                     </button>
                   ))}
-                  <button onClick={() => setMoving(false)} style={{ ...iconBtn, fontSize: T.fs.meta, color: T.muted }}>Cancel</button>
+                  <button onClick={() => setMoving(false)} style={{ ...smallBtn, color: T.muted, background: "none", border: "none" }}>Cancel</button>
                 </div>
               )}
               {/* AI tweak — free-text instruction for just this activity */}
               {isTweaking ? (
-                <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 8, fontSize: T.fs.meta, color: T.accent }}>
-                  <span style={{ width: 12, height: 12, border: `1.5px solid ${T.border}`, borderTopColor: T.accent, borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: T.fs.body, fontWeight: 700, color: T.ink }}>
+                  <span style={{ width: 13, height: 13, border: `2px solid ${T.border}`, borderTopColor: T.ink, borderRadius: "50%", display: "inline-block", animation: "spin .7s linear infinite" }} />
                   Tweaking this activity…
                 </div>
               ) : tweakOpen && (
-                <div onClick={e => e.stopPropagation()} style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 8 }}>
+                <div onClick={e => e.stopPropagation()} style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 10 }}>
                   <input value={tweakText} onChange={e => setTweakText(e.target.value)} autoFocus
                     onKeyDown={e => e.key === "Enter" && submitTweak()}
+                    aria-label="What to change"
                     placeholder="e.g. make it more relaxed · something cheaper nearby"
-                    style={{ flex: 1, minWidth: 0, padding: "6px 9px", border: `1px solid ${T.accent}`, borderRadius: T.r.sm, background: T.bg2, color: T.ink, outline: "none", fontSize: T.fs.meta, fontFamily: T.font }} />
-                  <button onClick={submitTweak} style={{ ...iconBtn, fontSize: T.fs.meta, fontWeight: 700, color: T.white, background: T.accent, padding: "5px 11px" }}>Ask AI</button>
-                  <button onClick={() => setTweakOpen(false)} style={{ ...iconBtn, fontSize: T.fs.meta, color: T.muted }}>✕</button>
+                    style={{ ...smallField, flex: 1, minWidth: 0 }} />
+                  <button onClick={submitTweak} style={solidBtn}>Ask AI</button>
+                  <button onClick={() => setTweakOpen(false)} aria-label="Close" style={{ ...smallBtn, padding: "0 8px", color: T.muted, background: "none", border: "none" }}>✕</button>
                 </div>
               )}
             </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, paddingTop: 2 }}>
+              <span style={timeSt}>{displayTime(clean(a.time))}</span>
+              {/* Drag handle — the only drag trigger, so taps elsewhere stay clickable */}
+              <span onPointerDown={e => controls.start(e)} onClick={e => e.stopPropagation()} title="Drag to reorder"
+                style={{ cursor: "grab", touchAction: "none", color: T.hint, fontSize: T.fs.ui, padding: "4px 0 4px 10px", userSelect: "none", lineHeight: 1 }}>⠿</span>
+            </div>
           </div>
 
-          {/* 3B action bar — reveals under the selected card; hidden while an
+          {/* 3B action bar — reveals under the selected stop; hidden while an
               AI tweak is in flight. max-height + opacity so the collapse is a
-              plain CSS transition (no framer, works under VITE_NO_MOTION). */}
+              plain CSS transition (no framer). Off under VITE_NO_MOTION: the
+              pane freezes transitions mid-flight. */}
           <div onClick={e => e.stopPropagation()}
-            style={{ maxHeight: selected && !isTweaking ? 96 : 0, opacity: selected && !isTweaking ? 1 : 0, overflow: "hidden", transition: "max-height .28s ease, opacity .22s ease" }}>
+            style={{ maxHeight: barOpen ? 96 : 0, opacity: barOpen ? 1 : 0, overflow: "hidden", transition: NO_MOTION ? "none" : "max-height .28s ease, opacity .22s ease" }}>
             {confirmDel ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, borderTop: `1px solid ${T.border}`, marginTop: 10, marginLeft: 6, paddingTop: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "10px 2px 2px 42px" }}>
                 <span style={{ flex: 1, minWidth: 0, fontSize: T.fs.body, color: T.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   Remove <strong style={{ color: T.ink }}>{clean(a.title)}</strong>?
                 </span>
-                <button onClick={() => onDeleteActivity(dayIdx, a.id)}
-                  style={{ ...iconBtn, fontSize: T.fs.meta, fontWeight: 700, color: T.white, background: T.accent, padding: "7px 14px" }}>Remove</button>
-                <button onClick={() => setConfirmDel(false)}
-                  style={{ ...iconBtn, fontSize: T.fs.meta, color: T.muted, border: `1px solid ${T.border}`, padding: "7px 12px" }}>Keep</button>
+                <button onClick={() => onDeleteActivity(dayIdx, a.id)} style={dangerBtn}>Remove</button>
+                <button onClick={() => setConfirmDel(false)} style={outlineBtn}>Keep</button>
               </div>
             ) : (
-              <div style={{ display: "flex", gap: 6, borderTop: `1px solid ${T.border}`, marginTop: 10, marginLeft: 6, paddingTop: 10 }}>
+              <div style={{ display: "flex", gap: 6, margin: "10px 2px 2px 42px" }}>
                 <ActionBtn glyph="sparkle" label="Tweak" active={tweakOpen} disabled={!online}
                   title={online ? "Ask AI to tweak this" : "Tweaking needs a connection"}
                   onClick={() => setTweakOpen(o => !o)} />
@@ -328,29 +365,33 @@ function FoodRow({ f }) {
   return (
     <tr style={{ borderBottom: `1px solid ${T.border}` }}>
       <td style={{ padding: "6px 5px", fontSize: T.fs.meta, color: T.muted, verticalAlign: "top", wordBreak: "break-word" }}>{clean(f.meal)}</td>
-      <td style={{ padding: "6px 5px", fontSize: T.fs.meta, color: T.ink, fontWeight: 600, verticalAlign: "top", wordBreak: "break-word" }}>{clean(f.name)}</td>
+      <td style={{ padding: "6px 5px", fontSize: T.fs.meta, color: T.ink, fontWeight: 700, verticalAlign: "top", wordBreak: "break-word" }}>{clean(f.name)}</td>
       <td style={{ padding: "6px 5px", fontSize: T.fs.meta, color: T.muted, verticalAlign: "top", wordBreak: "break-word" }}>{clean(f.order)}</td>
-      <td style={{ padding: "6px 5px", fontSize: T.fs.meta, color: T.accent, fontWeight: 600, verticalAlign: "top", whiteSpace: "nowrap" }}>{clean(f.price)}</td>
+      <td style={{ padding: "6px 5px", fontSize: T.fs.meta, color: T.ink, fontWeight: 700, verticalAlign: "top", whiteSpace: "nowrap" }}>{clean(f.price)}</td>
     </tr>
   );
 }
 
 /* ── Buckets view ─────────────────────────────────────────────────────────
-   Compact, read-only cards grouped by time-of-day. Tap a "→ Bucket" chip to
-   re-time an activity into another bucket. Detailed edits live in Timeline. */
-function BucketCard({ a, tips, mapUrl, dayIdx, bucket, onMoveToBucket }) {
+   Compact, read-only rows grouped by time-of-day. Tap a bucket name to
+   re-time an activity into that bucket. Detailed edits live in Timeline. */
+const BUCKET_INDENT = STATION_COL + 12;
+
+function BucketCard({ a, tips, mapUrl, dayIdx, bucket, isLast, onMoveToBucket }) {
   return (
-    <div style={{ background: T.bg1, border: `1px solid ${T.border}`, borderRadius: T.r.md, padding: "8px 10px", marginBottom: 6 }}>
-      <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-        <span style={{ fontFamily: T.fontMono, fontSize: T.fs.label, color: T.accent, fontWeight:700, letterSpacing: "-.02em", flexShrink: 0, width: 66 /* matches the timeline rail — fits 8-char 12h times */ }}>{displayTime(clean(a.time))}</span>
-        <span style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.3 }}>{clean(a.title)}</span>
+    <div style={{ padding: "10px 0", borderTop: `1px solid ${T.border}` }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+        <span style={{ width: STATION_COL, flexShrink: 0, display: "flex", justifyContent: "center" }}>
+          <StationSymbol kind={stationKind(a.details, isLast)} size={22} />
+        </span>
+        <span style={{ flex: 1, minWidth: 0, fontSize: T.fs.ui, color: T.ink, fontWeight: 700, lineHeight: 1.3 }}>{clean(a.title)}</span>
+        <span style={timeSt}>{displayTime(clean(a.time))}</span>
       </div>
-      {(a.details || tips?.length > 0 || mapUrl) && <div style={{ marginTop: 3 }}><DetailsBlock details={a.details} tips={tips} mapUrl={mapUrl} indent={74} /></div>}
-      <div style={{ display: "flex", gap: 5, marginTop: 6, marginLeft: 74, alignItems: "center" }}>
-        <span style={{ fontSize: T.fs.label, color: T.hint }}>Move to:</span>
+      {(a.details || tips?.length > 0 || mapUrl) && <div style={{ marginTop: 3 }}><DetailsBlock details={a.details} tips={tips} mapUrl={mapUrl} indent={BUCKET_INDENT} /></div>}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, marginLeft: BUCKET_INDENT, alignItems: "center" }}>
+        <span style={{ fontSize: T.fs.body, fontWeight: 700, color: T.ink }}>Move to:</span>
         {BUCKETS.filter(b => b !== bucket).map(b => (
-          <button key={b} onClick={() => onMoveToBucket(dayIdx, a.id, b)}
-            style={{ ...iconBtn, fontSize: T.fs.label, color: T.accent, border: `1px solid ${T.border2}`, padding: "2px 8px" }}>
+          <button key={b} onClick={() => onMoveToBucket(dayIdx, a.id, b)} style={chipSt(false, { small: true })}>
             {b}
           </button>
         ))}
@@ -360,6 +401,7 @@ function BucketCard({ a, tips, mapUrl, dayIdx, bucket, onMoveToBucket }) {
 }
 
 export function BucketView({ day, dayIdx, tipsFor, mapUrlFor, onMoveToBucket }) {
+  const lastId = day.activities[day.activities.length - 1]?.id;
   return (
     <div>
       {BUCKETS.map(bucket => {
@@ -367,16 +409,15 @@ export function BucketView({ day, dayIdx, tipsFor, mapUrlFor, onMoveToBucket }) 
           .filter(a => bucketOf(a.time) === bucket)
           .sort((x, y) => timeSortKey(x.time) - timeSortKey(y.time));
         return (
-          <div key={bucket} style={{ marginBottom: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7 }}>
-              <span style={{ fontSize: T.fs.label, fontWeight: 800, color: T.hint, textTransform: "uppercase", letterSpacing: ".07em" }}>{bucket}</span>
-              <span style={{ flex: 1, height: 1, background: T.border }} />
-              <span style={{ fontSize: T.fs.label, color: T.hint }}>{items.length || ""}</span>
+          <div key={bucket} style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={subhead}>{bucket}</span>
+              <span style={{ fontSize: T.fs.body, fontWeight: 700, color: T.muted }}>{items.length || ""}</span>
             </div>
             {items.length === 0 ? (
-              <div style={{ fontSize: T.fs.meta, color: T.hint, fontStyle: "italic", paddingLeft: 2, marginBottom: 4 }}>Nothing planned.</div>
+              <div style={{ fontSize: T.fs.body, color: T.muted, padding: "10px 0", borderTop: `1px solid ${T.border}` }}>Nothing planned.</div>
             ) : (
-              items.map(a => <BucketCard key={a.id} a={a} tips={tipsFor?.get(a.id)} mapUrl={mapUrlFor?.(a)} dayIdx={dayIdx} bucket={bucket} onMoveToBucket={onMoveToBucket} />)
+              items.map(a => <BucketCard key={a.id} a={a} tips={tipsFor?.get(a.id)} mapUrl={mapUrlFor?.(a)} dayIdx={dayIdx} bucket={bucket} isLast={a.id === lastId} onMoveToBucket={onMoveToBucket} />)
             )}
           </div>
         );
@@ -399,35 +440,42 @@ function DayCard({ day, dayIdx, days, viewMode, categories, tweakingId, selected
     } else dayTips.push(tip);
   }
 
-  // Map chip (pick A): a row whose title names a grounded venue links to
+  // Map link (pick A): a row whose title names a grounded venue links to
   // Google's exact pin. Render-time only — nothing is stored on the plan.
   const mapUrlFor = (a) => findGroundedVenue(clean(a.title), categories)?.mapUrl;
+  const color = dayLineColor(dayIdx);
+  const count = day.activities.length;
 
   return (
-    <div style={{ marginBottom: 22 }}>
-      <div style={{ fontFamily: T.fontDay, fontSize: T.fs.title, fontWeight:900, color: T.ink, margin: "0 0 12px", paddingBottom: 6, borderBottom: `1px solid ${T.border}` }}>
-        {clean(day.label)}
-      </div>
+    <div data-day-line={dayIdx} style={{ marginBottom: 30 }}>
+      {/* Day header: the line color opens the day. */}
+      <h2 style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 8px", fontFamily: T.fontDay, fontSize: T.fs.title, fontWeight: 900, letterSpacing: "-.02em", color: T.ink, lineHeight: 1.2 }}>
+        <span aria-hidden="true" style={{ width: STATION_COL + 2, height: 12, background: color, flexShrink: 0 }} />
+        <span style={{ flex: 1, minWidth: 0 }}>{clean(day.label)}</span>
+        {count > 0 && <span style={{ fontFamily: T.font, fontSize: T.fs.body, fontWeight: 500, letterSpacing: 0, color: T.muted, flexShrink: 0 }}>{count} {count === 1 ? "stop" : "stops"}</span>}
+      </h2>
 
-      {day.activities.length === 0 ? (
-        <div style={{ fontSize: T.fs.body, color: T.hint, fontStyle: "italic", padding: "8px 0", marginBottom: 8 }}>
+      {count === 0 ? (
+        <div style={{ fontSize: T.fs.body, color: T.muted, padding: "8px 0", marginBottom: 8 }}>
           No activities left for this day.
         </div>
       ) : viewMode === "buckets" ? (
         <BucketView day={day} dayIdx={dayIdx} tipsFor={tipsFor} mapUrlFor={mapUrlFor} onMoveToBucket={onMoveToBucket} />
       ) : (
-        <Reorder.Group axis="y" as="div" values={day.activities} onReorder={next => onReorderDay(dayIdx, next)}>
-          {day.activities.map(a => (
-            <ActivityBlock key={a.id} a={a} tips={tipsFor.get(a.id)} mapUrl={mapUrlFor(a)} dayIdx={dayIdx} days={days} isTweaking={tweakingId === a.id}
-              selected={selectedId === a.id} onToggleSelect={onToggleSelect}
-              onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity} onMoveActivity={onMoveActivity} onTweakActivity={onTweakActivity} />
-          ))}
-        </Reorder.Group>
+        <div>
+          <Reorder.Group axis="y" as="div" values={day.activities} onReorder={next => onReorderDay(dayIdx, next)} style={{ margin: 0, padding: 0 }}>
+            {day.activities.map((a, i) => (
+              <ActivityBlock key={a.id} a={a} tips={tipsFor.get(a.id)} mapUrl={mapUrlFor(a)} dayIdx={dayIdx} days={days} isFirst={i === 0} isLast={i === count - 1} isTweaking={tweakingId === a.id}
+                selected={selectedId === a.id} onToggleSelect={onToggleSelect}
+                onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity} onMoveActivity={onMoveActivity} onTweakActivity={onTweakActivity} />
+            ))}
+          </Reorder.Group>
+        </div>
       )}
 
       {day.food.length > 0 && (
-        <div style={{ marginTop: 12, marginBottom: 4 }}>
-          <div style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, fontWeight:700, color: T.hint, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 5 }}>Eat & Drink — suggestions only</div>
+        <div style={{ marginTop: 14, marginBottom: 4 }}>
+          <div style={{ ...subhead, marginBottom: 6 }}>Eat & Drink — suggestions only</div>
           <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
             <colgroup><col style={{ width: "22%" }} /><col style={{ width: "28%" }} /><col style={{ width: "38%" }} /><col style={{ width: "12%" }} /></colgroup>
             <tbody>{day.food.map((f, i) => <FoodRow key={i} f={f} />)}</tbody>
@@ -436,30 +484,24 @@ function DayCard({ day, dayIdx, days, viewMode, categories, tweakingId, selected
       )}
 
       {dayTips.length > 0 && (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, fontWeight:700, letterSpacing: ".08em", textTransform: "uppercase", color: T.accent, marginBottom: 6 }}>Before you go</div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {dayTips.map((tip, ti) => (
-              <div key={ti} style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "5px 10px", fontSize: T.fs.meta, color: T.muted, display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 4, height: 4, borderRadius: "50%", background: T.accent, display: "inline-block", flexShrink: 0 }} /> {tip}
-              </div>
-            ))}
-          </div>
+        <div style={{ marginTop: 14 }}>
+          <div style={{ ...subhead, marginBottom: 4 }}>Before you go</div>
+          {dayTips.map((tip, ti) => (
+            <div key={ti} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", borderTop: `1px solid ${T.border}`, fontFamily: T.fontProse, fontSize: T.fs.body, color: T.muted, lineHeight: 1.5 }}>
+              <span aria-hidden="true" style={{ width: 8, height: 8, background: color, flexShrink: 0, marginTop: 7 }} />
+              <span>{tip}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-const viewTab = active => ({
-  ...iconBtn, fontSize: T.fs.meta, fontWeight: 700, padding: "5px 12px", borderRadius: T.r.sm,
-  color: active ? T.white : T.muted, background: active ? T.accent : "transparent",
-});
-
 export default function ItineraryEditor({ model, categories, tweakingId, onEditActivity, onDeleteActivity, onReorderDay, onMoveActivity, onMoveToBucket, onTweakActivity }) {
   const [viewMode, setViewMode] = useState("timeline"); // "timeline" | "buckets" — presentation only
-  // 3B: one selected card at a time — tap to open its action bar, tap again
-  // (or tap another card) to close. Presentation state only, never persisted.
+  // 3B: one selected stop at a time — tap to open its action bar, tap again
+  // (or tap another stop) to close. Presentation state only, never persisted.
   const [selectedId, setSelectedId] = useState(null);
   const toggleSelect = id => setSelectedId(s => (s === id ? null : id));
   if (!model?.days?.length) return null;
@@ -467,14 +509,12 @@ export default function ItineraryEditor({ model, categories, tweakingId, onEditA
   return (
     <div style={{ fontFamily: T.font }}>
       {/* View toggle — Timeline (drag/edit) vs Buckets (fast time-of-day rearrange) */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
-        <div style={{ display: "flex", gap: 2, padding: 2, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.md }}>
-          <button onClick={() => setViewMode("timeline")} style={viewTab(viewMode === "timeline")}>Timeline</button>
-          <button onClick={() => setViewMode("buckets")}  style={viewTab(viewMode === "buckets")}>Buckets</button>
-        </div>
+      <div role="group" aria-label="Itinerary view" style={{ display: "flex", justifyContent: "flex-end", gap: 6, marginBottom: 16 }}>
+        <button aria-pressed={viewMode === "timeline"} onClick={() => setViewMode("timeline")} style={chipSt(viewMode === "timeline", { small: true })}>Timeline</button>
+        <button aria-pressed={viewMode === "buckets"}  onClick={() => setViewMode("buckets")}  style={chipSt(viewMode === "buckets", { small: true })}>Buckets</button>
       </div>
       {model.intro && (
-        <div style={{ fontSize: T.fs.body, color: T.muted, lineHeight: 1.7, marginBottom: 18 }}>{model.intro}</div>
+        <div style={{ fontFamily: T.fontProse, fontSize: T.fs.body, color: T.muted, lineHeight: 1.7, marginBottom: 20 }}>{model.intro}</div>
       )}
       {model.days.map((day, i) => (
         <DayCard key={i} day={day} dayIdx={i} days={days} viewMode={viewMode} categories={categories} tweakingId={tweakingId}
