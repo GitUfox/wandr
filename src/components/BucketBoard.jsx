@@ -12,24 +12,25 @@
  * unverified rows deliberately get no link at all.
  */
 import { T } from "../lib/constants.js";
+import { outlineBtnSt, titleSt } from "../lib/styles.js";
+import StationSymbol from "./StationSymbol.jsx";
+import Glyph from "./Glyphs.jsx";
 import { bucketPickKey, bucketShelves, countIdeas } from "../lib/utils.js";
 
+// Priority reads as plain text weight, not a badge (Transit Diagram).
 const PRIORITY_STYLE = {
-  essential:   { color: T.white,  background: T.accent,     border: `1px solid ${T.accent}` },
-  recommended: { color: T.accent, background: "transparent", border: `1px solid ${T.accent}` },
-  optional:    { color: T.hint,   background: "transparent", border: `1px solid ${T.border}` },
+  essential:   { color: T.accentInk, fontWeight: 900 },
+  recommended: { color: T.ink,       fontWeight: 700 },
+  optional:    { color: T.muted,     fontWeight: 500 },
 };
 
+// The pick control is a station: ring = an idea, filled disc = picked.
 function CheckRing({ picked, onToggle, name }) {
   return (
     <button onClick={onToggle} aria-pressed={picked} aria-label={picked ? `Remove ${name} from my list` : `Add ${name} to my list`}
-      style={{ width: 26, height: 26, borderRadius: "50%", flexShrink: 0, cursor: "pointer", fontFamily: T.font,
-        background: picked ? T.accent : "transparent",
-        border: picked ? `1.5px solid ${T.accent}` : `1.5px solid ${T.border2}`,
-        color: T.white, fontSize: 13, fontWeight: 800, lineHeight: 1,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        transition: "background .15s, border-color .15s", padding: 0 }}>
-      {picked ? "✓" : ""}
+      style={{ width: 44, height: 44, margin: "-8px 0 0 -8px", flexShrink: 0, cursor: "pointer", background: "transparent", border: "none", padding: 0,
+        display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <StationSymbol kind={picked ? "done" : "stop"} size={26} />
     </button>
   );
 }
@@ -38,18 +39,13 @@ function IdeaCard({ cat, item, picked, onToggle }) {
   const pr = PRIORITY_STYLE[item.priority] || PRIORITY_STYLE.optional;
   const mapOk = item.verified && typeof item.mapUrl === "string" && item.mapUrl.startsWith("https://www.google.com/maps");
   return (
-    <div style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "12px 14px", marginBottom: 8,
-      background: picked ? T.accentSoft : T.bg1, borderRadius: T.r.md,
-      border: `1px solid ${picked ? "rgba(227,38,47,.45)" : T.border}`, transition: "background .15s, border-color .15s" }}>
-      <div style={{ paddingTop: 1 }}>
-        <CheckRing picked={picked} onToggle={onToggle} name={item.name} />
-      </div>
+    <div style={{ display: "flex", gap: 6, alignItems: "flex-start", padding: "14px 0", borderTop: `1px solid ${T.border}` }}>
+      <CheckRing picked={picked} onToggle={onToggle} name={item.name} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ fontSize: T.fs.ui, fontWeight: 800, color: T.ink, lineHeight: 1.3 }}>{item.name}</span>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: T.fs.ui, fontWeight: picked ? 900 : 700, color: T.ink, lineHeight: 1.3 }}>{item.name}</span>
           {item.priority && (
-            <span style={{ ...pr, fontSize: T.fs.micro, fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase",
-              borderRadius: T.r.pill, padding: "2px 8px", flexShrink: 0 }}>
+            <span style={{ ...pr, fontSize: T.fs.meta, textTransform: "capitalize", flexShrink: 0 }}>
               {item.priority}
             </span>
           )}
@@ -58,21 +54,17 @@ function IdeaCard({ cat, item, picked, onToggle }) {
           <div style={{ fontFamily: T.fontProse, fontWeight:400, fontSize: T.fs.body, color: T.muted, lineHeight: 1.5, marginTop: 3 }}>{item.description}</div>
         )}
         {item.proTip && (
-          <div style={{ display: "flex", gap: 7, marginTop: 7, padding: "5px 10px", background: "rgba(227,38,47,.07)",
-            borderLeft: `2.5px solid ${T.accent}`, borderRadius: `0 ${T.r.sm}px ${T.r.sm}px 0` }}>
-            <span style={{ color: T.accent, fontWeight: 800, fontSize: T.fs.meta, lineHeight: 1.5 }}>!</span>
+          <div style={{ display: "flex", gap: 6, alignItems: "flex-start", marginTop: 6 }}>
+            <span style={{ flexShrink: 0, marginTop: 2 }}><Glyph name="info" size={12} color={T.ink} /></span>
             <span style={{ fontFamily: T.fontProse, fontWeight:400, fontSize: T.fs.meta, color: T.muted, lineHeight: 1.5 }}>{item.proTip}</span>
           </div>
         )}
         {mapOk && (
-          <div style={{ marginTop: 7 }}>
+          <div style={{ marginTop: 6 }}>
             <a href={item.mapUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-              style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: T.fs.label, fontWeight: 700,
-                color: T.accent, border: `1px solid ${T.accent}`, borderRadius: T.r.pill, padding: "3px 10px",
-                textDecoration: "none" }}>
-              <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-                <path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z" /><circle cx="12" cy="10" r="2.4" />
-              </svg>
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: T.fs.meta, fontWeight: 900,
+                color: T.accentInk, textDecoration: "underline", textUnderlineOffset: 3 }}>
+              <Glyph name="pin" size={12} color="currentColor" />
               Map
             </a>
           </div>
@@ -95,7 +87,7 @@ export default function BucketBoard({ trip, onTogglePick, onExport, onCopy, copi
 
   if (ideas === 0) {
     return (
-      <div style={{ padding: "18px 16px", background: T.bg1, border: `1px solid ${T.border}`, borderRadius: T.r.md,
+      <div style={{ padding: "18px 16px", background: T.bg1, border: `2px solid ${T.ink}`, borderRadius: T.r.md,
         fontSize: T.fs.body, color: T.muted, lineHeight: 1.6 }}>
         <strong style={{ color: T.ink }}>No ideas landed for this list.</strong>{" "}
         The curation didn't finish — Edit trip → Rebuild runs it again.
@@ -106,26 +98,22 @@ export default function BucketBoard({ trip, onTogglePick, onExport, onCopy, copi
   return (
     <div>
       {/* Status row — same anatomy as the itinerary's, dateless. */}
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, rowGap: 8,
-        padding: "4px 2px 12px", borderBottom: `1px solid ${T.border}`, marginBottom: 14 }}>
-        <span style={{ width: 7, height: 7, borderRadius: "50%", background: T.accent,
-          boxShadow: "0 0 0 3px rgba(227,38,47,.14)", flexShrink: 0 }} />
-        <span style={{ fontSize: T.fs.body, fontWeight: 800, color: T.ink }}>Your list</span>
-        <span style={{ fontSize: T.fs.meta, color: T.hint }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: 10, rowGap: 8, padding: "4px 0 14px", marginBottom: 8 }}>
+        <h2 style={{ ...titleSt, margin: 0 }}>Your list</h2>
+        <span style={{ fontSize: T.fs.body, color: T.muted }}>
           {picked ? `${picked} of ${ideas} picked` : `${ideas} ideas — tap the ring to claim one`}
         </span>
         {/* Same toolbar anatomy as the itinerary status row. */}
         {(onCopy || onExport) && (
-          <div style={{ display: "flex", gap: 7, marginLeft: "auto" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, width: "100%" }}>
             {onCopy && (
               <button onClick={onCopy}
-                style={{ fontSize: T.fs.meta, fontWeight: 600, color: copied === "error" ? T.danger : copied ? T.ink : T.muted, background: copied ? T.bg3 : "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "5px 12px", cursor: "pointer", fontFamily: T.font, transition: "all .15s" }}>
+                style={{ ...outlineBtnSt, color: copied === "error" ? T.danger : T.ink, background: copied ? T.bg2 : "transparent" }}>
                 {copied === "error" ? "Copy failed" : copied ? "✓ Copied" : "Copy"}
               </button>
             )}
             {onExport && (
-              <button onClick={onExport}
-                style={{ fontSize: T.fs.meta, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "5px 12px", cursor: "pointer", fontFamily: T.font }}>
+              <button onClick={onExport} style={outlineBtnSt}>
                 Export PDF
               </button>
             )}
@@ -137,10 +125,10 @@ export default function BucketBoard({ trip, onTogglePick, onExport, onCopy, copi
         const items = categories[id];
         const shelfPicked = items.filter(it => picks[bucketPickKey(id, it)]).length;
         return (
-          <div key={id} style={{ marginBottom: 18 }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
-              <span style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, fontWeight:700, color: T.hint, textTransform: "uppercase", letterSpacing: ".1em" }}>{label}</span>
-              <span style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, color: shelfPicked ? T.accent : T.hint, fontWeight:700 }}>
+          <div key={id} style={{ marginBottom: 22 }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8, paddingTop: 10, marginBottom: 2, borderTop: `3px solid ${T.ink}` }}>
+              <h3 style={{ ...titleSt, margin: 0 }}>{label}</h3>
+              <span style={{ fontSize: T.fs.body, color: T.muted, fontWeight: shelfPicked ? 700 : 500 }}>
                 {shelfPicked ? `${shelfPicked} of ${items.length} picked` : `${items.length}`}
               </span>
             </div>

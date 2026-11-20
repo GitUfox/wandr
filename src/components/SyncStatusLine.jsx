@@ -40,9 +40,9 @@ export default function SyncStatusLine({ onSignIn, style }) {
   }[status.kind];
 
   return (
-    <div role="status" style={{ display: "flex", alignItems: "center", gap: 7, fontSize: T.fs.meta, color: T.hint, fontFamily: T.font, lineHeight: 1.4, ...style }}>
+    <div role="status" style={{ display: "flex", alignItems: "center", gap: 7, fontSize: T.fs.meta, color: T.muted, fontFamily: T.font, lineHeight: 1.4, ...style }}>
       <span className={status.kind === "saving" ? "wsync-dot wsync-pulse" : "wsync-dot"}
-        style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: live ? T.accent : T.hint }} />
+        style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: live ? T.line[2] : T.hint }} />
       <style>{`
         .wsync-pulse{animation:wsyncpulse 1.1s ease-in-out infinite}
         @keyframes wsyncpulse{0%,100%{opacity:1}50%{opacity:.3}}
@@ -54,7 +54,7 @@ export default function SyncStatusLine({ onSignIn, style }) {
           <>
             {" · "}
             <button onClick={onSignIn}
-              style={{ background: "transparent", border: "none", padding: 0, margin: 0, color: T.accent, fontWeight: 700, fontSize: "inherit", fontFamily: T.font, cursor: "pointer" }}>
+              style={{ background: "transparent", border: "none", padding: 0, margin: 0, color: T.accentInk, fontWeight: 700, fontSize: "inherit", fontFamily: T.font, cursor: "pointer" }}>
               {ACCOUNT_COPY.statusLocalCta}
             </button>
           </>

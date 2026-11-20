@@ -43,17 +43,17 @@ function ActivityTable({ rows }) {
     <div style={{ marginBottom: 16, overflowX: "hidden" }}>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
-          <tr style={{ borderBottom: `1px solid ${T.border2}` }}>
+          <tr style={{ borderBottom: `2px solid ${T.ink}` }}>
             {/* width:1% + whiteSpace:nowrap = shrink to content. Activity is fixed. Details gets everything else. */}
-            <th style={{ width: "1%", whiteSpace: "nowrap", padding: "6px 12px 6px 5px", textAlign: "left", fontFamily: T.font, fontSize: T.fs.micro, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".06em" }}>Time</th>
-            <th style={{ width: "28%", padding: "6px 5px", textAlign: "left", fontFamily: T.font, fontSize: T.fs.micro, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".06em" }}>Activity</th>
-            <th style={{ padding: "6px 5px", textAlign: "left", fontFamily: T.font, fontSize: T.fs.micro, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".06em" }}>Details</th>
+            <th style={{ width: "1%", whiteSpace: "nowrap", padding: "6px 12px 6px 5px", textAlign: "left", fontFamily: T.font, fontSize: T.fs.meta, fontWeight: 700, color: T.muted }}>Time</th>
+            <th style={{ width: "28%", padding: "6px 5px", textAlign: "left", fontFamily: T.font, fontSize: T.fs.meta, fontWeight: 700, color: T.muted }}>Activity</th>
+            <th style={{ padding: "6px 5px", textAlign: "left", fontFamily: T.font, fontSize: T.fs.meta, fontWeight: 700, color: T.muted }}>Details</th>
           </tr>
         </thead>
         <tbody>
           {dataRows.map((row, i) => (
             <tr key={i} style={{ borderBottom: `1px solid ${T.border}`, background: i % 2 === 0 ? "transparent" : T.bg2 }}>
-              <td style={{ width: "1%", whiteSpace: "nowrap", padding: "8px 12px 8px 5px", fontFamily: T.font, fontSize: T.fs.label, color: T.accent, fontWeight: 700, verticalAlign: "top" }}>{cleanCell(row[0])}</td>
+              <td style={{ width: "1%", whiteSpace: "nowrap", padding: "8px 12px 8px 5px", fontFamily: T.font, fontSize: T.fs.body, color: T.ink, fontWeight: 900, fontVariantNumeric: "tabular-nums", verticalAlign: "top" }}>{cleanCell(row[0])}</td>
               <td style={{ padding: "8px 5px", fontFamily: T.font, fontSize: T.fs.meta, color: T.ink, fontWeight: 600, lineHeight: 1.4, verticalAlign: "top", wordBreak: "break-word" }}>{boldify(row[1])}</td>
               <td style={{ padding: "8px 5px", fontFamily: T.font, fontSize: T.fs.meta, color: T.muted, lineHeight: 1.55, verticalAlign: "top", wordBreak: "break-word" }}>{boldify(row[2])}</td>
             </tr>
@@ -68,7 +68,7 @@ function FoodTable({ rows }) {
   const dataRows = rows.filter(r => r[0] && !r[0].toLowerCase().match(/^meal$/));
   return (
     <div style={{ marginBottom: 16, overflowX: "hidden" }}>
-      <div style={{ fontSize: T.fs.label, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 5 }}>Eat & Drink — suggestions only</div>
+      <div style={{ fontSize: T.fs.body, fontWeight: 900, color: T.ink, marginBottom: 6 }}>Eat & Drink — suggestions only</div>
       <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
         <colgroup>
           <col style={{ width: "22%" }} />
@@ -77,9 +77,9 @@ function FoodTable({ rows }) {
           <col style={{ width: "12%" }} />
         </colgroup>
         <thead>
-          <tr style={{ borderBottom: `1px solid ${T.border2}` }}>
+          <tr style={{ borderBottom: `2px solid ${T.ink}` }}>
             {["Meal", "Name", "Order", "$"].map(h => (
-              <th key={h} style={{ padding: "5px 5px", textAlign: "left", fontFamily: T.font, fontSize: T.fs.micro, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".08em" }}>{h}</th>
+              <th key={h} style={{ padding: "5px 5px", textAlign: "left", fontFamily: T.font, fontSize: T.fs.meta, fontWeight: 700, color: T.muted }}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -94,7 +94,7 @@ function FoodTable({ rows }) {
                 <td style={{ padding: "7px 5px", fontFamily: T.font, fontSize: T.fs.meta, color: T.muted, verticalAlign: "top", wordBreak: "break-word" }}>{cleanCell(meal)}</td>
                 <td style={{ padding: "7px 5px", fontFamily: T.font, fontSize: T.fs.meta, color: T.ink, fontWeight: 600, verticalAlign: "top", wordBreak: "break-word" }}>{boldify(name)}</td>
                 <td style={{ padding: "7px 5px", fontFamily: T.font, fontSize: T.fs.meta, color: T.muted, verticalAlign: "top", wordBreak: "break-word" }}>{cleanCell(order)}</td>
-                <td style={{ padding: "7px 5px", fontFamily: T.font, fontSize: T.fs.meta, color: T.accent, fontWeight: 600, verticalAlign: "top", whiteSpace: "nowrap" }}>{safePrice}</td>
+                <td style={{ padding: "7px 5px", fontFamily: T.font, fontSize: T.fs.meta, color: T.ink, fontWeight: 700, verticalAlign: "top", whiteSpace: "nowrap" }}>{safePrice}</td>
               </tr>
             );
           })}
@@ -114,8 +114,8 @@ function GenericTable({ rows }) {
       <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
         {headers && (
           <thead>
-            <tr style={{ borderBottom: `1px solid ${T.border2}` }}>
-              {headers.map((h, i) => <th key={i} style={{ padding: "6px 6px", textAlign: "left", fontFamily: T.font, fontSize: T.fs.micro, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".08em" }}>{h}</th>)}
+            <tr style={{ borderBottom: `2px solid ${T.ink}` }}>
+              {headers.map((h, i) => <th key={i} style={{ padding: "6px 6px", textAlign: "left", fontFamily: T.font, fontSize: T.fs.meta, fontWeight: 700, color: T.muted }}>{h}</th>)}
             </tr>
           </thead>
         )}
@@ -197,10 +197,10 @@ export default function Md({ text }) {
           return <GenericTable key={idx} rows={generic} />;
         }
         if (seg.type === "tips") return (
-          <div key={idx} style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          <div key={idx} style={{ marginBottom: 12 }}>
             {seg.tips.map((tip, ti) => (
-              <div key={ti} style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "5px 10px", fontSize: T.fs.meta, color: T.muted, display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width:4, height:4, borderRadius:"50%", background:T.accent, display:"inline-block", flexShrink:0 }} /> {tip}
+              <div key={ti} style={{ padding: "8px 0", borderTop: `1px solid ${T.border}`, fontSize: T.fs.body, color: T.muted, display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ width:8, height:8, background:T.ink, display:"inline-block", flexShrink:0 }} /> {tip}
               </div>
             ))}
           </div>
@@ -208,12 +208,12 @@ export default function Md({ text }) {
 
         const line = seg.line;
         if (!line) return null;
-        if (line.startsWith("## "))  return <div key={idx} style={{ fontSize: T.fs.ui, fontWeight: 800, color: T.ink, margin: "1.4rem 0 .75rem", paddingBottom: 6, borderBottom: `1px solid ${T.border}` }}>{line.slice(3).replace(/^[,\s]+/, "")}</div>;
-        if (line.startsWith("### ")) return <div key={idx} style={{ fontSize: T.fs.body, fontWeight: 700, color: T.accent, margin: ".75rem 0 .3rem", textTransform: "uppercase", letterSpacing: ".06em" }}>{line.slice(4).replace(/^[,\s]+/, "")}</div>;
-        if (line.startsWith("# "))   return <div key={idx} style={{ fontSize: T.fs.title, fontWeight: 800, color: T.ink, margin: "0 0 .75rem" }}>{line.slice(2)}</div>;
+        if (line.startsWith("## "))  return <div key={idx} style={{ fontFamily: T.fontDay, fontSize: T.fs.title, fontWeight: 900, letterSpacing: "-.02em", color: T.ink, margin: "1.6rem 0 .75rem", paddingTop: 10, borderTop: `3px solid ${T.ink}` }}>{line.slice(3).replace(/^[,\s]+/, "")}</div>;
+        if (line.startsWith("### ")) return <div key={idx} style={{ fontSize: T.fs.body, fontWeight: 900, color: T.ink, margin: ".75rem 0 .3rem" }}>{line.slice(4).replace(/^[,\s]+/, "")}</div>;
+        if (line.startsWith("# "))   return <div key={idx} style={{ fontFamily: T.fontDay, fontSize: T.fs.title, fontWeight: 900, letterSpacing: "-.02em", color: T.ink, margin: "0 0 .75rem" }}>{line.slice(2)}</div>;
         if (line.match(/^[-•]\s/)) return (
           <div key={idx} style={{ display: "flex", gap: 8, marginBottom: 4, alignItems: "flex-start" }}>
-            <span style={{ color: T.accent, flexShrink: 0, fontSize: T.fs.body, marginTop: 2 }}>›</span>
+            <span style={{ color: T.ink, fontWeight: 900, flexShrink: 0, fontSize: T.fs.body, marginTop: 2 }}>›</span>
             <div style={{ fontSize: T.fs.body, color: T.muted, lineHeight: 1.6 }}>{boldify(line.replace(/^[-•]\s/, ""))}</div>
           </div>
         );

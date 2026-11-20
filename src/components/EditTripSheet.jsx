@@ -13,6 +13,7 @@
  */
 import { useState, useEffect } from "react";
 import { T, nearestBudgetTier, INTERESTS_GROUPS, INPUT_CAPS } from "../lib/constants.js";
+import { chipSt, fieldSt, labelSt, primaryBtnSt, outlineBtnSt, dangerBtnSt, sheetBackdropSt, sheetEdgeSt, titleSt } from "../lib/styles.js";
 import { extractDayHeaders, extractActivityTitles } from "../lib/utils.js";
 import DateRangePicker from "./DateRangePicker.jsx";
 import BudgetTiers from "./BudgetTiers.jsx";
@@ -74,10 +75,7 @@ function shortDayLabel(label) {
 function Field({ label, children }) {
   return (
     <div>
-      <div style={{
-        fontSize: T.fs.label, fontWeight: 700, color: T.hint,
-        textTransform: "uppercase", letterSpacing: ".12em", marginBottom: 8,
-      }}>
+      <div style={labelSt}>
         {label}
       </div>
       {children}
@@ -85,18 +83,7 @@ function Field({ label, children }) {
   );
 }
 
-const inputStyle = {
-  background: T.bg2,
-  border: `1px solid ${T.border2}`,
-  borderRadius: T.r.md,
-  color: T.ink,
-  fontSize: T.fs.body,
-  fontFamily: T.font,
-  padding: "9px 12px",
-  outline: "none",
-  width: "100%",
-  boxSizing: "border-box",
-};
+const inputStyle = { ...fieldSt, padding: "11px 14px", fontSize: T.fs.body };
 
 const textareaStyle = {
   ...inputStyle,
@@ -110,23 +97,7 @@ function SubmitBar({ label, enabled, loading, onSubmit }) {
       <button
         onClick={onSubmit}
         disabled={!enabled || loading}
-        style={{
-          width: "100%",
-          padding: "13px",
-          borderRadius: T.r.md,
-          background: !enabled || loading ? T.bg3 : T.accent,
-          border: "none",
-          color: !enabled || loading ? T.hint : T.white,
-          fontSize: T.fs.ui,
-          fontWeight: 700,
-          cursor: !enabled || loading ? "not-allowed" : "pointer",
-          fontFamily: T.font,
-          transition: "all .15s",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-        }}
+        style={{ ...primaryBtnSt(enabled && !loading), width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
       >
         {loading ? (
           <>
@@ -324,24 +295,14 @@ export default function EditTripSheet({
       {/* Backdrop — CSS opacity transition */}
       <div
         onClick={handleClose}
-        style={{
-          position: "fixed", inset: 0,
-          background: "rgba(0,0,0,0.65)",
-          backdropFilter: "blur(2px)",
-          zIndex: 100,
-          opacity: open ? 1 : 0,
-          transition: "opacity 0.22s ease",
-          pointerEvents: open ? "auto" : "none",
-        }}
+        style={sheetBackdropSt(open)}
       />
       {/* Sheet — CSS transform transition, slides up/down from bottom */}
       <div
         style={{
           position: "fixed",
           bottom: 0, left: 0, right: 0,
-          background: T.bg1,
-          borderTop: `1px solid ${T.border}`,
-          borderRadius: "16px 16px 0 0",
+          ...sheetEdgeSt,
           zIndex: 101,
           maxHeight: "88vh",
           overflowY: "auto",
@@ -375,7 +336,7 @@ export default function EditTripSheet({
               ‹
             </button>
           )}
-          <div style={{ flex: 1, fontSize: T.fs.title, fontWeight: 800, color: T.ink }}>
+          <div style={{ ...titleSt, flex: 1 }}>
             {stageTitle}
           </div>
           <button
@@ -405,7 +366,7 @@ export default function EditTripSheet({
                     onClick={() => !isDisabled && setStage(opt.id)}
                     style={{
                       display: "flex", alignItems: "center", gap: 14,
-                      padding: "14px 4px",
+                      padding: "14px 4px", minHeight: 64,
                       background: "transparent", border: "none",
                       borderBottom: i < OPTIONS.length - 1 ? `1px solid ${T.border}` : "none",
                       cursor: isDisabled ? "not-allowed" : "pointer",
@@ -415,10 +376,10 @@ export default function EditTripSheet({
                     }}
                   >
                     <span style={{ width: 26, display: "flex", justifyContent: "center", flexShrink: 0 }}>
-                      <Glyph name={opt.icon} size={18} color={T.accent} />
+                      <Glyph name={opt.icon} size={20} color={T.ink} />
                     </span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: T.fs.ui, fontWeight: 700, color: T.ink, marginBottom: 1 }}>
+                      <div style={{ fontSize: T.fs.ui, fontWeight: 900, color: T.ink, marginBottom: 1 }}>
                         {opt.title}
                       </div>
                       <div style={{ fontSize: T.fs.body, color: T.muted }}>
@@ -447,7 +408,7 @@ export default function EditTripSheet({
                 rows={4}
                 style={textareaStyle}
               />
-              <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 7 }}>
+              <div style={{ fontSize: T.fs.meta, color: T.muted, marginTop: 7 }}>
                 Tip: mention the specific day or activity name for best results.
               </div>
               <SubmitBar
@@ -462,7 +423,7 @@ export default function EditTripSheet({
           {/* ── SPECIFIC DAY ─────────────────────────────────────────────────── */}
           {stage === "specific-day" && (
             <div style={{ paddingTop: 14 }}>
-              <div style={{ fontSize: T.fs.meta, fontWeight: 600, color: T.hint, marginBottom: 10 }}>
+              <div style={{ fontSize: T.fs.body, fontWeight: 700, color: T.ink, marginBottom: 10 }}>
                 Which day?
               </div>
               {dayHeaders.length === 0 ? (
@@ -478,22 +439,24 @@ export default function EditTripSheet({
                       <button
                         key={i}
                         onClick={() => setSelectedDay(i)}
+                        aria-pressed={active}
                         style={{
-                          background: active ? T.accentSoft : T.bg2,
-                          border: active ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
+                          background: active ? T.ink : T.bg1,
+                          border: `2px solid ${T.ink}`,
+                          borderBottom: `7px solid ${T.line[i % T.line.length]}`,
                           borderRadius: T.r.md,
                           cursor: "pointer",
                           fontFamily: T.font,
-                          padding: "7px 12px",
+                          padding: "8px 12px",
                           textAlign: "left",
-                          minWidth: 64,
+                          minWidth: 72, minHeight: 52,
                         }}
                       >
-                        <div style={{ fontSize: T.fs.meta, fontWeight: 700, color: active ? T.accent : T.ink }}>
+                        <div style={{ fontSize: T.fs.body, fontWeight: 900, color: active ? T.white : T.ink }}>
                           {day}
                         </div>
                         {date && (
-                          <div style={{ fontSize: T.fs.label, color: active ? T.accentInk : T.hint, marginTop: 1 }}>
+                          <div style={{ fontSize: T.fs.meta, color: active ? T.white : T.muted, marginTop: 1 }}>
                             {date}
                           </div>
                         )}
@@ -502,7 +465,7 @@ export default function EditTripSheet({
                   })}
                 </div>
               )}
-              <div style={{ fontSize: T.fs.meta, fontWeight: 600, color: T.hint, marginBottom: 8 }}>
+              <div style={{ fontSize: T.fs.body, fontWeight: 700, color: T.ink, marginBottom: 8 }}>
                 What should change? <span style={{ fontWeight: 400, color: T.border2 }}>(optional)</span>
               </div>
               <textarea
@@ -535,18 +498,8 @@ export default function EditTripSheet({
                     <button
                       key={chip}
                       onClick={() => toggleVibe(chip)}
-                      style={{
-                        background: active ? T.accentSoft : T.bg2,
-                        border: active ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
-                        borderRadius: T.r.pill,
-                        color: active ? T.accent : T.muted,
-                        fontSize: T.fs.body,
-                        fontWeight: active ? 700 : 400,
-                        padding: "5px 12px",
-                        cursor: "pointer",
-                        fontFamily: T.font,
-                        transition: "all .12s",
-                      }}
+                      aria-pressed={active}
+                      style={chipSt(active, { small: true })}
                     >
                       {chip}
                     </button>
@@ -562,22 +515,23 @@ export default function EditTripSheet({
                 style={textareaStyle}
               />
               <button
+                aria-pressed={surprise}
                 onClick={() => setSurprise(v => !v)}
                 style={{
                   display: "flex", alignItems: "center", gap: 9, width: "100%", marginTop: 12,
-                  background: surprise ? T.accentSoft : T.bg2,
-                  border: surprise ? `1.5px solid ${T.accent}` : `1px dashed ${T.border2}`,
-                  borderRadius: T.r.md, padding: "10px 13px", cursor: "pointer", fontFamily: T.font,
-                  textAlign: "left", transition: "all .12s",
+                  background: surprise ? T.ink : T.bg1,
+                  border: `2px solid ${T.ink}`,
+                  borderRadius: T.r.md, padding: "12px 14px", cursor: "pointer", fontFamily: T.font,
+                  textAlign: "left",
                 }}
               >
-                <Glyph name="dice" size={17} color={surprise ? T.accent : T.muted} />
+                <Glyph name="dice" size={18} color={surprise ? T.white : T.ink} />
                 <span style={{ flex: 1 }}>
-                  <span style={{ display: "block", fontSize: T.fs.body, fontWeight: 700, color: surprise ? T.accent : T.ink }}>Surprise me</span>
-                  <span style={{ display: "block", fontSize: T.fs.meta, color: T.muted, marginTop: 1 }}>A genuinely different take — none of the current stops repeat</span>
+                  <span style={{ display: "block", fontSize: T.fs.body, fontWeight: 900, color: surprise ? T.white : T.ink }}>Surprise me</span>
+                  <span style={{ display: "block", fontSize: T.fs.meta, color: surprise ? T.white : T.muted, marginTop: 1 }}>A genuinely different take — none of the current stops repeat</span>
                 </span>
               </button>
-              <div style={{ fontSize: T.fs.meta, color: T.hint, lineHeight: 1.5, marginTop: 12 }}>
+              <div style={{ fontSize: T.fs.meta, color: T.muted, lineHeight: 1.5, marginTop: 12 }}>
                 Heads up — this rebuilds the whole itinerary, including any edits you've made to it.
               </div>
               <SubmitBar
@@ -626,18 +580,8 @@ export default function EditTripSheet({
                       <button
                         key={opt}
                         onClick={() => setLocalParty(opt)}
-                        style={{
-                          background: active ? T.accentSoft : T.bg2,
-                          border: active ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
-                          borderRadius: T.r.pill,
-                          color: active ? T.accent : T.muted,
-                          fontSize: T.fs.body,
-                          fontWeight: active ? 700 : 400,
-                          padding: "5px 12px",
-                          cursor: "pointer",
-                          fontFamily: T.font,
-                          transition: "all .12s",
-                        }}
+                        aria-pressed={active}
+                      style={chipSt(active, { small: true })}
                       >
                         {opt}
                       </button>
@@ -654,7 +598,7 @@ export default function EditTripSheet({
                   teams={localTeams} setTeams={setLocalTeams}
                   compact
                 />
-                <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 10, lineHeight: 1.5 }}>
+                <div style={{ fontSize: T.fs.meta, color: T.muted, marginTop: 10, lineHeight: 1.5 }}>
                   Starred interests win scheduling conflicts. Ranking happens when the
                   trip is built, so changes here take effect on the rebuild below.
                 </div>
@@ -678,7 +622,7 @@ export default function EditTripSheet({
           onClick={() => setConfirmRebuild(false)}
           style={{
             position: "fixed", inset: 0, zIndex: 200,
-            background: "rgba(0,0,0,0.7)", backdropFilter: "blur(2px)",
+            background: "rgba(0,0,0,0.4)",
             display: "flex", alignItems: "center", justifyContent: "center",
             padding: 24,
           }}
@@ -686,11 +630,11 @@ export default function EditTripSheet({
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: T.bg1, border: `1px solid ${T.border}`, borderRadius: T.r.lg,
+              background: T.bg1, border: `3px solid ${T.ink}`, borderRadius: T.r.lg,
               padding: "22px 20px", maxWidth: 340, width: "100%", fontFamily: T.font,
             }}
           >
-            <div style={{ fontSize: T.fs.title, fontWeight: 700, color: T.ink, marginBottom: 8 }}>
+            <div style={{ ...titleSt, marginBottom: 8 }}>
               Rebuild this trip?
             </div>
             <div style={{ fontSize: T.fs.body, color: T.muted, lineHeight: 1.55, marginBottom: 18 }}>
@@ -699,21 +643,13 @@ export default function EditTripSheet({
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 onClick={() => setConfirmRebuild(false)}
-                style={{
-                  flex: 1, padding: "11px", borderRadius: T.r.md,
-                  background: T.bg3, border: `1px solid ${T.border}`, color: T.ink,
-                  fontSize: T.fs.body, fontWeight: 700, cursor: "pointer", fontFamily: T.font,
-                }}
+                style={{ ...outlineBtnSt, flex: 1 }}
               >
                 Cancel
               </button>
               <button
                 onClick={doRebuild}
-                style={{
-                  flex: 1, padding: "11px", borderRadius: T.r.md,
-                  background: T.accent, border: "none", color: T.white,
-                  fontSize: T.fs.body, fontWeight: 700, cursor: "pointer", fontFamily: T.font,
-                }}
+                style={{ ...dangerBtnSt, flex: 1 }}
               >
                 Rebuild
               </button>

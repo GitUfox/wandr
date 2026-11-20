@@ -15,6 +15,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { T, FEATURES, ACCOUNT_COPY } from "../lib/constants.js";
+import { chipSt, fieldSt, labelSt, solidBtnSt, outlineBtnSt, dangerBtnSt, sheetBackdropSt, sheetEdgeSt, titleSt } from "../lib/styles.js";
 import { MAX_TRIPS } from "../lib/tripStore.js";
 import { getTimeFormat, saveSettings, clearAllWandrData } from "../lib/settings.js";
 import { useAccount } from "../hooks/useAccount.js";
@@ -86,7 +87,7 @@ export default function SettingsSheet({ open, onClose, tripCount = 0, focusAccou
     if (r) { setJustSynced(r); setTimeout(() => setJustSynced(null), 4000); }
   }
 
-  const label = { fontSize: T.fs.label, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", marginBottom: 8 };
+  const label = { ...labelSt, fontWeight: 900 };
   const row = { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "9px 0", borderBottom: `1px solid ${T.border}` };
 
   function pickFormat(fmt) {
@@ -111,35 +112,35 @@ export default function SettingsSheet({ open, onClose, tripCount = 0, focusAccou
   return (
     <>
       <div onClick={onClose}
-        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(2px)", zIndex: 100, opacity: open ? 1 : 0, transition: "opacity 0.22s ease", pointerEvents: open ? "auto" : "none" }} />
+        style={sheetBackdropSt(open)} />
       <div ref={sheetRef} style={{
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 101,
         maxWidth: 640, margin: "0 auto",
-        background: T.bg1, borderRadius: `${T.r.lg}px ${T.r.lg}px 0 0`, border: `1px solid ${T.border2}`, borderBottom: "none",
+        ...sheetEdgeSt,
         maxHeight: "88vh", overflowY: "auto",
         transform: open ? "translateY(0)" : "translateY(105%)",
         transition: "transform 0.38s cubic-bezier(.32,.72,.28,1)",
         padding: "1.25rem 1.5rem 1.75rem", fontFamily: T.font, boxSizing: "border-box",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-          <div style={{ width: 34, height: 34, borderRadius: "50%", background: T.bg3, border: `1px solid ${T.border2}`, color: T.muted, fontWeight: 800, fontSize: T.fs.title, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>⚙</div>
+          <div aria-hidden="true" style={{ width: 36, height: 36, borderRadius: "50%", background: T.bg1, border: `2px solid ${T.ink}`, color: T.ink, fontWeight: 800, fontSize: T.fs.title, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>⚙</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: T.fs.title, fontWeight: 800, color: T.ink }}>Settings</div>
-            <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 1 }}>
+            <div style={titleSt}>Settings</div>
+            <div style={{ fontSize: T.fs.meta, color: T.muted, marginTop: 1 }}>
               {account.email ? ACCOUNT_COPY.subtitleIn
                 : account.configured ? ACCOUNT_COPY.subtitleOut
                 : ACCOUNT_COPY.subtitleOff}
             </div>
           </div>
           <button onClick={onClose} aria-label="Close"
-            style={{ width: 28, height: 28, borderRadius: "50%", background: "transparent", border: "none", color: T.hint, fontSize: T.fs.title, cursor: "pointer", fontFamily: T.font, lineHeight: 1 }}>×</button>
+            style={{ width: 44, height: 44, margin: "-8px -10px -8px 0", borderRadius: "50%", background: "transparent", border: "none", color: T.ink, fontSize: 24, cursor: "pointer", fontFamily: T.font, lineHeight: 1 }}>×</button>
         </div>
 
         {/* ── Account ── */}
         <div style={{ marginTop: 18 }}>
           <div style={label}>Account</div>
           {!account.configured ? (
-            <div style={{ fontSize: T.fs.body, color: T.hint, lineHeight: 1.55 }}>
+            <div style={{ fontSize: T.fs.body, color: T.muted, lineHeight: 1.55 }}>
               Cloud sync isn't connected yet. Your trips and profile live safely on this device.
             </div>
           ) : account.email ? (
@@ -159,21 +160,21 @@ export default function SettingsSheet({ open, onClose, tripCount = 0, focusAccou
               {!confirmSignOut ? (
                 <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
                   <button onClick={handleSync} disabled={account.syncing}
-                    style={{ fontSize: T.fs.body, fontWeight: 700, color: T.white, background: T.accent, border: "none", borderRadius: T.r.sm, padding: "8px 14px", cursor: account.syncing ? "default" : "pointer", opacity: account.syncing ? .6 : 1, fontFamily: T.font }}>
+                    style={{ ...solidBtnSt, cursor: account.syncing ? "default" : "pointer", opacity: account.syncing ? .6 : 1 }}>
                     {account.syncing ? "Syncing…" : "Sync now"}
                   </button>
                   <button onClick={() => setConfirmSignOut(true)}
-                    style={{ fontSize: T.fs.body, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "8px 14px", cursor: "pointer", fontFamily: T.font }}>
+                    style={outlineBtnSt}>
                     Sign out
                   </button>
                   {justSynced && (
-                    <span style={{ fontSize: T.fs.meta, color: T.accent, fontWeight: 600 }}>
+                    <span style={{ fontSize: T.fs.meta, color: T.accentInk, fontWeight: 700 }}>
                       ✓ Synced{justSynced.pushed ? ` · ${justSynced.pushed} up` : ""}{justSynced.deleted ? ` · ${justSynced.deleted} removed` : ""}
                     </span>
                   )}
                 </div>
               ) : (
-                <div style={{ background: T.bg2, border: `1px solid ${T.border2}`, borderRadius: T.r.md, padding: "12px 14px", marginTop: 12 }}>
+                <div style={{ background: T.bg1, border: `2px solid ${T.ink}`, borderRadius: T.r.md, padding: "12px 14px", marginTop: 12 }}>
                   <div style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, marginBottom: 4 }}>
                     {ACCOUNT_COPY.signOutTitle}
                   </div>
@@ -182,17 +183,17 @@ export default function SettingsSheet({ open, onClose, tripCount = 0, focusAccou
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={() => { setConfirmSignOut(false); signOut(); }}
-                      style={{ fontSize: T.fs.body, fontWeight: 700, color: T.white, background: T.accent, border: "none", borderRadius: T.r.sm, padding: "8px 14px", cursor: "pointer", fontFamily: T.font }}>
+                      style={dangerBtnSt}>
                       Sign out
                     </button>
                     <button onClick={() => setConfirmSignOut(false)}
-                      style={{ fontSize: T.fs.body, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "8px 14px", cursor: "pointer", fontFamily: T.font }}>
+                      style={outlineBtnSt}>
                       Stay signed in
                     </button>
                   </div>
                 </div>
               )}
-              <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 8, lineHeight: 1.5 }}>
+              <div style={{ fontSize: T.fs.meta, color: T.muted, marginTop: 8, lineHeight: 1.5 }}>
                 {ACCOUNT_COPY.contract}
               </div>
             </div>
@@ -205,16 +206,16 @@ export default function SettingsSheet({ open, onClose, tripCount = 0, focusAccou
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center", flexWrap: "wrap" }}>
                 <button onClick={resend} disabled={resendIn > 0} aria-live="polite"
-                  style={{ fontSize: T.fs.body, fontWeight: 700, color: resendIn > 0 ? T.hint : T.white, background: resendIn > 0 ? T.bg3 : T.accent, border: "none", borderRadius: T.r.sm, padding: "8px 14px", cursor: resendIn > 0 ? "default" : "pointer", fontFamily: T.font, minWidth: 118, fontVariantNumeric: "tabular-nums" }}>
+                  style={{ fontSize: T.fs.body, fontWeight: 700, color: resendIn > 0 ? T.hint : T.white, background: resendIn > 0 ? T.bg3 : T.ink, border: "none", borderRadius: T.r.pill, minHeight: 44, padding: "0 18px", cursor: resendIn > 0 ? "default" : "pointer", fontFamily: T.font, minWidth: 118, fontVariantNumeric: "tabular-nums" }}>
                   {resendIn > 0 ? ACCOUNT_COPY.linkResendWaiting.replace("{n}", resendIn) : ACCOUNT_COPY.linkResendReady}
                 </button>
                 <button onClick={cancelPendingLink}
-                  style={{ fontSize: T.fs.body, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "8px 14px", cursor: "pointer", fontFamily: T.font }}>
+                  style={outlineBtnSt}>
                   {ACCOUNT_COPY.linkWrongAddress}
                 </button>
               </div>
               {resends >= 2 && (
-                <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 8, lineHeight: 1.5 }}>{ACCOUNT_COPY.linkSpamHint}</div>
+                <div style={{ fontSize: T.fs.meta, color: T.muted, marginTop: 8, lineHeight: 1.5 }}>{ACCOUNT_COPY.linkSpamHint}</div>
               )}
               {account.lastError && (
                 <div style={{ fontSize: T.fs.meta, color: T.danger, marginTop: 6 }}>{account.lastError}</div>
@@ -229,13 +230,13 @@ export default function SettingsSheet({ open, onClose, tripCount = 0, focusAccou
                 <input ref={emailRef} type="email" value={email} onChange={e => setEmail(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && emailValid && send(email.trim())}
                   placeholder="you@example.com" autoComplete="email"
-                  style={{ flex: 1, minWidth: 0, padding: "9px 12px", fontSize: T.fs.body, background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.sm, color: T.ink, outline: "none", fontFamily: T.font, colorScheme: "dark" }} />
+                  style={{ ...fieldSt, flex: 1, width: "auto", minWidth: 0, padding: "10px 14px", fontSize: T.fs.body }} />
                 <button onClick={() => emailValid && send(email.trim())} disabled={!emailValid}
-                  style={{ fontSize: T.fs.body, fontWeight: 700, color: emailValid ? T.white : T.hint, background: emailValid ? T.accent : T.bg3, border: "none", borderRadius: T.r.sm, padding: "8px 14px", cursor: emailValid ? "pointer" : "default", fontFamily: T.font, whiteSpace: "nowrap" }}>
+                  style={{ fontSize: T.fs.body, fontWeight: 700, color: emailValid ? T.white : T.hint, background: emailValid ? T.ink : T.bg3, border: "none", borderRadius: T.r.pill, minHeight: 44, padding: "0 18px", cursor: emailValid ? "pointer" : "default", fontFamily: T.font, whiteSpace: "nowrap" }}>
                   {account.linkExpired ? "Send a fresh link" : "Email me a link"}
                 </button>
               </div>
-              <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 8, lineHeight: 1.5 }}>
+              <div style={{ fontSize: T.fs.meta, color: T.muted, marginTop: 8, lineHeight: 1.5 }}>
                 No password — we email you a sign-in link. Syncs your trips and profile across devices.
               </div>
               {account.lastError && (
@@ -248,18 +249,18 @@ export default function SettingsSheet({ open, onClose, tripCount = 0, focusAccou
         {/* ── Time format ── */}
         <div style={{ marginTop: 18 }}>
           <div style={label}>Time format</div>
-          <div style={{ display: "inline-flex", background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.pill, padding: 3 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {[["24h", "24-hour · 17:30"], ["12h", "12-hour · 5:30 PM"]].map(([fmt, lbl]) => {
               const on = timeFormat === fmt;
               return (
                 <button key={fmt} onClick={() => pickFormat(fmt)}
-                  style={{ border: "none", borderRadius: T.r.pill, padding: "6px 14px", fontSize: T.fs.body, fontWeight: 700, fontFamily: T.font, cursor: "pointer", background: on ? T.accent : "transparent", color: on ? T.white : T.muted, transition: "all .12s" }}>
+                  aria-pressed={on} style={chipSt(on, { small: true })}>
                   {lbl}
                 </button>
               );
             })}
           </div>
-          <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 8, lineHeight: 1.5 }}>
+          <div style={{ fontSize: T.fs.meta, color: T.muted, marginTop: 8, lineHeight: 1.5 }}>
             Applies to itinerary times and the time picker.
           </div>
         </div>
@@ -277,13 +278,13 @@ export default function SettingsSheet({ open, onClose, tripCount = 0, focusAccou
           </div>
           <div style={{ ...row }}>
             <span style={{ fontSize: T.fs.body, color: T.muted }}>Offline reading</span>
-            <span style={{ fontSize: T.fs.body, color: offlineReady ? T.accent : T.hint, fontWeight: 600 }}>
+            <span style={{ fontSize: T.fs.body, color: offlineReady ? T.ink : T.muted, fontWeight: 600 }}>
               {offlineReady ? "Ready" : "After first online visit"}
             </span>
           </div>
           <div style={{ ...row, borderBottom: "none" }}>
             <span style={{ fontSize: T.fs.body, color: T.muted }}>Venue verification</span>
-            <span style={{ fontSize: T.fs.body, color: FEATURES.venueGrounding && placesActivated() ? T.accent : T.hint, fontWeight: 600 }}>
+            <span style={{ fontSize: T.fs.body, color: FEATURES.venueGrounding && placesActivated() ? T.ink : T.muted, fontWeight: 600 }}>
               {FEATURES.venueGrounding ? (placesActivated() ? "Active" : "Waiting on activation") : "Off"}
             </span>
           </div>
@@ -295,11 +296,11 @@ export default function SettingsSheet({ open, onClose, tripCount = 0, focusAccou
           <div style={label}>Your data</div>
           {!confirmClear ? (
             <button onClick={() => setConfirmClear(true)}
-              style={{ fontSize: T.fs.body, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "8px 14px", cursor: "pointer", fontFamily: T.font }}>
+              style={outlineBtnSt}>
               Clear my data…
             </button>
           ) : (
-            <div style={{ background: T.bg2, border: `1px solid ${T.border2}`, borderRadius: T.r.md, padding: "12px 14px" }}>
+            <div style={{ background: T.bg1, border: `2px solid ${T.ink}`, borderRadius: T.r.md, padding: "12px 14px" }}>
               <div style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, marginBottom: 4 }}>
                 Delete everything saved on this device?
               </div>
@@ -309,11 +310,11 @@ export default function SettingsSheet({ open, onClose, tripCount = 0, focusAccou
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={doClear}
-                  style={{ fontSize: T.fs.body, fontWeight: 700, color: T.white, background: T.accent, border: "none", borderRadius: T.r.sm, padding: "8px 14px", cursor: "pointer", fontFamily: T.font }}>
+                  style={dangerBtnSt}>
                   Delete everything
                 </button>
                 <button onClick={() => setConfirmClear(false)}
-                  style={{ fontSize: T.fs.body, fontWeight: 600, color: T.muted, background: "transparent", border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "8px 14px", cursor: "pointer", fontFamily: T.font }}>
+                  style={outlineBtnSt}>
                   Keep my data
                 </button>
               </div>

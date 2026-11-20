@@ -10,8 +10,10 @@
  * transitions on a fixed+bottom:0 element (framer's y:"100%" computes wrong
  * on fixed-bottom elements — see CLAUDE.md).
  */
+import { TripinMark } from "./TripinLogo.jsx";
 import { useState, useEffect } from "react";
 import { T, INTERESTS_GROUPS, PACE_BANDS } from "../lib/constants.js";
+import { chipSt, labelSt, primaryBtnSt, sheetBackdropSt, sheetEdgeSt, titleSt } from "../lib/styles.js";
 import InterestsPicker from "./InterestsPicker.jsx";
 
 const CREW_OPTS = ["Solo", "Couple", "Friends", "Group", "Family"];
@@ -56,29 +58,29 @@ export default function ProfileSheet({ open, profile, onClose, onSave }) {
     onClose();
   }
 
-  const label = { fontSize: T.fs.label, fontWeight: 700, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", marginBottom: 8 };
+  const label = { ...labelSt, fontWeight: 900 };
 
   return (
     <>
       <div onClick={onClose}
-        style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(2px)", zIndex: 100, opacity: open ? 1 : 0, transition: "opacity 0.22s ease", pointerEvents: open ? "auto" : "none" }} />
+        style={sheetBackdropSt(open)} />
       <div style={{
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 101,
         maxWidth: 640, margin: "0 auto",
-        background: T.bg1, borderRadius: "18px 18px 0 0", border: `1px solid ${T.border2}`, borderBottom: "none",
+        ...sheetEdgeSt,
         maxHeight: "88vh", overflowY: "auto",
         transform: open ? "translateY(0)" : "translateY(105%)",
         transition: "transform 0.38s cubic-bezier(.32,.72,.28,1)",
         padding: "1.25rem 1.5rem 1.75rem", fontFamily: T.font, boxSizing: "border-box",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-          <div style={{ width: 34, height: 34, borderRadius: "50%", background: T.accent, color: T.bg0, fontWeight: 800, fontSize: T.fs.title, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✦</div>
+          <TripinMark px={36} />
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: T.fs.title, fontWeight: 800, color: T.ink }}>Your traveler profile</div>
-            <div style={{ fontSize: T.fs.meta, color: T.hint, marginTop: 1 }}>No dates. No destinations. Just you.</div>
+            <div style={titleSt}>Your traveler profile</div>
+            <div style={{ fontSize: T.fs.meta, color: T.muted, marginTop: 1 }}>No dates. No destinations. Just you.</div>
           </div>
           <button onClick={onClose} aria-label="Close"
-            style={{ width: 28, height: 28, borderRadius: "50%", background: "transparent", border: "none", color: T.hint, fontSize: T.fs.title, cursor: "pointer", fontFamily: T.font, lineHeight: 1 }}>×</button>
+            style={{ width: 44, height: 44, margin: "-8px -10px -8px 0", borderRadius: "50%", background: "transparent", border: "none", color: T.ink, fontSize: 24, cursor: "pointer", fontFamily: T.font, lineHeight: 1 }}>×</button>
         </div>
 
         <div style={{ marginTop: 18 }}>
@@ -94,12 +96,12 @@ export default function ProfileSheet({ open, profile, onClose, onSave }) {
 
         <div style={{ marginTop: 18 }}>
           <div style={label}>Pace</div>
-          <div style={{ display: "inline-flex", background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.pill, padding: 3 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {PACE_OPTS.map(o => {
               const on = pace === o;
               return (
                 <button key={o} onClick={() => setPace(on ? "" : o)}
-                  style={{ border: "none", borderRadius: T.r.pill, padding: "6px 14px", fontSize: T.fs.body, fontWeight: 700, fontFamily: T.font, cursor: "pointer", background: on ? T.accent : "transparent", color: on ? T.white : T.muted, transition: "all .12s" }}>
+                  aria-pressed={on} style={chipSt(on, { small: true })}>
                   {o}
                 </button>
               );
@@ -114,7 +116,7 @@ export default function ProfileSheet({ open, profile, onClose, onSave }) {
               const on = crew === o;
               return (
                 <button key={o} onClick={() => setCrew(on ? "" : o)}
-                  style={{ background: on ? T.accentSoft : T.bg2, border: on ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`, borderRadius: T.r.pill, color: on ? T.accent : T.muted, fontSize: T.fs.body, fontWeight: on ? 700 : 400, padding: "6px 14px", cursor: "pointer", fontFamily: T.font, transition: "all .12s" }}>
+                  aria-pressed={on} style={chipSt(on, { small: true })}>
                   {o}
                 </button>
               );
@@ -123,7 +125,7 @@ export default function ProfileSheet({ open, profile, onClose, onSave }) {
         </div>
 
         <button onClick={save}
-          style={{ width: "100%", marginTop: 22, padding: 13, borderRadius: T.r.md, background: T.accent, border: "none", color: T.white, fontSize: T.fs.ui, fontWeight: 800, cursor: "pointer", fontFamily: T.font }}>
+          style={{ ...primaryBtnSt(true), width: "100%", marginTop: 24 }}>
           Save profile
         </button>
       </div>

@@ -6,7 +6,7 @@
  */
 import { useState, useEffect, useRef } from "react";
 import { MODES, T, FEATURES, AI_DISCLAIMER, NO_MOTION } from "../lib/constants.js";
-import { chipSt, fieldSt, primaryBtnSt } from "../lib/styles.js";
+import { chipSt, fieldSt, primaryBtnSt, outlineBtnSt } from "../lib/styles.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { useTimeFormat } from "../hooks/useTimeFormat.js";
 import { showSaveTripCard, arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime, findGroundedVenue, countIdeas, tripDayIndex, parseTime, formatTime } from "../lib/utils.js";
@@ -301,11 +301,8 @@ export function TripStrip({ dep, ret, nights, todayInfo, isBucket, ideaCount = 0
   );
 }
 
-// Header action: an outlined pill.
-const hdrBtn = {
-  minHeight:40, padding:"0 16px", borderRadius:T.r.pill, border:`2px solid ${T.ink}`,
-  background:"transparent", color:T.ink, fontSize:T.fs.body, fontWeight:700, fontFamily:T.font, cursor:"pointer",
-};
+// Header and toolbar actions: the shared outlined pill.
+const hdrBtn = outlineBtnSt;
 
 export default function Dashboard({
   trip,

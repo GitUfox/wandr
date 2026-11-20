@@ -60,3 +60,30 @@ export const primaryBtnSt = (enabled = true) => ({
   cursor: enabled ? "pointer" : "default",
   transition: ease("background .15s, color .15s"),
 });
+
+/** A secondary action, filled: ink pill. */
+export const solidBtnSt = {
+  minHeight: 44, padding: "0 18px", borderRadius: T.r.pill,
+  background: T.ink, color: T.white, border: `2px solid ${T.ink}`,
+  fontSize: T.fs.body, fontWeight: 900, fontFamily: T.font, cursor: "pointer",
+};
+
+/** A secondary action, outlined: ink ring pill. */
+export const outlineBtnSt = {
+  minHeight: 44, padding: "0 18px", borderRadius: T.r.pill,
+  background: "transparent", color: T.ink, border: `2px solid ${T.ink}`,
+  fontSize: T.fs.body, fontWeight: 700, fontFamily: T.font, cursor: "pointer",
+};
+
+/** A destructive confirm (delete, sign out, clear data): accent pill. */
+export const dangerBtnSt = { ...solidBtnSt, background: T.accent, border: `2px solid ${T.accent}` };
+
+/** A bottom sheet panel and its backdrop. `open` drives the slide. */
+export const sheetBackdropSt = (open) => ({
+  position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100,
+  opacity: open ? 1 : 0, transition: "opacity 0.22s ease", pointerEvents: open ? "auto" : "none",
+});
+export const sheetEdgeSt = { background: T.bg1, borderTop: `3px solid ${T.ink}`, borderRadius: "18px 18px 0 0" };
+
+/** The title of a sheet or a block. */
+export const titleSt = { fontFamily: T.fontDay, fontSize: T.fs.title, fontWeight: 900, letterSpacing: "-.02em", color: T.ink };
