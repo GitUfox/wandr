@@ -10,12 +10,12 @@ import { chipSt, fieldSt, primaryBtnSt, outlineBtnSt, motion, delay } from "../l
 import { useOnline } from "../hooks/useOnline.js";
 import { useTimeFormat } from "../hooks/useTimeFormat.js";
 import { showSaveTripCard, arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime, findGroundedVenue, countIdeas, tripDayIndex, parseTime, formatTime } from "../lib/utils.js";
-import { bucketTicketRow, bucketPrintBody, bucketPlainText } from "../lib/printBucket.js";
+import { bucketTicketRow, bucketPrintBody, bucketPlainText, printStation } from "../lib/printBucket.js";
 import { parsePlan } from "../lib/planModel.js";
 import { TEAM_SHORT } from "../lib/mlbTeams.js";
 import Md from "./Md.jsx";
 import BucketBoard from "./BucketBoard.jsx";
-import ItineraryEditor from "./ItineraryEditor.jsx";
+import ItineraryEditor, { stationKind, dayLineColor } from "./ItineraryEditor.jsx";
 import TripinLogo from "./TripinLogo.jsx";
 import EditTripSheet from "./EditTripSheet.jsx";
 import SettingsSheet from "./SettingsSheet.jsx";
@@ -26,32 +26,6 @@ import { useAccount } from "../hooks/useAccount.js";
 import StationSymbol from "./StationSymbol.jsx";
 import Glyph from "./Glyphs.jsx";
 import { packingNudge, packingTotals } from "../lib/packing.js";
-
-/* TiltedEarthMark — the static tilted-earth construction: 23.5° sphere, one
-   meridian, CURVED latitude arcs (straight chords are what read as a
-   basketball), polar axis stubs. The SCREEN ticket no longer seats an earth
-   (2A ember rail, 2026-08-11), but the PDF export still carries the
-   light-stock copy of this exact construction — this component stays as its
-   on-screen twin / sync reference. Currently unrendered; do not delete
-   without also redesigning the PDF ticket center. */
-// eslint-disable-next-line no-unused-vars
-function TiltedEarthMark({ size = 22, tilt = -23.5 }) {
-  return (
-    <svg viewBox="0 0 28 28" width={size} height={size} aria-hidden="true" style={{ display:"block" }}>
-      <g transform={`translate(14,14) rotate(${tilt})`}>
-        <circle r="10" fill={T.accent} />
-        <g stroke={T.bg2} strokeWidth="1.05" fill="none" strokeLinecap="round">
-          <ellipse rx="4.5" ry="9.7" />
-          <path d="M -9,-4.6 Q 0,-6.8 9,-4.6" />
-          <path d="M -10,0 Q 0,1.9 10,0" />
-          <path d="M -9,4.6 Q 0,6.8 9,4.6" />
-        </g>
-        <line x1="0" y1="-13.4" x2="0" y2="-10.6" stroke={T.muted} strokeWidth="1.1" />
-        <line x1="0" y1="10.6" x2="0" y2="13.4" stroke={T.muted} strokeWidth="1.1" />
-      </g>
-    </svg>
-  );
-}
 
 /* ── Curating-state motion (2026-08-07, design picks 1A+2A+3A) ────────────────
    RollingMsg — LOAD_MSGS rise in / lift out instead of hard-swapping (2A).
@@ -462,60 +436,24 @@ export default function Dashboard({
   }
 
   function exportToPdf() {
-    // Boarding-pass ticket (design pick 9B) — the same object as the hero,
-    // translated to paper: light-grey stock, perforation, barcode.
-    const stubsHtml = tripStubs.map(([l, v]) => `
-      <div>
-        <div class="p-label">${htmlEscape(l)}</div>
-        <div style="font-size:11px;font-weight:700">${htmlEscape(v)}</div>
-      </div>`).join("");
-    // Light-stock twin of the ticket emblem (4A+5A): canvas can't print, so
-    // paper gets TiltedEarthMark's construction with the ring and ember
-    // frozen mid-front-pass. Keep in sync with TiltedEarthMark in this file.
-    // ONE string, seated by BOTH ticket variants (dates + bucket) — drift-proof.
-    const printEarthSvg = `<svg viewBox="0 0 120 26" style="flex:1;height:22px;min-width:48px;overflow:visible" aria-hidden="true">
-            <line x1="10" y1="13" x2="40" y2="13" stroke="#d8d2cb" stroke-width="1.2"/>
-            <line x1="80" y1="13" x2="110" y2="13" stroke="#d8d2cb" stroke-width="1.2"/>
-            <circle cx="8" cy="13" r="2.4" fill="none" stroke="#9a938c" stroke-width="1.3"/>
-            <circle cx="112" cy="13" r="2.4" fill="#E3262F"/>
-            <g transform="translate(60,13) rotate(-20)">
-              <ellipse rx="16" ry="5" fill="none" stroke="#c9c2ba" stroke-width=".9"/>
-            </g>
-            <g transform="translate(60,13) rotate(-23.5)">
-              <circle r="10" fill="#E3262F"/>
-              <g stroke="#faf8f6" stroke-width="1.05" fill="none" stroke-linecap="round">
-                <ellipse rx="4.5" ry="9.7"/>
-                <path d="M -9,-4.6 Q 0,-6.8 9,-4.6"/>
-                <path d="M -10,0 Q 0,1.9 10,0"/>
-                <path d="M -9,4.6 Q 0,6.8 9,4.6"/>
-              </g>
-              <line x1="0" y1="-13.4" x2="0" y2="-10.6" stroke="#9a938c" stroke-width="1.1"/>
-              <line x1="0" y1="10.6" x2="0" y2="13.4" stroke="#9a938c" stroke-width="1.1"/>
-            </g>
-            <g transform="translate(60,13) rotate(-20) scale(1,0.3125)">
-              <ellipse cx="8" cy="13.9" rx="1.7" ry="5.4" fill="#E3262F"/>
-            </g>
-          </svg>`;
-    const ticketTop = isBucket
-      ? bucketTicketRow(ideaCount, pickedCount, printEarthSvg)
+    // TRANSIT DIAGRAM on paper (redesign step 5). The PDF is the same trip as
+    // the screen: the trip strip, then one line per day with a station per
+    // stop. It is built from the SAME parsed model and the SAME fact engine
+    // as the screen (parsePlan + splitDetails + stationKind + dayLineColor),
+    // so the export cannot drift from what the traveler edited. Every
+    // model-authored string passes through htmlEscape: this HTML lands in
+    // document.write, so LLM output is untrusted markup.
+    const stubsHtml = tripStubs.map(([l, v]) =>
+      `<span>${htmlEscape(l)} <strong>${htmlEscape(v)}</strong></span>`).join("");
+    const totalDays = trip.nights ? trip.nights + 1 : 0;
+    const barsHtml = Array.from({ length: Math.min(totalDays, 14) }, (_, i) =>
+      `<span style="background:${dayLineColor(i)}"></span>`).join("");
+    const stripTop = isBucket
+      ? bucketTicketRow(ideaCount, pickedCount)
       : dep && ret ? `
-        <div style="display:flex;align-items:center;gap:14px;padding:13px 34px 11px 16px">
-          <div><div class="p-label">Depart</div><div class="p-date">${htmlEscape(dep)}</div></div>
-          ${printEarthSvg}
-          <div style="text-align:right"><div class="p-label">Return</div><div class="p-date">${htmlEscape(ret)}</div></div>
-        </div>
-        <div class="perf"><div class="notch" style="left:-31px"></div><div class="notch" style="right:-31px"></div></div>` : "";
-    const ticketHtml = `
-      <div class="ticket">
-        <div class="barcode"></div>${ticketTop}
-        <div style="display:flex;gap:20px;padding:10px 34px 13px 16px">${stubsHtml}</div>
-      </div>`;
-
-    // ── Body: day cards (§15.6 picks 1B+2B+3B) ────────────────────────────
-    // Built from the SAME parsed model and the SAME chip engine as the screen
-    // (parsePlan + splitDetails) — the export can't drift from what the
-    // traveler edited. Every model-authored string passes through htmlEscape:
-    // this HTML lands in document.write, so LLM output is untrusted markup.
+        <div class="dates"><span>${htmlEscape(sentenceMonth(dep))}</span><span>${htmlEscape(sentenceMonth(ret))}</span></div>
+        ${barsHtml ? `<div class="bars">${barsHtml}</div>` : ""}` : "";
+    const stripHtml = `<div class="strip${isBucket ? " plain" : ""}">${stripTop}${stubsHtml ? `<div class="stubs">${stubsHtml}</div>` : ""}</div>`;
 
     // Escape first, then translate **bold** — never the other way round.
     const rich = (s) => htmlEscape(s).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
@@ -528,45 +466,42 @@ export default function Dashboard({
       return `<p class="prose">${rich(line)}</p>`;
     }).join("");
 
-    const cardHtml = (a) => {
+    // One stop = one row: station | text | time. The day line is drawn per
+    // row (the same rule as the screen), so it starts at the first station
+    // and ends at the last one on any page.
+    const stopHtml = (a, color, isFirst, isLast) => {
       const { desc, facts } = splitDetails(a.details);
-      // Duration reads as part of "when" — it lives under the time in the
-      // rail; every other fact becomes a chip. Booking keeps its hot accent.
-      const dur = facts.find(f => f.kind === "duration");
-      const chips = facts.filter(f => f !== dur);
-      const chipsHtml = chips.length
-        ? `<div class="chips">${chips.map(f => `<span class="chip${f.kind === "booking" ? " hot" : ""}">${htmlEscape(f.text)}</span>`).join("")}</div>`
+      const factsHtml = facts.length
+        ? `<div class="facts">${facts.map(f => `<span${f.kind === "booking" ? ' class="hot"' : ""}>${htmlEscape(f.text)}</span>`).join("")}</div>`
         : "";
-      // Pick A's print form: paper wants text, not taps — a grounded venue
-      // prints its real street address (Google's, never the model's).
+      // Paper wants text, not taps: a grounded venue prints its real street
+      // address (Google's, never the model's).
       const venue = findGroundedVenue(String(a.title || "").replace(/\*\*/g, ""), trip?.categories);
-      const addrHtml = venue?.address
-        ? `<div class="c-addr"><svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="#9a938c" stroke-width="2.2" stroke-linecap="round"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>${htmlEscape(venue.address)}</div>`
-        : "";
-      return `<div class="card">
-        <div class="rail"><div class="tm">${htmlEscape(displayTime(a.time))}</div>${dur ? `<div class="du">${htmlEscape(dur.text)}</div>` : ""}</div>
+      const addrHtml = venue?.address ? `<div class="c-addr">${htmlEscape(venue.address)}</div>` : "";
+      const seg = isFirst && isLast ? "" : `<span class="seg${isFirst ? " first" : ""}${isLast ? " last" : ""}" style="background:${color}"></span>`;
+      return `<div class="stop">
+        <div class="stn">${seg}${printStation(stationKind(a.details, isLast))}</div>
         <div>
           <div class="c-ttl">${htmlEscape(String(a.title || "").replace(/\*\*/g, ""))}</div>
-          ${chipsHtml}
           ${desc ? `<div class="c-desc">${rich(desc)}</div>` : ""}
+          ${(a._tips || []).map(tip => `<div class="c-tip">${rich(tip)}</div>`).join("")}
+          ${factsHtml}
           ${addrHtml}
-          ${(a._tips || []).map(tip => `<div class="c-tip"><span class="bang">!</span><span>${rich(tip)}</span></div>`).join("")}
         </div>
+        <div class="tm">${htmlEscape(displayTime(a.time))}</div>
       </div>`;
     };
 
     // Bucket export: the shelf body comes from printBucket (shared shelf
-    // source with the on-screen board); the day-card machinery below no-ops.
+    // source with the on-screen board); the day machinery below no-ops.
     const model = isBucket ? null : parsePlan(planText);
     let bodyHtml = isBucket ? bucketPrintBody(trip) : model.intro ? proseHtml(model.intro) : "";
 
-    for (const day of model?.days || []) {
-      const dm = String(day.label).match(/^Day (\d+) — (.+)$/);
-      bodyHtml += dm
-        ? `<div class="dayhead"><span class="daychip">${String(dm[1]).padStart(2, "0")}</span><span>${htmlEscape(dm[2])}</span></div>`
-        : `<h2 class="h2">${htmlEscape(day.label)}</h2>`;
+    (model?.days || []).forEach((day, dayIdx) => {
+      const color = dayLineColor(dayIdx);
+      bodyHtml += `<div class="dayhead"><span class="daybar" style="background:${color}"></span><span>${htmlEscape(day.label)}</span></div>`;
 
-      // 2B: attach each tip to the activity it names; the rest stay day-level.
+      // Attach each tip to the activity it names; the rest stay day-level.
       const titles = day.activities.map(a => a.title);
       const acts = day.activities.map(a => ({ ...a, _tips: [] }));
       const dayTips = [];
@@ -575,7 +510,7 @@ export default function Dashboard({
         if (i >= 0) acts[i]._tips.push(tip); else dayTips.push(tip);
       }
 
-      bodyHtml += acts.map(cardHtml).join("");
+      bodyHtml += acts.map((a, i) => stopHtml(a, color, i === 0, i === acts.length - 1)).join("");
 
       // Legacy FOOD rows (pre food-removal plans) — keep the data readable.
       for (const f of day.food || []) {
@@ -584,11 +519,11 @@ export default function Dashboard({
       }
 
       if (dayTips.length) {
-        bodyHtml += `<div class="prebox"><div class="p-label" style="color:#E3262F;margin-bottom:3px">Before you go</div>${dayTips.map(t => `<div class="tipline">${rich(t)}</div>`).join("")}</div>`;
+        bodyHtml += `<div class="prebox"><div class="pre-h">Before you go</div>${dayTips.map(t => `<div class="tipline"><span class="sq" style="background:${color}"></span><span>${rich(t)}</span></div>`).join("")}</div>`;
       }
 
       if (day.extras?.length) bodyHtml += proseHtml(day.extras.join("\n"));
-    }
+    });
 
     const w = window.open("", "_blank");
     if (!w) {
@@ -596,84 +531,95 @@ export default function Dashboard({
       window.alert("Pop-up blocked. Please allow pop-ups for this site to export the PDF.");
       return;
     }
+    const markSvg = (px) => `<svg width="${px}" height="${px}" viewBox="0 0 104 104" fill="none" aria-hidden="true"><rect width="104" height="104" rx="22" fill="${T.ink}"/><polyline points="14,74 46,74 78,42" stroke="${T.line[0]}" stroke-width="13"/><polyline points="52,14 52,90" stroke="${T.markBlue}" stroke-width="13"/><circle cx="52" cy="68" r="12" fill="${T.white}" stroke="${T.ink}" stroke-width="5"/></svg>`;
     w.document.write(`<!DOCTYPE html><html><head>
       <meta charset="utf-8">
       <title>${htmlEscape(trip.destination)} — Tripin ${isBucket ? "Bucket List" : "Itinerary"}</title>
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;700;900&display=swap" rel="stylesheet">
       <style>
-        /* Editorial Pass faces on paper (same roles as the screen — see
-           constants.js). Erode is self-hosted; this window is about:blank, so
-           the URL must be absolute or it silently resolves nowhere. */
+        /* The print window is about:blank: nothing from index.html reaches it.
+           It loads Figtree itself (typeSystem.test.js pins the match). */
+        /* The day lines and stations are backgrounds and fills. Browsers drop
+           backgrounds on paper unless the page asks for exact colors. */
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         /* 4A print hygiene: margin:0 removes the browser's own header/footer
            (about:blank, timestamp, page counts) — Chrome renders those in the
            page margin, so no margin means no chrome. The body padding below is
            therefore the ONLY physical margin the sheet gets. */
         @page { margin: 0; }
-        /* Letter-width column: the on-screen preview matches what prints
-           instead of stretching the ticket across a desktop monitor. */
-        body { font-family: 'Figtree', system-ui, sans-serif; margin: 0 auto; max-width: 720px; padding: 40px 40px 74px; background: #fff; color: #1a1a1a; box-sizing: border-box; }
+        /* Letter-width column: the on-screen preview matches what prints. */
+        body { font-family: 'Figtree', system-ui, sans-serif; margin: 0 auto; max-width: 720px; padding: 40px 40px 74px; background: #fff; color: ${T.ink}; box-sizing: border-box; }
         /* Print bottom padding must clear the fixed footer (~34px) or the last
            line of every page runs beneath it. */
         @media print { body { padding: 34px 36px 68px; max-width: none; } }
-        .wm { font-weight: 900; font-size: 16px; color: #111; letter-spacing: -.04em; }
-        .p-label { font-family: 'Figtree', sans-serif; font-size: 8px; letter-spacing: .12em; text-transform: uppercase; color: #9a938c; font-weight:700; }
-        .p-date { font-family: 'Figtree', sans-serif; font-size: 15px; font-weight:700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-        .ticket { position: relative; background: #faf8f6; border: 1px solid #e5e0da; border-radius: 12px; overflow: hidden; margin: 12px 0 6px; }
-        .barcode { position: absolute; right: 10px; top: 12px; bottom: 12px; width: 11px; border-radius: 2px;
-                   background: repeating-linear-gradient(180deg, #d8d2cb 0 2px, transparent 2px 5px); }
-        .perf { position: relative; border-top: 1.5px dashed #d8d2cb; margin: 0 22px; }
-        .notch { position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 1px solid #e5e0da; top: -9px; }
-        .dayhead { display: flex; align-items: center; gap: 9px; font-family: 'Figtree', sans-serif; font-size: 16.5px; font-weight:900; margin: 24px 0 4px; break-after: avoid; }
-        .daychip { background: #E3262F; color: #fff; font-family: 'Figtree', sans-serif; font-size: 9.5px; font-weight:700; border-radius: 6px; padding: 3px 6px; font-variant-numeric: tabular-nums; }
-        .h2 { font-family: 'Figtree', sans-serif; font-size: 16.5px; font-weight:900; color: #0d0d0d; margin: 24px 0 8px; padding-bottom: 5px; border-bottom: 1px solid #e8e8e8; }
-        .h3 { font-family: 'Figtree', sans-serif; font-size: 9.5px; font-weight:700; color: #E3262F; text-transform: uppercase; letter-spacing: .1em; margin: 14px 0 6px; }
-        .prose { font-family: 'Figtree', sans-serif; font-weight:400; font-size: 12px; color: #333; line-height: 1.6; margin: 0 0 4px; }
-        .prose.food { font-size: 10.5px; color: #555; }
-        /* 1B day cards: time rail | content. break-inside keeps a stop whole
-           across page breaks — the tip belongs to its card, not the next page. */
-        .card { display: grid; grid-template-columns: 76px 1fr; gap: 12px; padding: 10px 0 11px; /* 76 fits "10:00 AM" in Martian Mono at 11px + the rail's 10px padding */
-                border-bottom: 1px solid #f0eeeb; break-inside: avoid; }
-        .rail { text-align: right; border-right: 2px solid #E3262F; padding-right: 10px; }
-        .rail .tm { font-family: 'Figtree', sans-serif; font-size: 11px; font-weight:700; letter-spacing: -.02em; color: #0d0d0d; font-variant-numeric: tabular-nums; line-height: 1.2; }
-        .rail .du { font-family: 'Figtree', sans-serif; font-size: 7px; font-weight:700; color: #9a938c; letter-spacing: .04em; text-transform: uppercase; margin-top: 3px; }
-        .c-ttl { font-size: 12.5px; font-weight: 800; color: #0d0d0d; line-height: 1.3; letter-spacing: -.005em; }
-        /* 3B fact chips — same engine as the on-screen blocks (splitDetails). */
-        .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 5px 0 2px; }
-        .chip { font-size: 8.5px; font-weight: 700; padding: 2.5px 7px; border-radius: 4px;
-                border: 1px solid #e5e0da; color: #6b655f; background: #fbfaf9; white-space: nowrap; }
-        .chip.hot { border-color: #e8c4b4; color: #E3262F; background: #fdf5f2; }
-        .c-desc { font-family: 'Figtree', sans-serif; font-weight:400; font-size: 10.5px; color: #555; line-height: 1.55; margin-top: 3px; }
-        /* Pick A print form: the grounded venue's real street address. */
-        .c-addr { display: flex; align-items: center; gap: 4px; font-size: 8.5px; color: #9a938c; margin-top: 3px; }
-        /* 2B: a tip rendered with the stop it belongs to. */
-        .c-tip { display: flex; gap: 7px; margin-top: 6px; padding: 5px 9px; background: #fbf7f4;
-                 border-left: 2.5px solid #E3262F; border-radius: 0 4px 4px 0; break-inside: avoid; }
-        .c-tip .bang { color: #E3262F; font-weight: 800; font-size: 9px; line-height: 1.55; }
-        .c-tip span { font-family: 'Figtree', sans-serif; font-weight:400; font-size: 9.5px; color: #6b5f57; line-height: 1.55; }
+        .brand { display: flex; align-items: center; gap: 7px; margin-bottom: 18px; }
+        .wm { font-weight: 900; font-size: 17px; color: ${T.ink}; letter-spacing: -.04em; }
+        .kind { font-size: 10px; font-weight: 700; color: ${T.muted}; margin-bottom: 2px; }
+        .dest { font-size: 38px; font-weight: 900; letter-spacing: -.04em; line-height: 1; }
+        .region { font-size: 11.5px; font-weight: 500; color: ${T.muted}; margin-top: 5px; }
+        /* Trip strip: the two dates, one bar per day, then the trip facts. */
+        .strip { margin: 16px 0 6px; padding-bottom: 14px; border-bottom: 2.5px solid ${T.ink}; }
+        /* A bucket list opens with a shelf rule, so the strip has no rule of its own. */
+        .strip.plain { border-bottom: none; padding-bottom: 2px; }
+        .dates { display: flex; justify-content: space-between; font-size: 14px; font-weight: 900; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+        .bars { display: flex; gap: 2px; margin-top: 7px; }
+        .bars span { flex: 1; height: 8px; }
+        .dots { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+        .stubs { display: flex; flex-wrap: wrap; gap: 3px 18px; margin-top: 9px; font-size: 10.5px; color: ${T.muted}; }
+        .stubs strong { font-weight: 900; color: ${T.ink}; }
+        /* Day header: the line color opens the day. */
+        .dayhead { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 900; letter-spacing: -.02em; margin: 24px 0 4px; break-after: avoid; }
+        .daybar { width: 24px; height: 8px; flex-shrink: 0; }
+        .h2 { font-size: 15px; font-weight: 900; letter-spacing: -.02em; color: ${T.ink}; margin: 24px 0 2px; padding-top: 8px; border-top: 2.5px solid ${T.ink}; break-after: avoid; }
+        .h3 { font-size: 10.5px; font-weight: 900; color: ${T.ink}; margin: 14px 0 6px; }
+        .prose { font-weight: 400; font-size: 11.5px; color: ${T.muted}; line-height: 1.6; margin: 0 0 4px; }
+        .prose.food { font-size: 10.5px; }
+        /* One stop: station | text | time. break-inside keeps a stop whole
+           across page breaks. The tip belongs to its stop, not the next page. */
+        .stop { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; padding: 7px 0 8px; break-inside: avoid; }
+        .stn { position: relative; display: flex; justify-content: center; }
+        .stn svg { position: relative; display: block; }
+        /* The line segment for this stop. Middle: full height. First: from the
+           station down. Last: from the top to the station. 7px = the station
+           center below the row's top padding. */
+        .seg { position: absolute; left: 50%; width: 5px; margin-left: -2.5px; top: -7px; bottom: -8px; }
+        .seg.first { top: 7px; }
+        .seg.last { bottom: auto; height: 14px; }
+        .tm { font-size: 11px; font-weight: 900; color: ${T.ink}; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.3; }
+        .c-ttl { font-size: 12px; font-weight: 700; color: ${T.ink}; line-height: 1.3; }
+        .c-desc { font-weight: 400; font-size: 10.5px; color: ${T.muted}; line-height: 1.55; margin-top: 2px; }
+        /* Facts: one plain text line. A booking fact takes the accent ink. */
+        .facts { display: flex; flex-wrap: wrap; gap: 1px 12px; margin-top: 3px; font-size: 9px; font-weight: 700; color: ${T.muted}; font-variant-numeric: tabular-nums; }
+        .facts .hot { color: ${T.accentInk}; }
+        /* A grounded venue's real street address. */
+        .c-addr { font-size: 9px; color: ${T.muted}; margin-top: 2px; }
+        /* A tip rendered with the stop it belongs to. */
+        .c-tip { font-weight: 400; font-size: 9.5px; color: ${T.muted}; line-height: 1.55; margin-top: 3px; padding-left: 8px; border-left: 2px solid ${T.ink}; break-inside: avoid; }
         /* Day-level tips that name no single venue. */
-        .prebox { border: 1px solid #e5e0da; border-left: 2.5px solid #E3262F; border-radius: 0 5px 5px 0;
-                  padding: 8px 11px; margin: 10px 0 4px; background: #fdfbfa; break-inside: avoid; }
-        .prebox .tipline { font-family: 'Figtree', sans-serif; font-weight:400; font-size: 9.5px; color: #6b5f57; line-height: 1.55; margin-top: 2px; }
-        /* Bucket-list print cards: check ring column instead of the time rail. */
-        .shelfcount { font-size: 9px; font-weight: 700; color: #9a938c; margin-left: 8px; letter-spacing: .04em; text-transform: none; }
-        .bcard { display: grid; grid-template-columns: 22px 1fr; gap: 10px; padding: 9px 0 10px;
-                 border-bottom: 1px solid #f0eeeb; break-inside: avoid; }
-        .bring { width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid #d8d2cb; margin-top: 1px;
-                 font-size: 9px; font-weight: 800; color: #fff; display: flex; align-items: center; justify-content: center; }
-        .bring.on { background: #E3262F; border-color: #E3262F; }
+        .prebox { margin: 10px 0 4px; break-inside: avoid; }
+        .pre-h { font-size: 10.5px; font-weight: 900; color: ${T.ink}; margin-bottom: 2px; }
+        .tipline { display: flex; align-items: flex-start; gap: 7px; font-size: 9.5px; color: ${T.muted}; line-height: 1.55; padding: 4px 0; border-top: 1px solid ${T.border}; }
+        .sq { width: 5px; height: 5px; flex-shrink: 0; margin-top: 5px; }
+        /* Bucket list: station column in place of the time column. */
+        .shelfcount { font-size: 9.5px; font-weight: 500; color: ${T.muted}; margin-left: 8px; letter-spacing: 0; }
+        .bcard { display: grid; grid-template-columns: 22px 1fr; gap: 10px; padding: 8px 0 9px; border-top: 1px solid ${T.border}; break-inside: avoid; }
+        .bcard .stn { align-items: flex-start; padding-top: 1px; }
+        .prio { font-size: 9px; font-weight: 700; color: ${T.muted}; margin-left: 7px; text-transform: capitalize; }
+        .prio.hot { font-weight: 900; color: ${T.accentInk}; }
         .foot { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 720px;
                 box-sizing: border-box; display: flex; align-items: center; gap: 10px;
-                background: #fff; border-top: 1px solid #e8e4e0; padding: 8px 20px 12px; font-size: 8.5px; color: #9a938c; }
+                background: #fff; border-top: 1px solid ${T.border}; padding: 8px 20px 12px; font-size: 8.5px; color: ${T.muted}; }
         @media print { .foot { max-width: none; } }
         .foot .wm { font-size: 10px; }
         .foot .spacer { flex: 1; }
       </style>
     </head><body>
-      <div style="text-align:center;margin-bottom:14px"><span class="wm">Tripin</span></div>
-      <div class="p-label" style="color:#E3262F;margin-bottom:4px">${isBucket ? "My bucket list" : "My trip"}</div>
-      <div style="font-family:'Figtree', sans-serif;font-size:30px;font-weight:900;letter-spacing:0;line-height:1.05">${htmlEscape(destMain)}${destRegion ? ` <span style="font-family:'Figtree', sans-serif;font-size:10px;color:#9a938c;font-weight:700;letter-spacing:.08em;text-transform:uppercase">${htmlEscape(destRegion)}</span>` : ""}</div>
-      ${ticketHtml}
+      <div class="brand">${markSvg(20)}<span class="wm">Tripin</span></div>
+      <div class="kind">${isBucket ? "My bucket list" : "My trip"}</div>
+      <div class="dest">${htmlEscape(destMain)}</div>
+      ${destRegion ? `<div class="region">${htmlEscape(destRegion)}</div>` : ""}
+      ${stripHtml}
       <div style="margin-top:6px">${bodyHtml}</div>
       <div class="foot">
         <span class="wm">Tripin</span>
@@ -683,7 +629,7 @@ export default function Dashboard({
       </div>
     </body></html>`);
     w.document.close();
-    // Print once Manrope is actually loaded — otherwise the dialog snapshots
+    // Print once Figtree is actually loaded — otherwise the dialog snapshots
     // the fallback font. fonts.ready + a beat covers slow first-time loads.
     const doPrint = () => { w.focus(); w.print(); };
     if (w.document.fonts?.ready) w.document.fonts.ready.then(() => setTimeout(doPrint, 150));

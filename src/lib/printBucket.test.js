@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { bucketPrintBody, bucketPlainText, bucketTicketRow, escapeHtml } from "./printBucket.js";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { bucketPrintBody, bucketPlainText, bucketTicketRow, escapeHtml, printStation } from "./printBucket.js";
+import StationSymbol, { STATION_KINDS } from "../components/StationSymbol.jsx";
+import { T } from "./constants.js";
 
 // Bucket export builders (2026-08-15, Kraig's prod report). Pure string
 // builders — Dashboard owns the window, this owns what gets written.
@@ -29,9 +33,9 @@ describe("bucketPrintBody", () => {
     expect(html).toContain("1 of 2 picked");
   });
 
-  it("marks picked rings and leaves the rest empty", () => {
-    expect(html).toContain('class="bring on"');
-    expect(html).toContain('class="bring"');
+  it("marks a picked idea with a filled station and leaves the rest as rings", () => {
+    expect(html).toContain(printStation("done"));
+    expect(html).toContain(printStation("stop"));
   });
 
   it("prints the grounded street address only when the map URL validated", () => {
@@ -45,9 +49,10 @@ describe("bucketPrintBody", () => {
     expect(html).toContain("&quot;go&quot; &amp; left");
   });
 
-  it("carries priority chips, hot for essential", () => {
-    expect(html).toContain('chip hot');
+  it("prints priority as text, with the accent for essential", () => {
+    expect(html).toContain('class="prio hot"');
     expect(html).toContain("essential");
+    expect(html).not.toContain('class="chip');
   });
 });
 
@@ -71,21 +76,54 @@ describe("bucketPlainText", () => {
   });
 });
 
-describe("bucketTicketRow", () => {
-  it("seats IDEAS/PICKED around the shared earth string", () => {
-    const row = bucketTicketRow(9, 2, "<svg>EARTH</svg>");
-    expect(row).toContain("Ideas");
-    expect(row).toContain(">9<");
-    expect(row).toContain("Picked");
-    expect(row).toContain(">2<");
-    expect(row).toContain("<svg>EARTH</svg>");
-    expect(row).toContain('class="perf"');
+describe("bucketTicketRow (the trip strip rows for a bucket list)", () => {
+  it("prints the counts and one station per idea, filled when picked", () => {
+    const row = bucketTicketRow(9, 2);
+    expect(row).toContain("9 ideas · 2 picked");
+    expect(row.match(/<svg/g)).toHaveLength(9);
+    expect(row.split(printStation("done", 10)).length - 1).toBe(2);
+  });
+
+  it("has no ticket parts (retired with the Transit Diagram redesign)", () => {
+    const row = bucketTicketRow(9, 2);
+    expect(row).not.toContain('class="perf"');
+    expect(row).not.toContain("notch");
+  });
+
+  it("uses the singular for one idea", () => {
+    expect(bucketTicketRow(1, 0)).toContain("1 idea · 0 picked");
   });
 
   it("never prints NaN for malformed counts", () => {
-    const row = bucketTicketRow(undefined, null, "");
+    const row = bucketTicketRow(undefined, null);
     expect(row).not.toContain("NaN");
-    expect(row).toContain(">0<");
+    expect(row).toContain("0 ideas · 0 picked");
+    expect(row).not.toContain("<svg");
+  });
+
+  it("caps the stations for a very long list", () => {
+    expect(bucketTicketRow(200, 0).match(/<svg/g)).toHaveLength(24);
+  });
+});
+
+describe("printStation matches the on-screen StationSymbol", () => {
+  // The inner shapes must be the same on paper and on screen. Compare the
+  // markup between the <svg ...> tags, with attribute spelling normalized.
+  const inner = (markup) => markup.replace(/^<svg[^>]*>/, "").replace(/<\/svg>$/, "")
+    .replace(/stroke-width/g, "strokeWidth").replace(/><\/(circle|rect)>/g, "/>").replace(/\s*\/>/g, "/>");
+
+  it.each(STATION_KINDS)("%s has the same geometry", (kind) => {
+    const screen = renderToStaticMarkup(createElement(StationSymbol, { kind }));
+    expect(inner(printStation(kind))).toBe(inner(screen));
+  });
+
+  it("falls back to a stop ring for an unknown kind", () => {
+    expect(printStation("nope")).toBe(printStation("stop"));
+  });
+
+  it("uses token colors", () => {
+    expect(printStation("book")).toContain(T.ink);
+    expect(printStation("book")).toContain(T.white);
   });
 });
 

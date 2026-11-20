@@ -13,6 +13,24 @@
  * itinerary export).
  */
 import { bucketPickKey, bucketShelves, countIdeas } from "./utils.js";
+import { T } from "./constants.js";
+
+/**
+ * A station symbol as an SVG string, for paper. Same geometry and the same
+ * four kinds as StationSymbol.jsx (the screen). Keep the two in step:
+ * printBucket.test.js compares them.
+ */
+export function printStation(kind = "stop", px = 14, color = T.ink) {
+  const open = `<svg width="${px}" height="${px}" viewBox="0 0 26 26" aria-hidden="true">`;
+  switch (kind) {
+    case "book": return `${open}<circle cx="13" cy="13" r="10" fill="${T.white}" stroke="${color}" stroke-width="4"/><circle cx="13" cy="13" r="4" fill="${color}"/></svg>`;
+    case "end":  return `${open}<rect x="1" y="8" width="24" height="10" fill="${color}"/></svg>`;
+    case "done": return `${open}<circle cx="13" cy="13" r="12" fill="${color}"/></svg>`;
+    default:     return `${open}<circle cx="13" cy="13" r="10" fill="${T.white}" stroke="${color}" stroke-width="4"/></svg>`;
+  }
+}
+
+const MAX_PRINT_DOTS = 24;
 
 export function escapeHtml(str) {
   return String(str || "")
@@ -30,21 +48,19 @@ function printableAddress(item) {
 }
 
 /**
- * The light-stock ticket's top row for a bucket trip: IDEAS n · earth · PICKED m.
- * `earthSvg` is the shared print-earth markup owned by exportToPdf (single
- * source — the itinerary ticket seats the same string).
+ * The trip strip's top rows for a bucket list: the counts, then one station
+ * per idea, filled when picked. A bucket list has no dates, so it has no day
+ * bars. (The name is kept from the ticket era: it is the strip row now.)
  */
-export function bucketTicketRow(ideas, picked, earthSvg) {
+export function bucketTicketRow(ideas, picked) {
+  const n = Number(ideas) || 0, p = Number(picked) || 0;
+  const dots = Array.from({ length: Math.min(n, MAX_PRINT_DOTS) }, (_, i) => printStation(i < p ? "done" : "stop", 10)).join("");
   return `
-        <div style="display:flex;align-items:center;gap:14px;padding:13px 34px 11px 16px">
-          <div><div class="p-label">Ideas</div><div class="p-date">${Number(ideas) || 0}</div></div>
-          ${earthSvg}
-          <div style="text-align:right"><div class="p-label">Picked</div><div class="p-date">${Number(picked) || 0}</div></div>
-        </div>
-        <div class="perf"><div class="notch" style="left:-31px"></div><div class="notch" style="right:-31px"></div></div>`;
+        <div class="dates"><span>${n} ${n === 1 ? "idea" : "ideas"} · ${p} picked</span></div>
+        ${dots ? `<div class="dots">${dots}</div>` : ""}`;
 }
 
-/** The printed body: shelves of idea cards with check rings, tips, addresses. */
+/** The printed body: shelves of idea rows with stations, tips, addresses. */
 export function bucketPrintBody(trip) {
   const picks = trip?.bucketPicks || {};
   let html = "";
@@ -55,12 +71,12 @@ export function bucketPrintBody(trip) {
       const picked = !!picks[bucketPickKey(id, item)];
       const addr = printableAddress(item);
       html += `<div class="bcard">
-        <div class="bring${picked ? " on" : ""}">${picked ? "✓" : ""}</div>
+        <div class="stn">${printStation(picked ? "done" : "stop")}</div>
         <div>
-          <div class="c-ttl">${escapeHtml(item.name)}${item.priority ? `<span class="chip${item.priority === "essential" ? " hot" : ""}" style="margin-left:6px">${escapeHtml(item.priority)}</span>` : ""}</div>
+          <div class="c-ttl">${escapeHtml(item.name)}${item.priority ? `<span class="prio${item.priority === "essential" ? " hot" : ""}">${escapeHtml(item.priority)}</span>` : ""}</div>
           ${item.description ? `<div class="c-desc">${escapeHtml(item.description)}</div>` : ""}
-          ${addr ? `<div class="c-addr"><svg viewBox="0 0 24 24" width="8" height="8" fill="none" stroke="#9a938c" stroke-width="2.2" stroke-linecap="round"><path d="M12 21s-7-6.1-7-11a7 7 0 0 1 14 0c0 4.9-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>${escapeHtml(addr)}</div>` : ""}
-          ${item.proTip ? `<div class="c-tip"><span class="bang">!</span><span>${escapeHtml(item.proTip)}</span></div>` : ""}
+          ${addr ? `<div class="c-addr">${escapeHtml(addr)}</div>` : ""}
+          ${item.proTip ? `<div class="c-tip">${escapeHtml(item.proTip)}</div>` : ""}
         </div>
       </div>`;
     }

@@ -32,7 +32,7 @@
  * Bump CACHE_VERSION to evict every old cache on activate.
  */
 
-const CACHE_VERSION = "v3"; // v3: Editorial Pass — self-hosted /fonts/ route (v2: new w-dot favicons)
+const CACHE_VERSION = "v4"; // v4: Tripin redesign — new mark icons, Figtree only (v3: Editorial Pass /fonts/ route, v2: w-dot favicons)
 const SHELL_CACHE   = `wandr-shell-${CACHE_VERSION}`;
 const ASSET_CACHE   = `wandr-assets-${CACHE_VERSION}`;
 const FONT_CACHE    = `wandr-fonts-${CACHE_VERSION}`;

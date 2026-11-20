@@ -11,6 +11,7 @@
     "start": "NODE_ENV=production node --env-file-if-exists=.env.local server.js",
     "preview": "vite preview",
     "keepalive": "node scripts/keepalive-ping.mjs",
+    "icons": "node scripts/render-icons.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
