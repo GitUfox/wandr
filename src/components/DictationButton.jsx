@@ -26,7 +26,7 @@ export default function DictationButton({ value, onChange, style, max }) {
       const s = document.createElement("style");
       s.id = "wandr-mic-style";
       s.textContent =
-        "@keyframes wandrMicPulse{0%{box-shadow:0 0 0 0 rgba(227,38,47,.45)}70%{box-shadow:0 0 0 7px rgba(227,38,47,0)}100%{box-shadow:0 0 0 0 rgba(227,38,47,0)}}";
+        "@keyframes wandrMicPulse{50%{opacity:.5}}@media (prefers-reduced-motion:reduce){[data-mic-live]{animation:none!important}}";
       document.head.appendChild(s);
     }
     return () => { try { recRef.current?.stop(); } catch {} };
@@ -72,14 +72,15 @@ export default function DictationButton({ value, onChange, style, max }) {
       type="button"
       onClick={() => (listening ? stop() : start())}
       aria-label={listening ? "Stop dictation" : "Dictate with your voice"}
+      data-mic-live={listening ? "" : undefined}
       title={listening ? "Stop dictation" : "Dictate"}
       style={{
         position: "absolute", bottom: 10, right: 10,
         display: "flex", alignItems: "center", justifyContent: "center",
         width: 30, height: 30, borderRadius: "50%",
-        background: listening ? T.accent : T.bg2,
-        border: `1px solid ${listening ? T.accent : T.border}`,
-        color: listening ? T.white : T.muted,
+        background: listening ? T.accent : T.bg1,
+        border: `2px solid ${listening ? T.accent : T.ink}`,
+        color: listening ? T.white : T.ink,
         cursor: "pointer", padding: 0, transition: "background .15s, border-color .15s, color .15s",
         animation: listening ? "wandrMicPulse 1.4s infinite" : "none",
         ...style,

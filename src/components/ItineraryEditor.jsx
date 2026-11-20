@@ -22,7 +22,7 @@
 import { useState, useEffect } from "react";
 import { Reorder, useDragControls } from "framer-motion";
 import { T, NO_MOTION } from "../lib/constants.js";
-import { chipSt, fieldSt } from "../lib/styles.js";
+import { chipSt, fieldSt, motion, delay } from "../lib/styles.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { BUCKETS, bucketOf, timeSortKey, formatTime, displayTime, splitDetails, matchTipToActivity, findGroundedVenue } from "../lib/utils.js";
 import Glyph from "./Glyphs.jsx";
@@ -51,6 +51,14 @@ const LINE_LEFT = ROW_PAD_LEFT + (STATION_COL - LINE_W) / 2;
  * first station and ends at the last one for any row height. (One long bar
  * behind the list cannot know where the last station sits.)
  */
+/**
+ * Arrival order: the "itinerary ready" moment. Each station pops in, its text
+ * rises, then its line segment grows down to the next station. Days start
+ * 150ms apart and stops 110ms apart. The cap keeps a long plan under 1.5s.
+ * The classes run on mount only, so an edit or a reorder does not replay it.
+ */
+export const stopDelayMs = (dayIdx, order) => Math.min(dayIdx * 150 + order * 110, 1400);
+
 function lineSegmentSt(color, isFirst, isLast) {
   const top = isFirst ? STATION_Y : 0;
   return {
@@ -194,7 +202,7 @@ function TipLines({ tips, indent = 0 }) {
   ));
 }
 
-function ActivityBlock({ a, tips, mapUrl, dayIdx, days, isFirst, isLast, isTweaking, selected, onToggleSelect, onEditActivity, onDeleteActivity, onMoveActivity, onTweakActivity }) {
+function ActivityBlock({ a, tips, mapUrl, dayIdx, days, order = 0, isFirst, isLast, isTweaking, selected, onToggleSelect, onEditActivity, onDeleteActivity, onMoveActivity, onTweakActivity }) {
   // The AI tweak is the only per-activity action that calls the AI; inline
   // edit, move and delete are all local, so they stay available offline.
   const online = useOnline();
@@ -240,6 +248,7 @@ function ActivityBlock({ a, tips, mapUrl, dayIdx, days, isFirst, isLast, isTweak
 
   const otherDays = days.filter(d => d.idx !== dayIdx);
   const barOpen = selected && !isTweaking;
+  const arriveMs = stopDelayMs(dayIdx, order);
 
   return (
     <Reorder.Item value={a} as="div" dragListener={false} dragControls={controls}
@@ -251,7 +260,7 @@ function ActivityBlock({ a, tips, mapUrl, dayIdx, days, isFirst, isLast, isTweak
           ? { background: T.bg1, border: `2px solid ${T.ink}`, padding: 12, margin: "6px 0" }
           : { padding: `10px 8px 10px ${ROW_PAD_LEFT}px`, boxShadow: selected ? `inset 0 0 0 2px ${T.ink}` : "none" }),
       }}>
-      {!editing && <span aria-hidden="true" data-line-segment="" style={lineSegmentSt(dayLineColor(dayIdx), isFirst, isLast)} />}
+      {!editing && <span aria-hidden="true" data-line-segment="" className={motion("t-grow-y")} style={{ ...lineSegmentSt(dayLineColor(dayIdx), isFirst, isLast), ...delay(arriveMs + 120) }} />}
 
       {editing ? (
         <>
@@ -283,9 +292,11 @@ function ActivityBlock({ a, tips, mapUrl, dayIdx, days, isFirst, isLast, isTweak
             onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleSelect(a.id); } }}
             style={{ display: "flex", gap: 12, alignItems: "flex-start", cursor: "pointer", outline: "none" }}>
             <span style={{ position: "relative", width: STATION_COL, flexShrink: 0, display: "flex", justifyContent: "center", paddingTop: 1 }}>
-              <StationSymbol kind={stationKind(a.details, isLast)} size={STATION} />
+              <span className={motion("t-pop")} style={delay(arriveMs)}>
+                <StationSymbol kind={stationKind(a.details, isLast)} size={STATION} />
+              </span>
             </span>
-            <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+            <div className={motion("t-rise")} style={{ flex: 1, minWidth: 0, paddingTop: 2, ...delay(arriveMs + 60) }}>
               <div style={{ fontSize: T.fs.ui, color: T.ink, fontWeight: 700, lineHeight: 1.3, marginBottom: 2 }}>{clean(a.title)}</div>
               {(a.details || tips?.length > 0 || mapUrl) && <DetailsBlock details={a.details} tips={tips} mapUrl={mapUrl} />}
               {/* Move picker — choose a destination day */}
@@ -465,7 +476,7 @@ function DayCard({ day, dayIdx, days, viewMode, categories, tweakingId, selected
         <div>
           <Reorder.Group axis="y" as="div" values={day.activities} onReorder={next => onReorderDay(dayIdx, next)} style={{ margin: 0, padding: 0 }}>
             {day.activities.map((a, i) => (
-              <ActivityBlock key={a.id} a={a} tips={tipsFor.get(a.id)} mapUrl={mapUrlFor(a)} dayIdx={dayIdx} days={days} isFirst={i === 0} isLast={i === count - 1} isTweaking={tweakingId === a.id}
+              <ActivityBlock key={a.id} a={a} tips={tipsFor.get(a.id)} mapUrl={mapUrlFor(a)} dayIdx={dayIdx} days={days} order={i} isFirst={i === 0} isLast={i === count - 1} isTweaking={tweakingId === a.id}
                 selected={selectedId === a.id} onToggleSelect={onToggleSelect}
                 onEditActivity={onEditActivity} onDeleteActivity={onDeleteActivity} onMoveActivity={onMoveActivity} onTweakActivity={onTweakActivity} />
             ))}

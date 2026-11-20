@@ -6,7 +6,7 @@
  */
 import { useState, useEffect, useRef } from "react";
 import { MODES, T, FEATURES, AI_DISCLAIMER, NO_MOTION } from "../lib/constants.js";
-import { chipSt, fieldSt, primaryBtnSt, outlineBtnSt } from "../lib/styles.js";
+import { chipSt, fieldSt, primaryBtnSt, outlineBtnSt, motion, delay } from "../lib/styles.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { useTimeFormat } from "../hooks/useTimeFormat.js";
 import { showSaveTripCard, arr, formatShortDate, ticketDate, timeAgo, splitDetails, matchTipToActivity, displayTime, findGroundedVenue, countIdeas, tripDayIndex, parseTime, formatTime } from "../lib/utils.js";
@@ -84,22 +84,33 @@ function RollingMsg({ text }) {
 function GhostDays({ nights }) {
   const count = Math.min(3, Math.max(2, Number(nights) || 2));
   const shimGrey = `linear-gradient(90deg, ${T.bg2} 25%, ${T.bg3} 45%, ${T.bg2} 65%)`;
-  const shimAccent = "linear-gradient(90deg, rgba(227,38,47,.10) 25%, rgba(227,38,47,.22) 45%, rgba(227,38,47,.10) 65%)";
-  const barStyle = (extra) => ({ height:9, borderRadius:5, backgroundSize:"220% 100%", animation:"wghostshim 2.4s linear infinite", ...extra });
+  const barStyle = (extra) => ({ height:10, backgroundSize:"220% 100%", background:shimGrey, animation:"wghostshim 2.4s linear infinite", ...extra });
   // Deliberately uneven widths — real itineraries are ragged, and identical
   // skeletons read as a broken repeat rather than a preview.
   const layouts = [["38%", ["62%","46%","57%"]], ["30%", ["52%","66%"]], ["34%", ["58%","44%","50%"]]];
+  // Transit Diagram: each ghost is a day line that is not built yet. A marker
+  // in the day color rides down the grey line while the trip is curating.
   return (
     <div aria-hidden="true">
       {layouts.slice(0, count).map(([titleW, lines], i) => (
-        <div key={i} className="wghost" style={{ borderTop:`3px solid ${T.border}`, padding:"14px 0 8px", marginBottom:14, animation:"wghostbreathe 3.2s ease-in-out infinite", animationDelay:`${i * 0.5}s` }}>
-          <div className="wghost-bar" style={barStyle({ width:titleW, height:11, marginBottom:3, background:shimGrey })} />
-          {lines.map((w, j) => (
-            <div key={j} style={{ display:"flex", gap:9, alignItems:"center", marginTop:8 }}>
-              <div className="wghost-bar" style={barStyle({ width:44, flexShrink:0, background:shimAccent })} />
-              <div className="wghost-bar" style={barStyle({ width:w, background:shimGrey })} />
+        <div key={i} className="wghost" style={{ marginBottom:26 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:8 }}>
+            <span style={{ width:32, height:12, background:T.line[i], opacity:.5, flexShrink:0 }} />
+            <span className="wghost-bar" style={barStyle({ width:titleW, height:14 })} />
+          </div>
+          <div style={{ position:"relative" }}>
+            <div style={{ position:"absolute", left:12, top:23, bottom:23, width:10, background:T.border }}>
+              <span className={motion("t-travel")} style={{ position:"absolute", left:-3, top:0, width:16, height:16, marginTop:-8, borderRadius:"50%", background:T.line[i], ...delay(i * 400) }} />
             </div>
-          ))}
+            {lines.map((w, j) => (
+              <div key={j} style={{ display:"flex", gap:12, alignItems:"center", padding:"10px 0 10px 2px" }}>
+                <span style={{ position:"relative", width:30, display:"flex", justifyContent:"center", flexShrink:0 }}>
+                  <StationSymbol kind="stop" size={26} color={T.border2} fill={T.bg0} />
+                </span>
+                <span className="wghost-bar" style={barStyle({ width:w })} />
+              </div>
+            ))}
+          </div>
         </div>
       ))}
     </div>
@@ -243,7 +254,8 @@ function TodayPanel({ todayInfo, day, dayIdx, online, planLoading, onRework, rew
    bar (Right Now mode, 1A), so the strip is also the progress bar for the
    trip you are on. A bucket list has no dates: it shows one station symbol
    per idea, filled when picked. The stubs (nights, budget, party) are the
-   same data the PDF prints, so the two cannot drift. Static: no motion here. */
+   same data the PDF prints, so the two cannot drift. Motion: the bars grow
+   in day order and the today station breathes. */
 const MAX_STRIP_DAYS = 14, MAX_STRIP_IDEAS = 18;
 // ticketDate() gives "NOV 19" for the PDF. The screen shows "Nov 19".
 const sentenceMonth = s => String(s || "").replace(/[A-Z]{2,}/g, m => m[0] + m.slice(1).toLowerCase());
@@ -276,10 +288,12 @@ export function TripStrip({ dep, ret, nights, todayInfo, isBucket, ideaCount = 0
             <div role="img" aria-label={todayInfo ? `Day ${todayInfo.dayNum} of ${todayInfo.totalDays}` : `${totalDays} days`}
               style={{ display:"flex", gap:3, marginTop:10 }}>
               {Array.from({ length: bars }, (_, i) => (
-                <span key={i} style={{ position:"relative", flex:1, height:12, background:T.line[i % T.line.length] }}>
+                <span key={i} style={{ position:"relative", flex:1, height:12 }}>
+                  {/* Motion: the bars grow in day order. The today station breathes. */}
+                  <span className={motion("t-grow-x")} style={{ position:"absolute", inset:0, background:T.line[i % T.line.length], ...delay(i * 60) }} />
                   {i === todayBar && (
                     <span style={{ position:"absolute", left:"50%", top:"50%", transform:"translate(-50%,-50%)" }}>
-                      <StationSymbol kind="stop" size={26} />
+                      <span className={motion("t-breathe")}><StationSymbol kind="stop" size={26} /></span>
                     </span>
                   )}
                 </span>

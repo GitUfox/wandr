@@ -55,8 +55,10 @@ function departsIn(iso) {
  * width or the gap changes, change FORK to match. Lines bend at 45 degrees
  * only. Polylines only, no path data.
  *
- * Motion: on a pick, the line that was not chosen goes cold (a color change).
- * VITE_NO_MOTION and prefers-reduced-motion commit with no delay.
+ * Motion: when the fork appears, both lines draw from the station and the
+ * buttons rise in. On a pick, the line that was not chosen goes cold (a
+ * color change). VITE_NO_MOTION and prefers-reduced-motion show the finished
+ * fork at once and commit with no delay.
  */
 const FORK = {
   width: 320, height: 74, gap: 12,
@@ -88,11 +90,13 @@ export function RailFork({ onPick, noMotion = false }) {
       style={{ width: FORK.width, maxWidth: "100%", margin: "0 auto 14px" }}>
       <svg viewBox={`0 0 ${FORK.width} ${FORK.height}`} width={FORK.width} height={FORK.height} fill="none" aria-hidden="true"
         style={{ display: "block", maxWidth: "100%" }}>
-        <polyline points={FORK.left}  strokeWidth="10" stroke={committed === "B" ? T.border : T.line[0]} style={lineSt} />
-        <polyline points={FORK.right} strokeWidth="10" stroke={committed === "A" ? T.border : T.line[1]} style={lineSt} />
+        {/* Motion: both lines draw from the station to their buttons, then
+            the buttons rise in. pathLength="1" lets one keyframe draw any line. */}
+        <polyline points={FORK.left}  pathLength="1" className={still ? undefined : "t-draw"} strokeWidth="10" stroke={committed === "B" ? T.border : T.line[0]} style={lineSt} />
+        <polyline points={FORK.right} pathLength="1" className={still ? undefined : "t-draw"} strokeWidth="10" stroke={committed === "A" ? T.border : T.line[1]} style={lineSt} />
         <circle cx="160" cy="11" r="10" fill={T.white} stroke={T.ink} strokeWidth="5" />
       </svg>
-      <div style={{ display: "flex", gap: FORK.gap }}>
+      <div className={still ? undefined : "t-rise"} style={{ display: "flex", gap: FORK.gap, ...(still ? {} : { animationDelay: "320ms" }) }}>
         <button onClick={() => pick("A", "itinerary")} aria-label="Full itinerary — a day-by-day plan"
           style={btnSt(T.line[0], committed === "B")}>
           <span style={{ display: "block", fontSize: T.fs.ui, fontWeight: 900, lineHeight: 1.2 }}>Full itinerary</span>

@@ -34,3 +34,39 @@ input[type="range"] {
 }
 
 .fade-up { animation: fadeUp 0.25s ease forwards; }
+
+/* ── Transit Diagram motion (redesign step 4) ───────────────────────────────
+   ONE home for the motion classes. A component adds a class through motion()
+   in src/lib/styles.js, which returns nothing under VITE_NO_MOTION. Stagger
+   comes from an inline animation-delay. The guard at the end turns every
+   class off for prefers-reduced-motion. Static-first rule: with all of these
+   off, every screen is complete and correct. */
+@keyframes tdraw   { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes tgrowy  { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes tgrowx  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes tpop    { 0% { transform: scale(0); } 70% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes trise   { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes tbreathe{ 50% { transform: scale(1.16); } }
+@keyframes ttravel { 0% { top: 0; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+@keyframes tarrive { 0% { transform: scale(1); } 40% { transform: scale(1.55); } 100% { transform: scale(1); } }
+
+/* A line that draws itself. The element needs pathLength="1". */
+.t-draw    { stroke-dasharray: 1; animation: tdraw .45s cubic-bezier(.4, 0, .2, 1) both; }
+/* A day line segment that grows down from its station. */
+.t-grow-y  { transform-origin: top; animation: tgrowy .26s ease-out both; }
+/* A day bar that grows from the left. */
+.t-grow-x  { transform-origin: left; animation: tgrowx .3s ease-out both; }
+/* A station that arrives. */
+.t-pop     { display: block; animation: tpop .28s ease-out both; }
+/* Text or a control that follows its station in. */
+.t-rise    { animation: trise .3s ease-out both; }
+/* The station for "today": a slow breath. */
+.t-breathe { display: block; animation: tbreathe 2.4s ease-in-out infinite; }
+/* The marker that rides a ghost line while a trip is curating. */
+.t-travel  { animation: ttravel 1.8s ease-in-out infinite; }
+/* One beat when a station reaches the end of its line. */
+.t-arrive  { display: block; animation: tarrive .6s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .t-draw, .t-grow-y, .t-grow-x, .t-pop, .t-rise, .t-breathe, .t-travel, .t-arrive { animation: none !important; }
+}

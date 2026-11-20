@@ -13,10 +13,10 @@ import { T } from "../lib/constants.js";
 
 export const STATION_KINDS = ["stop", "book", "end", "done"];
 
-export default function StationSymbol({ kind = "stop", size = 26, color = T.ink, fill = T.white, style }) {
+export default function StationSymbol({ kind = "stop", size = 26, color = T.ink, fill = T.white, style, className }) {
   const p = {
     width: size, height: size, viewBox: "0 0 26 26",
-    "aria-hidden": true, style: { display: "block", flexShrink: 0, ...style },
+    "aria-hidden": true, className, style: { display: "block", flexShrink: 0, ...style },
   };
   switch (kind) {
     case "book":

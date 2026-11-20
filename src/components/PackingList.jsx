@@ -25,7 +25,7 @@ import {
   toggleItem, toggleLast, setQty, removeItem, restoreItem, addItem, addShelf, unpackAll, STARTER_SHELVES,
 } from "../lib/packing.js";
 import StationSymbol from "./StationSymbol.jsx";
-import { chipSt, fieldSt, outlineBtnSt, titleSt } from "../lib/styles.js";
+import { chipSt, fieldSt, outlineBtnSt, titleSt, motion } from "../lib/styles.js";
 import Glyph from "./Glyphs.jsx";
 
 // Shared with every packing control. Transit Diagram (direction E): labels
@@ -37,6 +37,8 @@ const FILL = { background:T.ink, color:T.white };
 const INPUT = { ...fieldSt, padding:"0 14px", minHeight:48, fontSize:T.fs.body, minWidth:0 };
 // Packing progress is the green line (go). The day lines keep the other colors.
 const PACK_LINE = T.line[2];
+// One easing for the fill and the station, so they stay together.
+const PACK_TRAVEL = "PROP .6s cubic-bezier(.2,.8,.2,1)";
 
 function daysUntil(iso) {
   const d = parseISODate(iso);
@@ -174,8 +176,14 @@ export default function PackingList({ trip, trips = [], onChange, onBack }) {
   const filtering = filter !== "all" || q.trim() !== "";
   const query = q.trim().toLowerCase();
 
-  // The bags-closed burst left with the Transit Diagram redesign. The motion
-  // step owes a new moment: the station reaches the end of the line.
+  // Bags-closed moment: the station reaches the end of the line and gives one
+  // beat. It fires on the transition only, never on load.
+  const wasDone = useRef(null);
+  const [arrive, setArrive] = useState(0);
+  useEffect(() => {
+    if (wasDone.current === false && done) setArrive(k => k + 1);
+    wasDone.current = done;
+  }, [done]);
   useEffect(() => {
     if (!resetArmed) return;
     const t = setTimeout(() => setResetArmed(false), 4000);
@@ -318,7 +326,8 @@ export default function PackingList({ trip, trips = [], onChange, onBack }) {
 
         {/* Header. Transit Diagram: no ticket. Packing progress is one line
             with a station at the packed position. The end of the line is
-            "bags closed". Static here; the motion step animates the station. */}
+            "bags closed". The station travels with the fill and gives one beat
+            when it arrives. */}
         <section aria-live="polite">
           <h1 style={{ margin:0, fontFamily:T.fontHero, fontWeight:900, fontSize:T.fs.display, lineHeight:.95, letterSpacing:"-.04em", color:T.ink }}>Packing</h1>
           <div style={{ display:"flex", flexWrap:"wrap", gap:"2px 10px", marginTop:8 }}>
@@ -327,9 +336,12 @@ export default function PackingList({ trip, trips = [], onChange, onBack }) {
           <div role="progressbar" aria-label="Packed" aria-valuemin={0} aria-valuemax={100} aria-valuenow={totals.pct}
             style={{ position:"relative", height:30, marginTop:16 }}>
             <div style={{ position:"absolute", left:13, right:13, top:10, height:10, background:T.border }}>
-              <div style={{ width:`${totals.pct}%`, height:"100%", background:PACK_LINE }} />
-              <span style={{ position:"absolute", top:"50%", left:`${totals.pct}%`, transform:"translate(-50%,-50%)" }}>
-                <StationSymbol kind={done ? "done" : "stop"} size={26} color={done ? PACK_LINE : T.ink} />
+              {/* Motion: the fill and the station travel together along the line. */}
+              <div style={{ width:`${totals.pct}%`, height:"100%", background:PACK_LINE, transition:NO_MOTION?"none":PACK_TRAVEL.replace("PROP", "width") }} />
+              <span style={{ position:"absolute", top:"50%", left:`${totals.pct}%`, transform:"translate(-50%,-50%)", transition:NO_MOTION?"none":PACK_TRAVEL.replace("PROP", "left") }}>
+                <span key={arrive} className={arrive ? motion("t-arrive") : undefined} style={{ display:"block" }}>
+                  <StationSymbol kind={done ? "done" : "stop"} size={26} color={done ? PACK_LINE : T.ink} />
+                </span>
               </span>
             </div>
             {!done && <span aria-hidden="true" style={{ position:"absolute", right:8, top:3, width:10, height:24, background:T.ink }} />}

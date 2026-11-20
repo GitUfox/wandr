@@ -15,6 +15,14 @@ import { T, NO_MOTION } from "./constants.js";
 const ease = (v) => (NO_MOTION ? "none" : v);
 
 /**
+ * A motion class from src/index.css, or nothing when motion is off for the
+ * harness. Use it for every Transit Diagram motion class: className={motion("t-pop")}.
+ * `delayMs` gives the inline stagger: style={{ ...delay(120) }}.
+ */
+export const motion = (cls) => (NO_MOTION ? undefined : cls);
+export const delay = (ms) => (NO_MOTION ? {} : { animationDelay: `${Math.round(ms)}ms` });
+
+/**
  * A choice chip. Selected = ink fill, the same idea as a "done" station.
  * The weight is the same in both states, so a toggle never changes the width.
  * `small` is for dense grids (the interests taxonomy).
