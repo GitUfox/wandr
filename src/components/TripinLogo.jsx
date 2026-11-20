@@ -6,13 +6,14 @@
  * replace it with hand-typed path data.
  *
  * Props:
- *   size   "sm" | "md" | "lg"   (default "md")
+ *   size   "xs" | "sm" | "md" | "lg"   (default "md")
  *   mark   bool                  show the mark tile (default true)
  *   word   bool                  show the wordmark (default true)
  */
 import { T } from "../lib/constants.js";
 
-const FONT_PX = { sm: 35, md: 53, lg: 74 };
+const FONT_PX = { xs: 22, sm: 35, md: 53, lg: 74 };
+const MIN_MARK_PX = 30; // the mark stays legible beside the xs wordmark
 
 /** The mark alone. `px` is the tile's width and height. */
 export function TripinMark({ px = 32, title }) {
@@ -37,7 +38,7 @@ export default function TripinLogo({ size = "md", mark = true, word = true }) {
       role="img" aria-label="Tripin"
       style={{ display: "inline-flex", alignItems: "center", gap: Math.round(fontSize * 0.2), userSelect: "none" }}
     >
-      {mark && <TripinMark px={Math.round(fontSize * 0.9)} />}
+      {mark && <TripinMark px={Math.max(MIN_MARK_PX, Math.round(fontSize * 0.9))} />}
       {word && (
         <span aria-hidden="true" style={{
           fontFamily: T.fontHero, fontWeight: 900, fontSize, lineHeight: 1,

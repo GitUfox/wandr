@@ -2,8 +2,9 @@ import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { RailFork } from "./WelcomeScreen.jsx";
 import InterviewFlow from "./InterviewFlow.jsx";
+import { T } from "../lib/constants.js";
 
-// Welcome fork (design pick 1F) + the bucket branch of the dates step.
+// Welcome fork (design pick 1F, Transit Diagram version) + the bucket branch of the dates step.
 
 describe("RailFork", () => {
   const html = renderToStaticMarkup(<RailFork onPick={() => {}} noMotion />);
@@ -21,14 +22,35 @@ describe("RailFork", () => {
     expect(html).toContain("Bucket list — just the activities, no dates");
   });
 
-  it("parks the ember when motion is off (harness / reduced-motion)", () => {
-    expect(html).toContain("wrf-ember wrf-still");
+  it("draws the two branches as day lines 1 and 2, with no path data", () => {
+    expect(html).toContain(`stroke="${T.line[0]}"`);
+    expect(html).toContain(`stroke="${T.line[1]}"`);
+    expect(html).toContain("<polyline");
+    expect(html).not.toContain("<path");
   });
 
-  it("idles the ember when motion is on", () => {
+  it("ends each line at the center of its button (geometry contract)", () => {
+    // 320px box, 12px gap: two 154px buttons with centers at x = 77 and 243.
+    expect(html).toContain("77,72 77,74");
+    expect(html).toContain("243,72 243,74");
+    expect(html).toContain("width:320px");
+    expect(html).toContain("gap:12px");
+  });
+
+  it("removes transitions when motion is off (harness / reduced-motion)", () => {
+    expect(html).toContain('data-still="true"');
+    expect(html).toContain("transition:none");
+  });
+
+  it("keeps the line transition when motion is on", () => {
     const live = renderToStaticMarkup(<RailFork onPick={() => {}} />);
-    expect(live).toContain('class="wrf-ember"');
-    expect(live).not.toContain("wrf-still");
+    expect(live).not.toContain("data-still");
+    expect(live).toContain("transition:stroke .25s");
+  });
+
+  it("has no ember or glow (retired with the Transit Diagram redesign)", () => {
+    expect(html).not.toContain("ember");
+    expect(html).not.toContain("drop-shadow");
   });
 });
 
