@@ -1,6 +1,6 @@
 {
-  "name": "Wandr — Make it your trip",
-  "short_name": "Wandr",
+  "name": "Tripin — Make it your trip",
+  "short_name": "Tripin",
   "description": "AI-powered travel planning. Personalised itineraries you can read anywhere, even offline.",
   "start_url": "/",
   "scope": "/",

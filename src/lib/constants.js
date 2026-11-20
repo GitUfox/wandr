@@ -98,6 +98,9 @@ export const T = {
   // One color per day line, in day order. Day 6+ wraps (line[i % 5]).
   // Yellow needs ink text; the other four take white text.
   line:["#E3262F","#0057B8","#00853E","#FFCD00","#7B3FA0"],
+  // The blue line inside the logo mark. Day-2 blue is too dark on the ink
+  // tile (2.4:1), so the mark uses this lighter blue. Logo and favicon only.
+  markBlue:"#3D8BFF",
 
   // ── Editorial Pass type roles (2026-09-02, board picks 1B+2A+3B+4A) ──
   // Four faces, four jobs. ROLE tokens on purpose — swapping a face later is

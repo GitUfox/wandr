@@ -5,7 +5,7 @@ import { packingNudge } from "../lib/packing.js";
 import { useOnline } from "../hooks/useOnline.js";
 import { useIsWide } from "../hooks/useIsWide.js";
 import { fetchDestinationSuggestions } from "../lib/places.js";
-import WandrLogo from "./WandrLogo.jsx";
+import TripinLogo from "./TripinLogo.jsx";
 import ProfileSheet from "./ProfileSheet.jsx";
 import SettingsSheet from "./SettingsSheet.jsx";
 import ProfileChip from "./ProfileChip.jsx";
@@ -311,7 +311,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
         </button>
 
         {/* Help affordance — unambiguous "?" that opens an About panel */}
-        <button onClick={() => setShowAbout(true)} aria-label="About Wandr"
+        <button onClick={() => setShowAbout(true)} aria-label="About Tripin"
           style={{ width: 32, height: 32, borderRadius: "50%", background: T.bg2, border: `1px solid ${T.border}`, color: T.muted, fontSize: T.fs.ui, fontWeight: 700, cursor: "pointer", fontFamily: T.font, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           ?
         </button>
@@ -328,12 +328,12 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           <div onClick={e => e.stopPropagation()} className="fade-up"
             style={{ width: "100%", maxWidth: 380, background: T.bg1, border: `1px solid ${T.border}`, borderRadius: T.r.lg, padding: "1.5rem 1.5rem 1.75rem" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <div style={{ fontSize: T.fs.title, fontWeight: 700, color: T.ink }}>Wandr into your next trip</div>
+              <div style={{ fontSize: T.fs.title, fontWeight: 700, color: T.ink }}>Plan your next trip with Tripin</div>
               <button onClick={() => setShowAbout(false)} aria-label="Close"
                 style={{ width: 26, height: 26, borderRadius: "50%", background: "transparent", border: "none", color: T.hint, fontSize: T.fs.title, cursor: "pointer", fontFamily: T.font, lineHeight: 1 }}>×</button>
             </div>
             <div style={{ fontSize: T.fs.body, color: T.muted, lineHeight: 1.6, marginBottom: 16 }}>
-              Answer a few quick questions and Wandr builds you a personal trip — tailored to your pace, budget, and what you actually care about.
+              Answer a few quick questions and Tripin builds you a personal trip — tailored to your pace, budget, and what you actually care about.
             </div>
             {[
               ["Top-tier itineraries", "Every day planned, morning to night"],
@@ -370,7 +370,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
         <div style={ isWide
           ? { display: "flex", alignItems: "baseline", gap: 12, marginBottom: 0 }
           : { textAlign: "center", marginBottom: "2.75rem" } }>
-          <WandrLogo size={isWide ? "sm" : "lg"} globe="animated" showTrail={false} />
+          <TripinLogo size={isWide ? "sm" : "lg"} />
           <div style={{ fontSize: isWide ? T.fs.body : T.fs.ui, fontWeight: 600, color: T.muted, letterSpacing: ".02em", marginTop: isWide ? 0 : "1rem" }}>
             Make it your trip.
           </div>

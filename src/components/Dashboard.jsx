@@ -15,7 +15,7 @@ import { TEAM_SHORT } from "../lib/mlbTeams.js";
 import Md from "./Md.jsx";
 import BucketBoard from "./BucketBoard.jsx";
 import ItineraryEditor from "./ItineraryEditor.jsx";
-import WandrLogo from "./WandrLogo.jsx";
+import TripinLogo from "./TripinLogo.jsx";
 import EditTripSheet from "./EditTripSheet.jsx";
 import SettingsSheet from "./SettingsSheet.jsx";
 import ProfileChip from "./ProfileChip.jsx";
@@ -519,7 +519,7 @@ export default function Dashboard({
     }
     w.document.write(`<!DOCTYPE html><html><head>
       <meta charset="utf-8">
-      <title>${htmlEscape(trip.destination)} — Wandr ${isBucket ? "Bucket List" : "Itinerary"}</title>
+      <title>${htmlEscape(trip.destination)} — Tripin ${isBucket ? "Bucket List" : "Itinerary"}</title>
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;700;900&display=swap" rel="stylesheet">
       <style>
@@ -537,8 +537,7 @@ export default function Dashboard({
         /* Print bottom padding must clear the fixed footer (~34px) or the last
            line of every page runs beneath it. */
         @media print { body { padding: 34px 36px 68px; max-width: none; } }
-        .wm { font-weight: 800; font-size: 16px; color: #111; letter-spacing: -.02em; }
-        .wm .dot { color: #E3262F; }
+        .wm { font-weight: 900; font-size: 16px; color: #111; letter-spacing: -.04em; }
         .p-label { font-family: 'Figtree', sans-serif; font-size: 8px; letter-spacing: .12em; text-transform: uppercase; color: #9a938c; font-weight:700; }
         .p-date { font-family: 'Figtree', sans-serif; font-size: 15px; font-weight:700; font-variant-numeric: tabular-nums; white-space: nowrap; }
         .ticket { position: relative; background: #faf8f6; border: 1px solid #e5e0da; border-radius: 12px; overflow: hidden; margin: 12px 0 6px; }
@@ -592,13 +591,13 @@ export default function Dashboard({
         .foot .spacer { flex: 1; }
       </style>
     </head><body>
-      <div style="text-align:center;margin-bottom:14px"><span class="wm">wandr<span class="dot">.</span></span></div>
+      <div style="text-align:center;margin-bottom:14px"><span class="wm">Tripin</span></div>
       <div class="p-label" style="color:#E3262F;margin-bottom:4px">${isBucket ? "My bucket list" : "My trip"}</div>
       <div style="font-family:'Figtree', sans-serif;font-size:30px;font-weight:900;letter-spacing:0;line-height:1.05">${htmlEscape(destMain)}${destRegion ? ` <span style="font-family:'Figtree', sans-serif;font-size:10px;color:#9a938c;font-weight:700;letter-spacing:.08em;text-transform:uppercase">${htmlEscape(destRegion)}</span>` : ""}</div>
       ${ticketHtml}
       <div style="margin-top:6px">${bodyHtml}</div>
       <div class="foot">
-        <span class="wm">wandr<span class="dot">.</span></span>
+        <span class="wm">Tripin</span>
         <span>wandr-mauve.vercel.app</span>
         <span class="spacer"></span>
         <span>${htmlEscape(AI_DISCLAIMER)}</span>
@@ -644,7 +643,7 @@ export default function Dashboard({
           <div style={{ marginBottom:"1.25rem", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
             <button onClick={onReset} aria-label="Back to home" title="Back to home"
               style={{ background:"transparent", border:"none", padding:0, cursor:"pointer", display:"inline-block" }}>
-              <WandrLogo size="sm" showTrail={false} globe="animated" />
+              <TripinLogo size="sm" />
             </button>
             {/* Identity chip — same component and seat as the welcome corner. */}
             <ProfileChip onOpen={() => setShowAccount(true)} />

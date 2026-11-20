@@ -95,7 +95,7 @@ export default function InterviewFlow({
             exit goes through a confirm; on step 1 there's nothing to lose. */}
         <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:"2.25rem" }}>
           <button onClick={() => (step > 0 ? setConfirmHome(true) : onWelcome())} aria-label="Back to home"
-            style={{ fontSize:T.fs.body, color:T.hint, padding:0, background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>Wandr</button>
+            style={{ fontSize:T.fs.body, color:T.hint, padding:0, background:"none", border:"none", cursor:"pointer", fontFamily:T.font }}>Tripin</button>
           <div style={{ fontSize:T.fs.body, color:T.border }}>/</div>
           <div style={{ flex:1, height:2, background:T.bg3, borderRadius:1 }}>
             <div style={{ width:`${pct}%`, height:"100%", background:T.accent, borderRadius:1, transition:"width .4s ease" }} />
