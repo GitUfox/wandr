@@ -22,8 +22,8 @@ import {
 import StardustBurst from "./StardustBurst.jsx";
 import Glyph from "./Glyphs.jsx";
 
-const KICK = { fontFamily:T.fontMono, fontSize:T.fs.micro, letterSpacing:".12em", textTransform:"uppercase", color:T.hint, fontWeight:400 };
-const MONO = { fontFamily:T.fontMono, fontWeight:400, fontVariantNumeric:"tabular-nums" };
+const KICK = { fontFamily:T.fontMono, fontSize:T.fs.micro, letterSpacing:".12em", textTransform:"uppercase", color:T.hint, fontWeight:700 };
+const MONO = { fontFamily:T.fontMono, fontWeight:700, fontVariantNumeric:"tabular-nums" };
 const BTN  = { display:"inline-flex", alignItems:"center", justifyContent:"center", gap:7, minHeight:40, padding:"0 14px", borderRadius:T.r.sm, background:T.bg2, border:`1px solid ${T.border}`, color:T.muted, fontWeight:600, fontSize:T.fs.meta, cursor:"pointer", fontFamily:T.font, whiteSpace:"nowrap" };
 const INPUT = { background:T.bg0, border:`1px solid ${T.border}`, borderRadius:T.r.md, padding:"0 12px", minHeight:44, fontSize:T.fs.body, color:T.ink, fontFamily:T.font, outline:"none", width:"100%", minWidth:0 };
 
@@ -65,7 +65,7 @@ function Ring({ packed, name, onToggle, pop }) {
 }
 
 function Tag({ children, dim }) {
-  return <span style={{ ...KICK, letterSpacing:".1em", color:dim?T.hint:T.accentHover, border:`1px solid ${dim?T.border:"rgba(201,100,66,.5)"}`, borderRadius:4, padding:"2px 5px", lineHeight:1.2, whiteSpace:"nowrap" }}>{children}</span>;
+  return <span style={{ ...KICK, letterSpacing:".1em", color:dim?T.hint:T.accentHover, border:`1px solid ${dim?T.border:"rgba(227,38,47,.5)"}`, borderRadius:4, padding:"2px 5px", lineHeight:1.2, whiteSpace:"nowrap" }}>{children}</span>;
 }
 
 function Item({ item, selected, onToggle, onSelect, onQty, onLast, onRemove, pop }) {
@@ -119,7 +119,7 @@ function SeedCard({ trip, source, onSeed }) {
   const when = [trip.destination, monthName(trip.answers?.dates?.start) && `in ${monthName(trip.answers?.dates?.start)}`].filter(Boolean).join(" ");
   return (
     <div style={{ background:T.bg1, border:`1px solid ${T.border2}`, borderRadius:T.r.lg, padding:"16px 18px 18px", marginBottom:14 }}>
-      <div style={{ fontFamily:T.fontDay, fontWeight:400, fontSize:T.fs.title, color:T.ink, marginBottom:6 }}>Packing for {trip.destination}</div>
+      <div style={{ fontFamily:T.fontDay, fontWeight:900, fontSize:T.fs.title, color:T.ink, marginBottom:6 }}>Packing for {trip.destination}</div>
       <p style={{ margin:"0 0 10px", fontSize:T.fs.body, color:T.muted, lineHeight:1.5 }}>
         {source
           ? <>Your list from <b style={{ color:T.ink, fontWeight:700 }}>{source.destination}</b>, {baseCount} things, nothing packed yet.{nights ? ` Counts refit to ${nights}.` : ""}</>
@@ -130,7 +130,7 @@ function SeedCard({ trip, source, onSeed }) {
           <div style={{ ...KICK, color:T.muted, marginBottom:7 }}>Added for {when}{season ? ` · ${season}` : ""}</div>
           <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:12 }}>
             {adds.map(a => (
-              <span key={a.name} style={{ fontSize:T.fs.meta, fontWeight:600, padding:"5px 9px", borderRadius:T.r.pill, background:T.bg3, border:"1px solid rgba(201,100,66,.6)", color:T.ink }}>{a.name}</span>
+              <span key={a.name} style={{ fontSize:T.fs.meta, fontWeight:600, padding:"5px 9px", borderRadius:T.r.pill, background:T.bg3, border:"1px solid rgba(227,38,47,.6)", color:T.ink }}>{a.name}</span>
             ))}
           </div>
         </>
@@ -266,10 +266,10 @@ export default function PackingList({ trip, trips = [], onChange, onBack }) {
     const isClosed = !!closed[shelf.id] && !filtering;
     const complete = ct > 0 && cp === ct;
     return (
-      <section key={shelf.id} style={{ background:T.bg1, border:`1px solid ${complete ? "rgba(201,100,66,.45)" : T.border}`, borderRadius:T.r.lg, overflow:"hidden", transition:"border-color .3s" }}>
+      <section key={shelf.id} style={{ background:T.bg1, border:`1px solid ${complete ? "rgba(227,38,47,.45)" : T.border}`, borderRadius:T.r.lg, overflow:"hidden", transition:"border-color .3s" }}>
         <button type="button" onClick={() => setClosed(c => ({ ...c, [shelf.id]: !c[shelf.id] }))} aria-expanded={!isClosed}
           style={{ display:"flex", alignItems:"center", gap:12, width:"100%", textAlign:"left", padding:"14px 12px 12px 18px", background:"transparent", border:"none", cursor:"pointer", fontFamily:T.font }}>
-          <h2 style={{ margin:0, fontFamily:T.fontDay, fontWeight:400, fontSize:T.fs.title, color:T.ink, lineHeight:1.2, flex:1, minWidth:0, overflowWrap:"anywhere" }}>{shelf.name}</h2>
+          <h2 style={{ margin:0, fontFamily:T.fontDay, fontWeight:900, fontSize:T.fs.title, color:T.ink, lineHeight:1.2, flex:1, minWidth:0, overflowWrap:"anywhere" }}>{shelf.name}</h2>
           <span style={{ ...MONO, fontSize:T.fs.label, color:complete?T.accentHover:T.muted, whiteSpace:"nowrap" }}>{cp} / {ct}</span>
           <span aria-hidden="true" style={{ width:34, height:34, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, color:T.muted }}>
             <span style={{ width:7, height:7, borderRight:`1.6px solid currentColor`, borderBottom:`1.6px solid currentColor`, transform:isClosed?"rotate(-45deg)":"rotate(45deg) translate(-1px,-1px)", transition:"transform .25s" }} />
@@ -310,7 +310,7 @@ export default function PackingList({ trip, trips = [], onChange, onBack }) {
         @keyframes wpkpark{50%{transform:translate(-50%,-50%) scale(1.25)}}
         @keyframes wpkring{0%{transform:translate(-50%,-50%) scale(.5);opacity:.7}70%,100%{transform:translate(-50%,-50%) scale(1.9);opacity:0}}
         @keyframes wpkin{from{opacity:0;transform:translateY(6px)}}
-        @keyframes wpkonce{0%{box-shadow:0 0 0 0 rgba(201,100,66,0)}25%{box-shadow:0 0 0 6px rgba(201,100,66,.28)}100%{box-shadow:0 0 0 0 rgba(201,100,66,0)}}
+        @keyframes wpkonce{0%{box-shadow:0 0 0 0 rgba(227,38,47,0)}25%{box-shadow:0 0 0 6px rgba(227,38,47,.28)}100%{box-shadow:0 0 0 0 rgba(227,38,47,0)}}
         .wpk-in{animation:wpkin .25s ease}
         .wpk-pop{animation:wpkonce .6s ease-out}
         .wpk-ember{transition:left .9s cubic-bezier(.2,.8,.2,1)}
@@ -330,7 +330,7 @@ export default function PackingList({ trip, trips = [], onChange, onBack }) {
         </div>
 
         {/* ticket */}
-        <section aria-live="polite" style={{ position:"relative", background:`radial-gradient(120% 90% at 18% 0%, rgba(201,100,66,.13), transparent 55%), ${T.bg1}`, border:`1px solid ${T.border2}`, borderRadius:T.r.lg, overflow:"hidden" }}>
+        <section aria-live="polite" style={{ position:"relative", background:`radial-gradient(120% 90% at 18% 0%, rgba(227,38,47,.13), transparent 55%), ${T.bg1}`, border:`1px solid ${T.border2}`, borderRadius:T.r.lg, overflow:"hidden" }}>
           <div aria-hidden="true" style={{ position:"absolute", right:12, top:14, bottom:14, width:13, borderRadius:2, opacity:.5, background:`repeating-linear-gradient(180deg, ${T.border2} 0 2px, transparent 2px 5px)` }} />
           <StardustBurst burstKey={burst} origin={{ right: 34, top: 22 }} />
           <div style={{ display:"flex", alignItems:"center", gap:14, padding:"16px 40px 14px 18px" }}>
@@ -351,7 +351,7 @@ export default function PackingList({ trip, trips = [], onChange, onBack }) {
             <div style={{ ...notch, left:-37 }} /><div style={{ ...notch, right:-37 }} />
           </div>
           <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:14, padding:"16px 40px 6px 18px" }}>
-            <h1 style={{ margin:0, fontFamily:T.fontHero, fontWeight:400, fontSize:T.fs.hero, lineHeight:1.05, letterSpacing:"-.01em", color:T.ink, minWidth:0, overflowWrap:"anywhere" }}>{trip?.destination}</h1>
+            <h1 style={{ margin:0, fontFamily:T.fontHero, fontWeight:900, fontSize:T.fs.hero, lineHeight:1.05, letterSpacing:"-.03em", color:T.ink, minWidth:0, overflowWrap:"anywhere" }}>{trip?.destination}</h1>
             <div style={{ ...MONO, fontSize:17, color:totals.packed?T.ink:T.hint, whiteSpace:"nowrap", flexShrink:0 }}>{totals.pct}%</div>
           </div>
           <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:"6px 10px", padding:"0 40px 14px 18px" }}>
@@ -394,7 +394,7 @@ export default function PackingList({ trip, trips = [], onChange, onBack }) {
               <main style={{ display:"grid", gridTemplateColumns:isWide?"1fr 1fr":"1fr", gap:14, alignItems:"start" }}>{shelvesEl}</main>
             ) : (
               <div style={{ background:T.bg1, border:`1px dashed ${T.border2}`, borderRadius:T.r.lg, padding:"28px 18px", textAlign:"center", color:T.muted }}>
-                <h3 style={{ margin:"0 0 6px", fontFamily:T.fontDay, fontWeight:400, fontSize:T.fs.title, color:T.ink }}>
+                <h3 style={{ margin:"0 0 6px", fontFamily:T.fontDay, fontWeight:900, fontSize:T.fs.title, color:T.ink }}>
                   {query ? "No item called that" : filter === "togo" ? "Nothing left to pack" : filter === "packed" ? "Nothing packed yet" : "No last call items"}
                 </h3>
                 <p style={{ margin:"0 0 14px", fontSize:T.fs.body }}>

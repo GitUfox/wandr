@@ -114,7 +114,7 @@ export default function ProfileSheet({ open, profile, onClose, onSave }) {
               const on = crew === o;
               return (
                 <button key={o} onClick={() => setCrew(on ? "" : o)}
-                  style={{ background: on ? "#2a1a12" : T.bg2, border: on ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`, borderRadius: T.r.pill, color: on ? T.accent : T.muted, fontSize: T.fs.body, fontWeight: on ? 700 : 400, padding: "6px 14px", cursor: "pointer", fontFamily: T.font, transition: "all .12s" }}>
+                  style={{ background: on ? T.accentSoft : T.bg2, border: on ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`, borderRadius: T.r.pill, color: on ? T.accent : T.muted, fontSize: T.fs.body, fontWeight: on ? 700 : 400, padding: "6px 14px", cursor: "pointer", fontFamily: T.font, transition: "all .12s" }}>
                   {o}
                 </button>
               );

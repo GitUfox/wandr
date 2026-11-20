@@ -163,7 +163,7 @@ export default function InterviewFlow({
                   const sel = logTransport === o;
                   return (
                     <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogTransport(p => p === o ? "" : o)}
-                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accentSoft:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                       {o}
                     </button>
                   );
@@ -179,7 +179,7 @@ export default function InterviewFlow({
                   const sel = logPace === o;
                   return (
                     <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogPace(p => p === o ? "" : o)}
-                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accentSoft:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                       {o}
                     </button>
                   );
@@ -195,7 +195,7 @@ export default function InterviewFlow({
                   const sel = logRhythm === o;
                   return (
                     <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogRhythm(p => p === o ? "" : o)}
-                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accentSoft:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                       {o}
                     </button>
                   );
@@ -211,7 +211,7 @@ export default function InterviewFlow({
                   const sel = logFocus === o;
                   return (
                     <button key={o} className="wandr-chip" data-label={o} onClick={() => setLogFocus(p => p === o ? "" : o)}
-                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?"#2a1a12":T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                      style={{ padding:"7px 14px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accentSoft:T.bg2, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                       {o}
                     </button>
                   );
@@ -354,7 +354,7 @@ export default function InterviewFlow({
                         const sel = kids === o;
                         return (
                           <button key={o} className="wandr-chip" data-label={o} onClick={() => setKids(k => k === o ? "" : o)}
-                            style={{ padding:"6px 12px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?"#2a1a12":T.bg3, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
+                            style={{ padding:"6px 12px", fontSize:T.fs.body, borderRadius:T.r.pill, background:sel?T.accentSoft:T.bg3, border:sel?`1.5px solid ${T.accent}`:`1px solid ${T.border}`, color:sel?T.accent:T.muted, fontWeight:sel?700:400, cursor:"pointer", fontFamily:T.font, transition:"all .15s" }}>
                             {o}
                           </button>
                         );

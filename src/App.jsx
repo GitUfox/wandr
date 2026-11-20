@@ -17,7 +17,7 @@ import Dashboard from "./components/Dashboard.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import PackingList from "./components/PackingList.jsx";
 
-const GF = "https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap";
+const GF = "https://fonts.googleapis.com/css2?family=Figtree:wght@300..900&display=swap";
 
 const GLOBAL_CSS = `
   html,body,#root{background:${T.bg0}!important;margin:0;padding:0;min-height:100vh;width:100%}

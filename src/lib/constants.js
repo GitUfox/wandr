@@ -83,12 +83,21 @@ export const NO_MOTION = !!import.meta.env?.VITE_NO_MOTION;
 
 // ── Design tokens ────────────────────────────────────────────────────────────
 export const T = {
-  bg0:"#0d0d0d", bg1:"#171717", bg2:"#1f1f1f", bg3:"#2a2a2a",
-  border:"#333333", border2:"#444444",
-  accent:"#c96442", accentHover:"#e07050",
-  danger:"#f08070", // error copy — the one red the UI uses
-  ink:"#efefef", muted:"#a0a0a0", hint:"#555555",
-  white:"#ffffff", font:"'Manrope',sans-serif",
+  // ── Transit Diagram (Tripin redesign, direction E, picked 2026-11-20) ──
+  // Light ground. Ink does the structure, the day line colors do the meaning.
+  // bg0 = page ground · bg1 = raised surface (white) · bg2/bg3 = quiet fills.
+  bg0:"#F7F7F2", bg1:"#FFFFFF", bg2:"#EFEFE9", bg3:"#E3E3DC",
+  border:"#C9C9C2", border2:"#8E8E87",
+  accent:"#E3262F", accentHover:"#C81F27",
+  // Selected-state pair: a pale tint of the accent + the text color that
+  // reads on it. These replaced the hardcoded dark-theme "#2a1a12"/"#a06040".
+  accentSoft:"#FCE4E5", accentInk:"#B01C24",
+  danger:"#B3261E", // error copy
+  ink:"#1A1A1A", muted:"#4A4A46", hint:"#6F6F69",
+  white:"#ffffff", font:"'Figtree',sans-serif",
+  // One color per day line, in day order. Day 6+ wraps (line[i % 5]).
+  // Yellow needs ink text; the other four take white text.
+  line:["#E3262F","#0057B8","#00853E","#FFCD00","#7B3FA0"],
 
   // ── Editorial Pass type roles (2026-09-02, board picks 1B+2A+3B+4A) ──
   // Four faces, four jobs. ROLE tokens on purpose — swapping a face later is
@@ -103,10 +112,15 @@ export const T = {
   // Erode 500 (600 exists for print bold only). Asking for any other weight
   // renders synthetic faux-bold. Mono kickers drop tracking to ≤.12em (the
   // face is wide; Manrope's .18em gaps read broken in mono).
-  fontHero:"'Instrument Serif',Georgia,serif",
-  fontDay:"'Young Serif',Georgia,serif",
-  fontProse:"'Erode',Georgia,serif",
-  fontMono:"'Martian Mono',ui-monospace,Menlo,monospace",
+  // 2026-11-20 Transit Diagram: ONE family, Figtree. The four role tokens stay
+  // (call sites keep working, a later face swap is still one line here) but
+  // every role now resolves to Figtree. Roles differ by WEIGHT at the call
+  // site: hero/day 900 · prose 400 · times and labels 700 (tabular numerals).
+  // The Editorial Pass notes above are history.
+  fontHero:"'Figtree',system-ui,sans-serif",
+  fontDay:"'Figtree',system-ui,sans-serif",
+  fontProse:"'Figtree',system-ui,sans-serif",
+  fontMono:"'Figtree',system-ui,sans-serif",
 
   // Type ramp (design-sweep S1). The app once had 25 distinct font sizes;
   // new/edited styles must pick from this ramp — no ad-hoc sizes.

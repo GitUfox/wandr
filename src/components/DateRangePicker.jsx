@@ -130,7 +130,7 @@ export default function DateRangePicker({ d1, setD1, d2, setD2 }) {
               <button
                 onClick={() => open && phase === p ? setOpen(false) : openForPhase(p)}
                 style={{
-                  width: "100%", padding: "10px 14px", borderRadius: T.r.md, background: active ? "#2a1a12" : T.bg3,
+                  width: "100%", padding: "10px 14px", borderRadius: T.r.md, background: active ? T.accentSoft : T.bg3,
                   border: active ? `1.5px solid ${T.accent}` : `1px solid ${T.border2}`,
                   color: iso ? T.ink : T.hint, fontSize: T.fs.ui, fontFamily: T.font,
                   textAlign: "left", cursor: "pointer", transition: "all .15s",
@@ -197,14 +197,14 @@ export default function DateRangePicker({ d1, setD1, d2, setD2 }) {
 
               if (isSelected) {
                 bg = T.accent;
-                color = "#fff";
+                color = T.white;
                 fontWeight = 700;
               } else if (inRange) {
-                bg = "rgba(201,100,66,.18)";
+                bg = "rgba(227,38,47,.18)";
                 color = T.ink;
                 borderRadius = "0";
               } else if (isHovered && phase === "end" && rangeStart && !isPast) {
-                bg = "rgba(201,100,66,.12)";
+                bg = "rgba(227,38,47,.12)";
               }
 
               // Rounded ends of range

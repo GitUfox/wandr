@@ -14,13 +14,16 @@
 import { lazy, Suspense } from "react";
 
 const Globe = lazy(() => import("./Globe.jsx"));
-const ORANGE = "#c96442";
+import { T } from "../lib/constants.js";
+// Interim (Tripin token pass): the old mark on the new tokens. The new mark
+// and wordmark replace this component in the logo step.
+const ORANGE = T.accent;
 
 export default function WandrLogo({
   size       = "md",
   showTrail  = true,
   trailColor = ORANGE,
-  wordColor  = "#efefef",
+  wordColor  = T.ink,
   globe      = "static",
 }) {
   const scale    = size === "sm" ? 0.38 : size === "lg" ? 0.80 : 0.58;
@@ -44,7 +47,7 @@ export default function WandrLogo({
     <svg viewBox="0 0 24 24" aria-hidden="true" style={{ width: globePx, height: globePx, ...globeStyle }}>
       <g transform="translate(12,12) rotate(-23.5)">
         <circle r="11" fill={trailColor} />
-        <g stroke="#0d0d0d" strokeWidth="1.4" fill="none" strokeLinecap="round">
+        <g stroke={T.bg0} strokeWidth="1.4" fill="none" strokeLinecap="round">
           <ellipse rx="5" ry="10.6" />
           <path d="M -9.9,-5 Q 0,-7.5 9.9,-5" />
           <path d="M -11,0 Q 0,2.1 11,0" />

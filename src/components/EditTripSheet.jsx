@@ -116,7 +116,7 @@ function SubmitBar({ label, enabled, loading, onSubmit }) {
           borderRadius: T.r.md,
           background: !enabled || loading ? T.bg3 : T.accent,
           border: "none",
-          color: !enabled || loading ? T.hint : "#fff",
+          color: !enabled || loading ? T.hint : T.white,
           fontSize: T.fs.ui,
           fontWeight: 700,
           cursor: !enabled || loading ? "not-allowed" : "pointer",
@@ -133,7 +133,7 @@ function SubmitBar({ label, enabled, loading, onSubmit }) {
             <div style={{
               width: 14, height: 14,
               border: "1.5px solid rgba(255,255,255,0.3)",
-              borderTopColor: "#fff",
+              borderTopColor: T.white,
               borderRadius: "50%",
               animation: "spin .7s linear infinite",
             }} />
@@ -479,7 +479,7 @@ export default function EditTripSheet({
                         key={i}
                         onClick={() => setSelectedDay(i)}
                         style={{
-                          background: active ? "#2a1a12" : T.bg2,
+                          background: active ? T.accentSoft : T.bg2,
                           border: active ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
                           borderRadius: T.r.md,
                           cursor: "pointer",
@@ -493,7 +493,7 @@ export default function EditTripSheet({
                           {day}
                         </div>
                         {date && (
-                          <div style={{ fontSize: T.fs.label, color: active ? "#a06040" : T.hint, marginTop: 1 }}>
+                          <div style={{ fontSize: T.fs.label, color: active ? T.accentInk : T.hint, marginTop: 1 }}>
                             {date}
                           </div>
                         )}
@@ -536,7 +536,7 @@ export default function EditTripSheet({
                       key={chip}
                       onClick={() => toggleVibe(chip)}
                       style={{
-                        background: active ? "#2a1a12" : T.bg2,
+                        background: active ? T.accentSoft : T.bg2,
                         border: active ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
                         borderRadius: T.r.pill,
                         color: active ? T.accent : T.muted,
@@ -565,7 +565,7 @@ export default function EditTripSheet({
                 onClick={() => setSurprise(v => !v)}
                 style={{
                   display: "flex", alignItems: "center", gap: 9, width: "100%", marginTop: 12,
-                  background: surprise ? "#2a1a12" : T.bg2,
+                  background: surprise ? T.accentSoft : T.bg2,
                   border: surprise ? `1.5px solid ${T.accent}` : `1px dashed ${T.border2}`,
                   borderRadius: T.r.md, padding: "10px 13px", cursor: "pointer", fontFamily: T.font,
                   textAlign: "left", transition: "all .12s",
@@ -627,7 +627,7 @@ export default function EditTripSheet({
                         key={opt}
                         onClick={() => setLocalParty(opt)}
                         style={{
-                          background: active ? "#2a1a12" : T.bg2,
+                          background: active ? T.accentSoft : T.bg2,
                           border: active ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`,
                           borderRadius: T.r.pill,
                           color: active ? T.accent : T.muted,
@@ -711,7 +711,7 @@ export default function EditTripSheet({
                 onClick={doRebuild}
                 style={{
                   flex: 1, padding: "11px", borderRadius: T.r.md,
-                  background: T.accent, border: "none", color: "#fff",
+                  background: T.accent, border: "none", color: T.white,
                   fontSize: T.fs.body, fontWeight: 700, cursor: "pointer", fontFamily: T.font,
                 }}
               >

@@ -69,7 +69,7 @@ export default function InterestsPicker({
                   const prio = priorityChips.includes(o);
                   return (
                     <button key={o} className="wandr-chip" data-label={o} onClick={() => toggleInterest(o)}
-                      style={{ padding: "6px 13px", fontSize: T.fs.body, borderRadius: T.r.pill, background: sel ? "#2a1a12" : T.bg2, border: sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`, color: sel ? T.accent : T.muted, fontWeight: sel ? 700 : 400, cursor: "pointer", fontFamily: T.font, transition: "all .15s" }}>
+                      style={{ padding: "6px 13px", fontSize: T.fs.body, borderRadius: T.r.pill, background: sel ? T.accentSoft : T.bg2, border: sel ? `1.5px solid ${T.accent}` : `1px solid ${T.border}`, color: sel ? T.accent : T.muted, fontWeight: sel ? 700 : 400, cursor: "pointer", fontFamily: T.font, transition: "all .15s" }}>
                       {o}
                       {sel && (
                         <span onClick={e => togglePriority(e, o)}

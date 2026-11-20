@@ -52,7 +52,7 @@ describe("with a list — the ticket and the shelves", () => {
     expect(html).toContain("OCT 24");
   });
   it("shelves use the day face with mono counts, and items carry their tags", () => {
-    expect(html).toContain("Young Serif");
+    expect(html).toContain("font-weight:900");      // day-role headers: Figtree at 900 (Transit Diagram)
     expect(html).toContain(">Clothing</h2>");
     expect(html).toContain("0 / 11");               // 8 starter + rain layer + towel + flip-flops (swimsuit deduped)
     expect(html).toContain("Last call");

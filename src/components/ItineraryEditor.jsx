@@ -36,7 +36,7 @@ function DetailsBlock({ details, tips, mapUrl, indent = 0 }) {
   if (!desc && !facts.length && !tips?.length && !mapUrl) return null;
   return (
     <>
-      {desc && <div style={{ fontFamily: T.fontProse, fontWeight: 500, fontSize: T.fs.body, color: T.muted, lineHeight: 1.5, marginLeft: indent }}>{desc}</div>}
+      {desc && <div style={{ fontFamily: T.fontProse, fontWeight:400, fontSize: T.fs.body, color: T.muted, lineHeight: 1.5, marginLeft: indent }}>{desc}</div>}
       {/* Attached tip reads as part of the description, so it sits above the
           fact chips — chips close the card (Kraig, 2026-08-11). */}
       <TipLines tips={tips} indent={indent} />
@@ -49,8 +49,8 @@ function DetailsBlock({ details, tips, mapUrl, indent = 0 }) {
                 display: "inline-flex", alignItems: "center", gap: 5,
                 fontSize: T.fs.label, fontWeight: 700, lineHeight: 1.3, fontVariantNumeric: "tabular-nums",
                 color: hot ? T.accentHover : T.muted,
-                background: hot ? "rgba(201,100,66,.08)" : T.bg2,
-                border: `1px solid ${hot ? "rgba(201,100,66,.4)" : T.border}`,
+                background: hot ? "rgba(227,38,47,.08)" : T.bg2,
+                border: `1px solid ${hot ? "rgba(227,38,47,.4)" : T.border}`,
                 borderRadius: T.r.sm, padding: "3px 8px",
               }}>
                 <Glyph name={FACT_GLYPH[f.kind] || "info"} size={11} color="currentColor" />
@@ -69,8 +69,8 @@ function DetailsBlock({ details, tips, mapUrl, indent = 0 }) {
                 display: "inline-flex", alignItems: "center", gap: 5,
                 fontSize: T.fs.label, fontWeight: 700, lineHeight: 1.3,
                 color: T.accentHover, textDecoration: "none",
-                background: "rgba(201,100,66,.10)",
-                border: "1px solid rgba(201,100,66,.55)",
+                background: "rgba(227,38,47,.10)",
+                border: "1px solid rgba(227,38,47,.55)",
                 borderRadius: T.r.sm, padding: "3px 8px",
               }}>
               <Glyph name="pin" size={11} color="currentColor" />
@@ -103,14 +103,14 @@ function TimeSlotPicker({ value, onPick }) {
         for (let m = p.from; m <= p.to; m += 30) slots.push(formatTime(m));
         return (
           <div key={p.label} style={{ marginBottom: 9 }}>
-            <div style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, letterSpacing: ".12em", textTransform: "uppercase", color: T.hint, fontWeight: 400, marginBottom: 6 }}>{p.label}</div>
+            <div style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, letterSpacing: ".12em", textTransform: "uppercase", color: T.hint, fontWeight:700, marginBottom: 6 }}>{p.label}</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
               {slots.map(t => {
                 const on = t === value;
                 return (
                   <button key={t} onClick={() => onPick(t)}
                     style={{
-                      fontFamily: T.fontMono, fontSize: T.fs.meta, fontWeight: 400, fontVariantNumeric: "tabular-nums",
+                      fontFamily: T.fontMono, fontSize: T.fs.meta, fontWeight:700, fontVariantNumeric: "tabular-nums",
                       width: 62, padding: "6px 0", textAlign: "center", borderRadius: T.r.md, cursor: "pointer",
                       color: on ? T.white : T.muted,
                       background: on ? T.accent : T.bg2,
@@ -143,7 +143,7 @@ function ActionBtn({ glyph, label, onClick, danger, active, disabled, title }) {
       style={{
         flex: 1, minHeight: 44, display: "flex", flexDirection: "column", alignItems: "center",
         justifyContent: "center", gap: 3, padding: "6px 4px",
-        background: active ? "rgba(201,100,66,.08)" : T.bg2,
+        background: active ? "rgba(227,38,47,.08)" : T.bg2,
         border: `1px solid ${active ? T.accent : T.border}`, borderRadius: T.r.sm,
         cursor: disabled ? "not-allowed" : "pointer", fontFamily: T.font, opacity: disabled ? .4 : 1,
       }}>
@@ -158,7 +158,7 @@ function ActionBtn({ glyph, label, onClick, danger, active, disabled, title }) {
 function TipLines({ tips, indent = 0 }) {
   if (!tips?.length) return null;
   return tips.map((tip, i) => (
-    <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start", marginTop: 6, marginLeft: indent, fontFamily: T.fontProse, fontWeight: 500, fontSize: T.fs.meta, color: T.muted, lineHeight: 1.5 }}>
+    <div key={i} style={{ display: "flex", gap: 6, alignItems: "flex-start", marginTop: 6, marginLeft: indent, fontFamily: T.fontProse, fontWeight:400, fontSize: T.fs.meta, color: T.muted, lineHeight: 1.5 }}>
       <span style={{ flexShrink: 0, marginTop: 1 }}><Glyph name="info" size={11} color={T.accent} /></span>
       <span>{tip}</span>
     </div>
@@ -253,7 +253,7 @@ function ActivityBlock({ a, tips, mapUrl, dayIdx, days, isTweaking, selected, on
             {/* Drag handle — the only drag trigger, so taps elsewhere stay clickable */}
             <span onPointerDown={e => controls.start(e)} onClick={e => e.stopPropagation()} title="Drag to reorder"
               style={{ cursor: "grab", touchAction: "none", color: T.hint, fontSize: T.fs.ui, padding: "2px 4px", flexShrink: 0, userSelect: "none", lineHeight: 1.2 }}>⠿</span>
-            <div style={{ width: 66 /* fits "10:00 AM" in Martian Mono at label size — 58 wrapped 8-char 12h times */, flexShrink: 0, fontFamily: T.fontMono, fontSize: T.fs.label, color: T.accent, fontWeight: 400, letterSpacing: "-.02em", paddingTop: 3 }}>{displayTime(clean(a.time))}</div>
+            <div style={{ width: 66 /* fits "10:00 AM" in Martian Mono at label size — 58 wrapped 8-char 12h times */, flexShrink: 0, fontFamily: T.fontMono, fontSize: T.fs.label, color: T.accent, fontWeight:700, letterSpacing: "-.02em", paddingTop: 3 }}>{displayTime(clean(a.time))}</div>
             <div style={{ flex: 1, minWidth: 0, paddingTop: 1 }}>
               <div style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.35, marginBottom: 2 }}>{clean(a.title)}</div>
               {(a.details || tips?.length > 0 || mapUrl) && <DetailsBlock details={a.details} tips={tips} mapUrl={mapUrl} />}
@@ -342,7 +342,7 @@ function BucketCard({ a, tips, mapUrl, dayIdx, bucket, onMoveToBucket }) {
   return (
     <div style={{ background: T.bg1, border: `1px solid ${T.border}`, borderRadius: T.r.md, padding: "8px 10px", marginBottom: 6 }}>
       <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-        <span style={{ fontFamily: T.fontMono, fontSize: T.fs.label, color: T.accent, fontWeight: 400, letterSpacing: "-.02em", flexShrink: 0, width: 66 /* matches the timeline rail — fits 8-char 12h times */ }}>{displayTime(clean(a.time))}</span>
+        <span style={{ fontFamily: T.fontMono, fontSize: T.fs.label, color: T.accent, fontWeight:700, letterSpacing: "-.02em", flexShrink: 0, width: 66 /* matches the timeline rail — fits 8-char 12h times */ }}>{displayTime(clean(a.time))}</span>
         <span style={{ fontSize: T.fs.body, color: T.ink, fontWeight: 700, lineHeight: 1.3 }}>{clean(a.title)}</span>
       </div>
       {(a.details || tips?.length > 0 || mapUrl) && <div style={{ marginTop: 3 }}><DetailsBlock details={a.details} tips={tips} mapUrl={mapUrl} indent={74} /></div>}
@@ -405,7 +405,7 @@ function DayCard({ day, dayIdx, days, viewMode, categories, tweakingId, selected
 
   return (
     <div style={{ marginBottom: 22 }}>
-      <div style={{ fontFamily: T.fontDay, fontSize: T.fs.title, fontWeight: 400, color: T.ink, margin: "0 0 12px", paddingBottom: 6, borderBottom: `1px solid ${T.border}` }}>
+      <div style={{ fontFamily: T.fontDay, fontSize: T.fs.title, fontWeight:900, color: T.ink, margin: "0 0 12px", paddingBottom: 6, borderBottom: `1px solid ${T.border}` }}>
         {clean(day.label)}
       </div>
 
@@ -427,7 +427,7 @@ function DayCard({ day, dayIdx, days, viewMode, categories, tweakingId, selected
 
       {day.food.length > 0 && (
         <div style={{ marginTop: 12, marginBottom: 4 }}>
-          <div style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, fontWeight: 400, color: T.hint, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 5 }}>Eat & Drink — suggestions only</div>
+          <div style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, fontWeight:700, color: T.hint, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 5 }}>Eat & Drink — suggestions only</div>
           <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
             <colgroup><col style={{ width: "22%" }} /><col style={{ width: "28%" }} /><col style={{ width: "38%" }} /><col style={{ width: "12%" }} /></colgroup>
             <tbody>{day.food.map((f, i) => <FoodRow key={i} f={f} />)}</tbody>
@@ -437,7 +437,7 @@ function DayCard({ day, dayIdx, days, viewMode, categories, tweakingId, selected
 
       {dayTips.length > 0 && (
         <div style={{ marginTop: 12 }}>
-          <div style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, fontWeight: 400, letterSpacing: ".08em", textTransform: "uppercase", color: T.accent, marginBottom: 6 }}>Before you go</div>
+          <div style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, fontWeight:700, letterSpacing: ".08em", textTransform: "uppercase", color: T.accent, marginBottom: 6 }}>Before you go</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {dayTips.map((tip, ti) => (
               <div key={ti} style={{ background: T.bg2, border: `1px solid ${T.border}`, borderRadius: T.r.sm, padding: "5px 10px", fontSize: T.fs.meta, color: T.muted, display: "flex", alignItems: "center", gap: 5 }}>

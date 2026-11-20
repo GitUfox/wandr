@@ -13,7 +13,7 @@ import { geoOrthographic, geoGraticule10, geoPath } from "d3-geo";
 import { feature, mesh } from "topojson-client";
 import world from "world-atlas/countries-110m.json";
 
-// Wandr orange #c96442 = rgb(201,100,66), layered at varying opacity.
+// Wandr orange #c96442 = rgb(227,38,47), layered at varying opacity.
 const SCHEME = {
   sphere:  "201,100,66,0.05",
   grat:    "201,100,66,0.16",

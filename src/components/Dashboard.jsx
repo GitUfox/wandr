@@ -83,7 +83,7 @@ function RollingMsg({ text }) {
 function GhostDays({ nights }) {
   const count = Math.min(3, Math.max(2, Number(nights) || 2));
   const shimGrey = `linear-gradient(90deg, ${T.bg2} 25%, ${T.bg3} 45%, ${T.bg2} 65%)`;
-  const shimAccent = "linear-gradient(90deg, rgba(201,100,66,.10) 25%, rgba(201,100,66,.22) 45%, rgba(201,100,66,.10) 65%)";
+  const shimAccent = "linear-gradient(90deg, rgba(227,38,47,.10) 25%, rgba(227,38,47,.22) 45%, rgba(227,38,47,.10) 65%)";
   const barStyle = (extra) => ({ height:9, borderRadius:5, backgroundSize:"220% 100%", animation:"wghostshim 2.4s linear infinite", ...extra });
   // Deliberately uneven widths — real itineraries are ragged, and identical
   // skeletons read as a broken repeat rather than a preview.
@@ -159,10 +159,10 @@ function TodayPanel({ todayInfo, day, dayIdx, online, planLoading, onRework, rew
   const clean = s => String(s || "").replace(/\*\*/g, "").trim();
 
   return (
-    <div key={undoAt} style={{ padding:"13px 15px 14px", background:T.bg1, border:"1px solid rgba(201,100,66,.45)", borderRadius:T.r.md, marginBottom:12, animation: undoAt ? "wonce 1.1s ease" : "none" }}>
+    <div key={undoAt} style={{ padding:"13px 15px 14px", background:T.bg1, border:"1px solid rgba(227,38,47,.45)", borderRadius:T.r.md, marginBottom:12, animation: undoAt ? "wonce 1.1s ease" : "none" }}>
       <div style={{ display:"flex", alignItems:"center", gap:8 }}>
         <span style={{ width:7, height:7, borderRadius:"50%", background:T.accentHover, flexShrink:0, animation:"pulse 2s ease-in-out infinite" }} />
-        <span style={{ fontFamily:T.fontMono, fontSize:T.fs.micro, fontWeight:400, letterSpacing:".12em", textTransform:"uppercase", color:T.accentHover }}>
+        <span style={{ fontFamily:T.fontMono, fontSize:T.fs.micro, fontWeight:700, letterSpacing:".12em", textTransform:"uppercase", color:T.accentHover }}>
           Today · Day {todayInfo.dayNum} of {todayInfo.totalDays}
         </span>
         <span style={{ fontSize:T.fs.meta, color:T.hint }}>{dateLine}</span>
@@ -170,9 +170,9 @@ function TodayPanel({ todayInfo, day, dayIdx, online, planLoading, onRework, rew
 
       {upNext ? (
         <div style={{ marginTop:10 }}>
-          <div style={{ fontFamily:T.fontMono, fontSize:T.fs.micro, fontWeight:400, letterSpacing:".12em", textTransform:"uppercase", color:T.hint, marginBottom:3 }}>Up next</div>
+          <div style={{ fontFamily:T.fontMono, fontSize:T.fs.micro, fontWeight:700, letterSpacing:".12em", textTransform:"uppercase", color:T.hint, marginBottom:3 }}>Up next</div>
           <div style={{ display:"flex", gap:9, alignItems:"baseline" }}>
-            <span style={{ fontFamily:T.fontMono, fontSize:T.fs.label, fontWeight:400, color:T.accent, fontVariantNumeric:"tabular-nums", flexShrink:0, letterSpacing:"-.02em" }}>{displayTime(clean(upNext.time))}</span>
+            <span style={{ fontFamily:T.fontMono, fontSize:T.fs.label, fontWeight:700, color:T.accent, fontVariantNumeric:"tabular-nums", flexShrink:0, letterSpacing:"-.02em" }}>{displayTime(clean(upNext.time))}</span>
             <span style={{ fontSize:T.fs.ui, fontWeight:800, color:T.ink }}>{clean(upNext.title)}</span>
           </div>
           {upcoming.length > 1 && (
@@ -201,7 +201,7 @@ function TodayPanel({ todayInfo, day, dayIdx, online, planLoading, onRework, rew
                 const on = reasons.includes(chip.id);
                 return (
                   <button key={chip.id} onClick={() => toggleReason(chip.id)}
-                    style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:T.fs.meta, fontWeight:700, color:on ? T.accentHover : T.muted, background:on ? "rgba(201,100,66,.08)" : T.bg2, border:`1px solid ${on ? T.accent : T.border}`, borderRadius:T.r.pill, padding:"7px 13px", cursor:"pointer", fontFamily:T.font }}>
+                    style={{ display:"inline-flex", alignItems:"center", gap:5, fontSize:T.fs.meta, fontWeight:700, color:on ? T.accentHover : T.muted, background:on ? "rgba(227,38,47,.08)" : T.bg2, border:`1px solid ${on ? T.accent : T.border}`, borderRadius:T.r.pill, padding:"7px 13px", cursor:"pointer", fontFamily:T.font }}>
                     {chip.glyph && <Glyph name={chip.glyph} size={11} color="currentColor" />}
                     {chip.label}
                   </button>
@@ -214,7 +214,7 @@ function TodayPanel({ todayInfo, day, dayIdx, online, planLoading, onRework, rew
               style={{ width:"100%", marginTop:9, padding:"9px 12px", border:`1px solid ${T.border}`, borderRadius:T.r.sm, background:T.bg2, color:T.ink, outline:"none", fontSize:T.fs.body, fontFamily:T.font, boxSizing:"border-box" }} />
             <button onClick={submit} disabled={!online}
               style={{ width:"100%", marginTop:9, padding:"11px 0", borderRadius:T.r.md, background:T.accent, color:T.white, fontSize:T.fs.body, fontWeight:800, border:"none", cursor:"pointer", fontFamily:T.font }}>
-              Rework from <span style={{ fontFamily:T.fontMono, fontWeight:400, fontSize:T.fs.meta, letterSpacing:"-.02em" }}>{displayTime(fromTime)}</span> →
+              Rework from <span style={{ fontFamily:T.fontMono, fontWeight:700, fontSize:T.fs.meta, letterSpacing:"-.02em" }}>{displayTime(fromTime)}</span> →
             </button>
           </div>
         </>
@@ -398,12 +398,12 @@ export default function Dashboard({
             <line x1="10" y1="13" x2="40" y2="13" stroke="#d8d2cb" stroke-width="1.2"/>
             <line x1="80" y1="13" x2="110" y2="13" stroke="#d8d2cb" stroke-width="1.2"/>
             <circle cx="8" cy="13" r="2.4" fill="none" stroke="#9a938c" stroke-width="1.3"/>
-            <circle cx="112" cy="13" r="2.4" fill="#c96442"/>
+            <circle cx="112" cy="13" r="2.4" fill="#E3262F"/>
             <g transform="translate(60,13) rotate(-20)">
               <ellipse rx="16" ry="5" fill="none" stroke="#c9c2ba" stroke-width=".9"/>
             </g>
             <g transform="translate(60,13) rotate(-23.5)">
-              <circle r="10" fill="#c96442"/>
+              <circle r="10" fill="#E3262F"/>
               <g stroke="#faf8f6" stroke-width="1.05" fill="none" stroke-linecap="round">
                 <ellipse rx="4.5" ry="9.7"/>
                 <path d="M -9,-4.6 Q 0,-6.8 9,-4.6"/>
@@ -414,7 +414,7 @@ export default function Dashboard({
               <line x1="0" y1="10.6" x2="0" y2="13.4" stroke="#9a938c" stroke-width="1.1"/>
             </g>
             <g transform="translate(60,13) rotate(-20) scale(1,0.3125)">
-              <ellipse cx="8" cy="13.9" rx="1.7" ry="5.4" fill="#c96442"/>
+              <ellipse cx="8" cy="13.9" rx="1.7" ry="5.4" fill="#E3262F"/>
             </g>
           </svg>`;
     const ticketTop = isBucket
@@ -505,7 +505,7 @@ export default function Dashboard({
       }
 
       if (dayTips.length) {
-        bodyHtml += `<div class="prebox"><div class="p-label" style="color:#c96442;margin-bottom:3px">Before you go</div>${dayTips.map(t => `<div class="tipline">${rich(t)}</div>`).join("")}</div>`;
+        bodyHtml += `<div class="prebox"><div class="p-label" style="color:#E3262F;margin-bottom:3px">Before you go</div>${dayTips.map(t => `<div class="tipline">${rich(t)}</div>`).join("")}</div>`;
       }
 
       if (day.extras?.length) bodyHtml += proseHtml(day.extras.join("\n"));
@@ -521,13 +521,11 @@ export default function Dashboard({
       <meta charset="utf-8">
       <title>${htmlEscape(trip.destination)} — Wandr ${isBucket ? "Bucket List" : "Itinerary"}</title>
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-      <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600;700;800&family=Instrument+Serif&family=Martian+Mono&family=Young+Serif&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;700;900&display=swap" rel="stylesheet">
       <style>
         /* Editorial Pass faces on paper (same roles as the screen — see
            constants.js). Erode is self-hosted; this window is about:blank, so
            the URL must be absolute or it silently resolves nowhere. */
-        @font-face { font-family: 'Erode'; src: url('${location.origin}/fonts/erode-500.woff2') format('woff2'); font-weight: 500; font-style: normal; font-display: block; }
-        @font-face { font-family: 'Erode'; src: url('${location.origin}/fonts/erode-600.woff2') format('woff2'); font-weight: 600; font-style: normal; font-display: block; }
         /* 4A print hygiene: margin:0 removes the browser's own header/footer
            (about:blank, timestamp, page counts) — Chrome renders those in the
            page margin, so no margin means no chrome. The body padding below is
@@ -535,57 +533,57 @@ export default function Dashboard({
         @page { margin: 0; }
         /* Letter-width column: the on-screen preview matches what prints
            instead of stretching the ticket across a desktop monitor. */
-        body { font-family: 'Manrope', system-ui, sans-serif; margin: 0 auto; max-width: 720px; padding: 40px 40px 74px; background: #fff; color: #1a1a1a; box-sizing: border-box; }
+        body { font-family: 'Figtree', system-ui, sans-serif; margin: 0 auto; max-width: 720px; padding: 40px 40px 74px; background: #fff; color: #1a1a1a; box-sizing: border-box; }
         /* Print bottom padding must clear the fixed footer (~34px) or the last
            line of every page runs beneath it. */
         @media print { body { padding: 34px 36px 68px; max-width: none; } }
         .wm { font-weight: 800; font-size: 16px; color: #111; letter-spacing: -.02em; }
-        .wm .dot { color: #c96442; }
-        .p-label { font-family: 'Martian Mono', monospace; font-size: 8px; letter-spacing: .12em; text-transform: uppercase; color: #9a938c; font-weight: 400; }
-        .p-date { font-family: 'Martian Mono', monospace; font-size: 15px; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .wm .dot { color: #E3262F; }
+        .p-label { font-family: 'Figtree', sans-serif; font-size: 8px; letter-spacing: .12em; text-transform: uppercase; color: #9a938c; font-weight:700; }
+        .p-date { font-family: 'Figtree', sans-serif; font-size: 15px; font-weight:700; font-variant-numeric: tabular-nums; white-space: nowrap; }
         .ticket { position: relative; background: #faf8f6; border: 1px solid #e5e0da; border-radius: 12px; overflow: hidden; margin: 12px 0 6px; }
         .barcode { position: absolute; right: 10px; top: 12px; bottom: 12px; width: 11px; border-radius: 2px;
                    background: repeating-linear-gradient(180deg, #d8d2cb 0 2px, transparent 2px 5px); }
         .perf { position: relative; border-top: 1.5px dashed #d8d2cb; margin: 0 22px; }
         .notch { position: absolute; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 1px solid #e5e0da; top: -9px; }
-        .dayhead { display: flex; align-items: center; gap: 9px; font-family: 'Young Serif', Georgia, serif; font-size: 16.5px; font-weight: 400; margin: 24px 0 4px; break-after: avoid; }
-        .daychip { background: #c96442; color: #fff; font-family: 'Martian Mono', monospace; font-size: 9.5px; font-weight: 400; border-radius: 6px; padding: 3px 6px; font-variant-numeric: tabular-nums; }
-        .h2 { font-family: 'Young Serif', Georgia, serif; font-size: 16.5px; font-weight: 400; color: #0d0d0d; margin: 24px 0 8px; padding-bottom: 5px; border-bottom: 1px solid #e8e8e8; }
-        .h3 { font-family: 'Martian Mono', monospace; font-size: 9.5px; font-weight: 400; color: #c96442; text-transform: uppercase; letter-spacing: .1em; margin: 14px 0 6px; }
-        .prose { font-family: 'Erode', Georgia, serif; font-weight: 500; font-size: 12px; color: #333; line-height: 1.6; margin: 0 0 4px; }
+        .dayhead { display: flex; align-items: center; gap: 9px; font-family: 'Figtree', sans-serif; font-size: 16.5px; font-weight:900; margin: 24px 0 4px; break-after: avoid; }
+        .daychip { background: #E3262F; color: #fff; font-family: 'Figtree', sans-serif; font-size: 9.5px; font-weight:700; border-radius: 6px; padding: 3px 6px; font-variant-numeric: tabular-nums; }
+        .h2 { font-family: 'Figtree', sans-serif; font-size: 16.5px; font-weight:900; color: #0d0d0d; margin: 24px 0 8px; padding-bottom: 5px; border-bottom: 1px solid #e8e8e8; }
+        .h3 { font-family: 'Figtree', sans-serif; font-size: 9.5px; font-weight:700; color: #E3262F; text-transform: uppercase; letter-spacing: .1em; margin: 14px 0 6px; }
+        .prose { font-family: 'Figtree', sans-serif; font-weight:400; font-size: 12px; color: #333; line-height: 1.6; margin: 0 0 4px; }
         .prose.food { font-size: 10.5px; color: #555; }
         /* 1B day cards: time rail | content. break-inside keeps a stop whole
            across page breaks — the tip belongs to its card, not the next page. */
         .card { display: grid; grid-template-columns: 76px 1fr; gap: 12px; padding: 10px 0 11px; /* 76 fits "10:00 AM" in Martian Mono at 11px + the rail's 10px padding */
                 border-bottom: 1px solid #f0eeeb; break-inside: avoid; }
-        .rail { text-align: right; border-right: 2px solid #c96442; padding-right: 10px; }
-        .rail .tm { font-family: 'Martian Mono', monospace; font-size: 11px; font-weight: 400; letter-spacing: -.02em; color: #0d0d0d; font-variant-numeric: tabular-nums; line-height: 1.2; }
-        .rail .du { font-family: 'Martian Mono', monospace; font-size: 7px; font-weight: 400; color: #9a938c; letter-spacing: .04em; text-transform: uppercase; margin-top: 3px; }
+        .rail { text-align: right; border-right: 2px solid #E3262F; padding-right: 10px; }
+        .rail .tm { font-family: 'Figtree', sans-serif; font-size: 11px; font-weight:700; letter-spacing: -.02em; color: #0d0d0d; font-variant-numeric: tabular-nums; line-height: 1.2; }
+        .rail .du { font-family: 'Figtree', sans-serif; font-size: 7px; font-weight:700; color: #9a938c; letter-spacing: .04em; text-transform: uppercase; margin-top: 3px; }
         .c-ttl { font-size: 12.5px; font-weight: 800; color: #0d0d0d; line-height: 1.3; letter-spacing: -.005em; }
         /* 3B fact chips — same engine as the on-screen blocks (splitDetails). */
         .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 5px 0 2px; }
         .chip { font-size: 8.5px; font-weight: 700; padding: 2.5px 7px; border-radius: 4px;
                 border: 1px solid #e5e0da; color: #6b655f; background: #fbfaf9; white-space: nowrap; }
-        .chip.hot { border-color: #e8c4b4; color: #c96442; background: #fdf5f2; }
-        .c-desc { font-family: 'Erode', Georgia, serif; font-weight: 500; font-size: 10.5px; color: #555; line-height: 1.55; margin-top: 3px; }
+        .chip.hot { border-color: #e8c4b4; color: #E3262F; background: #fdf5f2; }
+        .c-desc { font-family: 'Figtree', sans-serif; font-weight:400; font-size: 10.5px; color: #555; line-height: 1.55; margin-top: 3px; }
         /* Pick A print form: the grounded venue's real street address. */
         .c-addr { display: flex; align-items: center; gap: 4px; font-size: 8.5px; color: #9a938c; margin-top: 3px; }
         /* 2B: a tip rendered with the stop it belongs to. */
         .c-tip { display: flex; gap: 7px; margin-top: 6px; padding: 5px 9px; background: #fbf7f4;
-                 border-left: 2.5px solid #c96442; border-radius: 0 4px 4px 0; break-inside: avoid; }
-        .c-tip .bang { color: #c96442; font-weight: 800; font-size: 9px; line-height: 1.55; }
-        .c-tip span { font-family: 'Erode', Georgia, serif; font-weight: 500; font-size: 9.5px; color: #6b5f57; line-height: 1.55; }
+                 border-left: 2.5px solid #E3262F; border-radius: 0 4px 4px 0; break-inside: avoid; }
+        .c-tip .bang { color: #E3262F; font-weight: 800; font-size: 9px; line-height: 1.55; }
+        .c-tip span { font-family: 'Figtree', sans-serif; font-weight:400; font-size: 9.5px; color: #6b5f57; line-height: 1.55; }
         /* Day-level tips that name no single venue. */
-        .prebox { border: 1px solid #e5e0da; border-left: 2.5px solid #c96442; border-radius: 0 5px 5px 0;
+        .prebox { border: 1px solid #e5e0da; border-left: 2.5px solid #E3262F; border-radius: 0 5px 5px 0;
                   padding: 8px 11px; margin: 10px 0 4px; background: #fdfbfa; break-inside: avoid; }
-        .prebox .tipline { font-family: 'Erode', Georgia, serif; font-weight: 500; font-size: 9.5px; color: #6b5f57; line-height: 1.55; margin-top: 2px; }
+        .prebox .tipline { font-family: 'Figtree', sans-serif; font-weight:400; font-size: 9.5px; color: #6b5f57; line-height: 1.55; margin-top: 2px; }
         /* Bucket-list print cards: check ring column instead of the time rail. */
         .shelfcount { font-size: 9px; font-weight: 700; color: #9a938c; margin-left: 8px; letter-spacing: .04em; text-transform: none; }
         .bcard { display: grid; grid-template-columns: 22px 1fr; gap: 10px; padding: 9px 0 10px;
                  border-bottom: 1px solid #f0eeeb; break-inside: avoid; }
         .bring { width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid #d8d2cb; margin-top: 1px;
                  font-size: 9px; font-weight: 800; color: #fff; display: flex; align-items: center; justify-content: center; }
-        .bring.on { background: #c96442; border-color: #c96442; }
+        .bring.on { background: #E3262F; border-color: #E3262F; }
         .foot { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 720px;
                 box-sizing: border-box; display: flex; align-items: center; gap: 10px;
                 background: #fff; border-top: 1px solid #e8e4e0; padding: 8px 20px 12px; font-size: 8.5px; color: #9a938c; }
@@ -595,8 +593,8 @@ export default function Dashboard({
       </style>
     </head><body>
       <div style="text-align:center;margin-bottom:14px"><span class="wm">wandr<span class="dot">.</span></span></div>
-      <div class="p-label" style="color:#c96442;margin-bottom:4px">${isBucket ? "My bucket list" : "My trip"}</div>
-      <div style="font-family:'Instrument Serif',Georgia,serif;font-size:30px;font-weight:400;letter-spacing:0;line-height:1.05">${htmlEscape(destMain)}${destRegion ? ` <span style="font-family:'Martian Mono',monospace;font-size:10px;color:#9a938c;font-weight:400;letter-spacing:.08em;text-transform:uppercase">${htmlEscape(destRegion)}</span>` : ""}</div>
+      <div class="p-label" style="color:#E3262F;margin-bottom:4px">${isBucket ? "My bucket list" : "My trip"}</div>
+      <div style="font-family:'Figtree', sans-serif;font-size:30px;font-weight:900;letter-spacing:0;line-height:1.05">${htmlEscape(destMain)}${destRegion ? ` <span style="font-family:'Figtree', sans-serif;font-size:10px;color:#9a938c;font-weight:700;letter-spacing:.08em;text-transform:uppercase">${htmlEscape(destRegion)}</span>` : ""}</div>
       ${ticketHtml}
       <div style="margin-top:6px">${bodyHtml}</div>
       <div class="foot">
@@ -620,7 +618,7 @@ export default function Dashboard({
         html,body,#root{background:${T.bg0}!important;margin:0;padding:0;min-height:100vh;width:100%}
         @keyframes blink{50%{opacity:0}}
         @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes pulse{50%{box-shadow:0 0 0 6px rgba(201,100,66,.06)}}
+        @keyframes pulse{50%{box-shadow:0 0 0 6px rgba(227,38,47,.06)}}
         @keyframes wrollin{from{opacity:0;transform:translateY(6px)}}
         @keyframes wrollout{to{opacity:0;transform:translateY(-6px)}}
         @keyframes wghostbreathe{0%,100%{opacity:.45}50%{opacity:.8}}
@@ -628,7 +626,7 @@ export default function Dashboard({
         @keyframes wtravel{0%{transform:translateX(-52px);opacity:0}8%{opacity:1}72%{transform:translateX(52px);opacity:1}82%{transform:translateX(52px);opacity:0}100%{transform:translateX(52px);opacity:0}}
         @keyframes wpark{50%{transform:scale(1.25)}}
         @keyframes wparkring{0%{transform:scale(.5);opacity:.7}70%,100%{transform:scale(1.9);opacity:0}}
-        @keyframes wonce{0%{box-shadow:0 0 0 0 rgba(201,100,66,0)}25%{box-shadow:0 0 0 5px rgba(201,100,66,.28)}100%{box-shadow:0 0 0 0 rgba(201,100,66,0)}}
+        @keyframes wonce{0%{box-shadow:0 0 0 0 rgba(227,38,47,0)}25%{box-shadow:0 0 0 5px rgba(227,38,47,.28)}100%{box-shadow:0 0 0 0 rgba(227,38,47,0)}}
         @keyframes warrive{0%,66%{transform:scale(.35);opacity:0}74%{transform:scale(1);opacity:.8}92%{transform:scale(2.1);opacity:0}100%{transform:scale(2.1);opacity:0}}
         @media (prefers-reduced-motion:reduce){.wroll-in,.wroll-out,.wghost,.wghost-bar,.wtravel,.warrive,.wpark,.wparkring{animation:none!important}.wtravel{opacity:1!important}}
         *{box-sizing:border-box}
@@ -639,7 +637,7 @@ export default function Dashboard({
       <div style={{ maxWidth:760, margin:"0 auto" }} className="no-print">
 
         {/* Header */}
-        <div style={{ background:`radial-gradient(120% 90% at 18% 0%, rgba(201,100,66,.13), transparent 55%), ${T.bg1}`, borderBottom:`1px solid ${T.border}`, padding:"1.75rem 1.75rem 1.5rem" }}>
+        <div style={{ background:`radial-gradient(120% 90% at 18% 0%, rgba(227,38,47,.13), transparent 55%), ${T.bg1}`, borderBottom:`1px solid ${T.border}`, padding:"1.75rem 1.75rem 1.5rem" }}>
           {/* Brand bar — the mark is the way home (standard logo-to-home
               pattern). The trip is already persisted, so leaving is safe:
               it waits on the welcome shelf, one tap from resuming. */}
@@ -653,11 +651,11 @@ export default function Dashboard({
           </div>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, flexWrap:"wrap", marginBottom:10 }}>
             <div>
-              <div style={{ fontFamily:T.fontMono, fontSize:T.fs.micro, letterSpacing:".12em", textTransform:"uppercase", color:T.accent, fontWeight:400, marginBottom:5 }}>{isBucket ? "My bucket list" : "My trip"}</div>
+              <div style={{ fontFamily:T.fontMono, fontSize:T.fs.micro, letterSpacing:".12em", textTransform:"uppercase", color:T.accent, fontWeight:700, marginBottom:5 }}>{isBucket ? "My bucket list" : "My trip"}</div>
               {/* 1B editorial hero — the one Instrument Serif slot on screen. */}
-              <div style={{ fontFamily:T.fontHero, fontSize:T.fs.hero, fontWeight:400, color:T.ink, lineHeight:1.05, letterSpacing:"0" }}>{destMain}</div>
+              <div style={{ fontFamily:T.fontHero, fontSize:T.fs.hero, fontWeight:900, color:T.ink, lineHeight:1.05, letterSpacing:"-.03em" }}>{destMain}</div>
               {destRegion && (
-                <div style={{ fontFamily:T.fontMono, fontSize:T.fs.label, color:T.hint, fontWeight:400, letterSpacing:".08em", textTransform:"uppercase", marginTop:4 }}>{destRegion}</div>
+                <div style={{ fontFamily:T.fontMono, fontSize:T.fs.label, color:T.hint, fontWeight:700, letterSpacing:".08em", textTransform:"uppercase", marginTop:4 }}>{destRegion}</div>
               )}
             </div>
             <div style={{ display:"flex", gap:7, alignItems:"flex-start" }}>
@@ -713,7 +711,7 @@ export default function Dashboard({
               trip.season (the full sentence) now lives only in the PDF export;
               the stub shows a short derived label instead. */}
           {(() => {
-            const stubLabel = { fontFamily:T.fontMono, fontSize:T.fs.micro, letterSpacing:".12em", textTransform:"uppercase", color:T.hint, fontWeight:400 };
+            const stubLabel = { fontFamily:T.fontMono, fontSize:T.fs.micro, letterSpacing:".12em", textTransform:"uppercase", color:T.hint, fontWeight:700 };
             const notch = { position:"absolute", width:22, height:22, borderRadius:"50%", background:T.bg1, border:`1px solid ${T.border2}`, top:-11 };
             const stubs = tripStubs;
             // One rail, two tickets: Depart→Return (itinerary) and
@@ -768,12 +766,12 @@ export default function Dashboard({
                     <div style={{ display:"flex", alignItems:"center", gap:14, padding:"15px 38px 13px 18px" }}>
                       <div>
                         <div style={stubLabel}>Ideas</div>
-                        <div style={{ fontFamily:T.fontMono, fontSize:17 /* off-ramp: matches the DEPART/RETURN numeral tier (19→17 with the mono swap — Martian reads a size heavier) */, fontWeight:400, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{building ? "…" : ideaCount}</div>
+                        <div style={{ fontFamily:T.fontMono, fontSize:17 /* off-ramp: matches the DEPART/RETURN numeral tier (19→17 with the mono swap — Martian reads a size heavier) */, fontWeight:700, color:T.ink, fontVariantNumeric:"tabular-nums" }}>{building ? "…" : ideaCount}</div>
                       </div>
                       {railCenter}
                       <div style={{ textAlign:"right" }}>
                         <div style={stubLabel}>Picked</div>
-                        <div style={{ fontFamily:T.fontMono, fontSize:17 /* off-ramp: matches the DEPART/RETURN numeral tier (19→17 with the mono swap) */, fontWeight:400, color:pickedCount ? T.ink : T.hint, fontVariantNumeric:"tabular-nums" }}>{building ? "…" : pickedCount}</div>
+                        <div style={{ fontFamily:T.fontMono, fontSize:17 /* off-ramp: matches the DEPART/RETURN numeral tier (19→17 with the mono swap) */, fontWeight:700, color:pickedCount ? T.ink : T.hint, fontVariantNumeric:"tabular-nums" }}>{building ? "…" : pickedCount}</div>
                       </div>
                     </div>
                     <div style={{ position:"relative", borderTop:`1.5px dashed ${T.border2}`, margin:"0 26px" }}>
@@ -787,12 +785,12 @@ export default function Dashboard({
                     <div style={{ display:"flex", alignItems:"center", gap:14, padding:"15px 38px 13px 18px" }}>
                       <div>
                         <div style={stubLabel}>Depart</div>
-                        <div style={{ fontFamily:T.fontMono, fontSize:17 /* off-ramp: ticket DEPART/RETURN dates — the printed-pass tier (19→17 with the mono swap; Martian 400 reads a size heavier than Manrope 800) */, fontWeight:400, color:T.ink, fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{dep}</div>
+                        <div style={{ fontFamily:T.fontMono, fontSize:17 /* off-ramp: ticket DEPART/RETURN dates — the printed-pass tier (19→17 with the mono swap; Martian 400 reads a size heavier than Manrope 800) */, fontWeight:700, color:T.ink, fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{dep}</div>
                       </div>
                       {railCenter}
                       <div style={{ textAlign:"right" }}>
                         <div style={stubLabel}>Return</div>
-                        <div style={{ fontFamily:T.fontMono, fontSize:17 /* off-ramp: ticket DEPART/RETURN dates — the printed-pass tier (19→17 with the mono swap) */, fontWeight:400, color:T.ink, fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{ret}</div>
+                        <div style={{ fontFamily:T.fontMono, fontSize:17 /* off-ramp: ticket DEPART/RETURN dates — the printed-pass tier (19→17 with the mono swap) */, fontWeight:700, color:T.ink, fontVariantNumeric:"tabular-nums", whiteSpace:"nowrap" }}>{ret}</div>
                       </div>
                     </div>
                     <div style={{ position:"relative", borderTop:`1.5px dashed ${T.border2}`, margin:"0 26px" }}>
@@ -835,7 +833,7 @@ export default function Dashboard({
 
           {/* One-time "save these as your defaults?" prompt (first-time users) */}
           {showProfilePrompt && (
-            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", background:"#2a1a12", border:`1px solid ${T.accent}`, borderRadius:T.r.md, marginBottom:12 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px", background:T.accentSoft, border:`1px solid ${T.accent}`, borderRadius:T.r.md, marginBottom:12 }}>
               <div style={{ flex:1, fontSize:T.fs.body, color:T.ink, lineHeight:1.4 }}>
                 Save these as your <strong style={{ color:T.accent }}>defaults</strong>? Skip the questions next time.
               </div>
@@ -901,13 +899,13 @@ export default function Dashboard({
             return (
               <button onClick={onOpenPacking} data-testid="packing-row"
                 style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"11px 14px", marginBottom:12, borderRadius:T.r.md, textAlign:"left", cursor:"pointer", fontFamily:T.font,
-                  background: hot ? "rgba(201,100,66,.09)" : T.bg1, border:`1px solid ${hot ? "rgba(201,100,66,.32)" : T.border}` }}>
+                  background: hot ? "rgba(227,38,47,.09)" : T.bg1, border:`1px solid ${hot ? "rgba(227,38,47,.32)" : T.border}` }}>
                 <Glyph name="trip" size={14} color={hot ? T.accent : T.muted} />
                 <span style={{ flex:1, minWidth:0 }}>
                   <span style={{ display:"block", fontSize:T.fs.body, fontWeight:hot ? 700 : 600, color:hot ? T.ink : T.muted }}>{label}</span>
                   {hint && <span style={{ display:"block", fontSize:T.fs.meta, color:T.hint, marginTop:1 }}>{hint}</span>}
                 </span>
-                <span style={{ fontFamily:T.fontMono, fontSize:T.fs.micro, letterSpacing:".12em", textTransform:"uppercase", color:T.accent, fontWeight:400, flexShrink:0 }}>Open</span>
+                <span style={{ fontFamily:T.fontMono, fontSize:T.fs.micro, letterSpacing:".12em", textTransform:"uppercase", color:T.accent, fontWeight:700, flexShrink:0 }}>Open</span>
               </button>
             );
           })()}
@@ -937,7 +935,7 @@ export default function Dashboard({
               {building ? (
                 <>
                   <div style={{ display:"flex", flexWrap:"wrap", alignItems:"center", gap:10, rowGap:8, padding:"4px 2px 12px", borderBottom:`1px solid ${T.border}`, marginBottom:12 }}>
-                    <span style={{ width:7, height:7, borderRadius:"50%", background:T.accent, boxShadow:"0 0 0 3px rgba(201,100,66,.14)", flexShrink:0, animation:"pulse 1.2s ease-in-out infinite" }} />
+                    <span style={{ width:7, height:7, borderRadius:"50%", background:T.accent, boxShadow:"0 0 0 3px rgba(227,38,47,.14)", flexShrink:0, animation:"pulse 1.2s ease-in-out infinite" }} />
                     <span style={{ fontSize:T.fs.body, fontWeight:800, color:T.ink }}>{isBucket ? "Curating your ideas" : "Curating your trip"}</span>
                     <RollingMsg text={buildingMsg || "finding the good stuff…"} />
                   </div>
@@ -965,7 +963,7 @@ export default function Dashboard({
               })() : (
                 <div style={{ position:"relative", display:"flex", flexWrap:"wrap", alignItems:"center", gap:10, rowGap:8, padding:"4px 2px 12px", borderBottom:`1px solid ${T.border}`, marginBottom:12 }}>
                   <StardustBurst burstKey={readyBurst} origin={{ left: 4, top: "40%" }} />
-                  <span style={{ width:7, height:7, borderRadius:"50%", background:T.accent, boxShadow:"0 0 0 3px rgba(201,100,66,.14)", flexShrink:0, animation:planLoading?"pulse 1.2s ease-in-out infinite":"pulse 2.4s ease-in-out infinite" }} />
+                  <span style={{ width:7, height:7, borderRadius:"50%", background:T.accent, boxShadow:"0 0 0 3px rgba(227,38,47,.14)", flexShrink:0, animation:planLoading?"pulse 1.2s ease-in-out infinite":"pulse 2.4s ease-in-out infinite" }} />
                   <span style={{ fontSize:T.fs.body, fontWeight:800, color:T.ink }}>Full itinerary</span>
                   <span style={{ fontSize:T.fs.meta, color:T.hint }}>
                     {planLoading ? "writing your days…" : generatedAt ? `generated ${timeAgo(generatedAt)}` : ""}
@@ -1008,7 +1006,7 @@ export default function Dashboard({
                   are things to look at. Hidden while streaming, when the day
                   count is legitimately mid-flight. */}
               {FEATURES.planCheck && !planLoading && planIssues.length > 0 && (
-                <div style={{ padding:"11px 14px", background:"rgba(201,100,66,.09)", border:`1px solid rgba(201,100,66,.32)`, borderRadius:T.r.md, marginBottom:10 }}>
+                <div style={{ padding:"11px 14px", background:"rgba(227,38,47,.09)", border:`1px solid rgba(227,38,47,.32)`, borderRadius:T.r.md, marginBottom:10 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
                     <Glyph name="warning" size={13} color={T.accent} />
                     <span style={{ fontSize:T.fs.label, fontWeight:700, color:T.accent, letterSpacing:".06em", textTransform:"uppercase" }}>

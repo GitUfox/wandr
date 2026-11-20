@@ -26,7 +26,7 @@ export default function DictationButton({ value, onChange, style, max }) {
       const s = document.createElement("style");
       s.id = "wandr-mic-style";
       s.textContent =
-        "@keyframes wandrMicPulse{0%{box-shadow:0 0 0 0 rgba(201,100,66,.45)}70%{box-shadow:0 0 0 7px rgba(201,100,66,0)}100%{box-shadow:0 0 0 0 rgba(201,100,66,0)}}";
+        "@keyframes wandrMicPulse{0%{box-shadow:0 0 0 0 rgba(227,38,47,.45)}70%{box-shadow:0 0 0 7px rgba(227,38,47,0)}100%{box-shadow:0 0 0 0 rgba(227,38,47,0)}}";
       document.head.appendChild(s);
     }
     return () => { try { recRef.current?.stop(); } catch {} };
@@ -79,7 +79,7 @@ export default function DictationButton({ value, onChange, style, max }) {
         width: 30, height: 30, borderRadius: "50%",
         background: listening ? T.accent : T.bg2,
         border: `1px solid ${listening ? T.accent : T.border}`,
-        color: listening ? "#fff" : T.muted,
+        color: listening ? T.white : T.muted,
         cursor: "pointer", padding: 0, transition: "background .15s, border-color .15s, color .15s",
         animation: listening ? "wandrMicPulse 1.4s infinite" : "none",
         ...style,

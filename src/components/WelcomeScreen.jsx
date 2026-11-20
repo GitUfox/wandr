@@ -70,10 +70,10 @@ export function RailFork({ onPick, noMotion = false }) {
 
   const pillSt = (on, off) => ({
     position: "absolute", left: 158, width: 138, textAlign: "left", cursor: "pointer",
-    background: on ? "#211712" : T.bg1, border: `1px solid ${on ? T.accent : T.border2}`,
+    background: on ? T.accentSoft : T.bg1, border: `1px solid ${on ? T.accent : T.border2}`,
     borderRadius: T.r.pill, padding: "7px 14px", fontFamily: T.font,
     opacity: off ? .4 : 1, transition: "border-color .3s, background .3s, opacity .3s",
-    boxShadow: on ? "0 0 0 1px rgba(201,100,66,.35), 0 0 18px rgba(201,100,66,.18)" : "none",
+    boxShadow: on ? "0 0 0 1px rgba(227,38,47,.35), 0 0 18px rgba(227,38,47,.18)" : "none",
   });
   const glowSt = (lit) => ({ strokeDasharray: 1, strokeDashoffset: lit ? 0 : 1, transition: "stroke-dashoffset .5s ease" });
 
@@ -88,13 +88,13 @@ export function RailFork({ onPick, noMotion = false }) {
         </defs>
         <path d="M8,65 H96" fill="none" stroke={T.border} strokeWidth="3" strokeLinecap="round" />
         <path d="M96,65 C126,65 130,34 150,34" fill="none" strokeWidth="3" strokeLinecap="round"
-          stroke={committed === "B" ? "#242424" : T.border} style={{ transition: "stroke .4s" }} />
+          stroke={committed === "B" ? T.bg3 : T.border} style={{ transition: "stroke .4s" }} />
         <path d="M96,65 C126,65 130,96 150,96" fill="none" strokeWidth="3" strokeLinecap="round"
-          stroke={committed === "A" ? "#242424" : T.border} style={{ transition: "stroke .4s" }} />
+          stroke={committed === "A" ? T.bg3 : T.border} style={{ transition: "stroke .4s" }} />
         <path d="M8,65 H96 C126,65 130,34 150,34" pathLength="1" fill="none" stroke="url(#wrfGrad)"
-          strokeWidth="3" strokeLinecap="round" style={{ ...glowSt(committed === "A"), filter: "drop-shadow(0 0 5px rgba(201,100,66,.65))" }} />
+          strokeWidth="3" strokeLinecap="round" style={{ ...glowSt(committed === "A"), filter: "drop-shadow(0 0 5px rgba(227,38,47,.65))" }} />
         <path d="M8,65 H96 C126,65 130,96 150,96" pathLength="1" fill="none" stroke="url(#wrfGrad)"
-          strokeWidth="3" strokeLinecap="round" style={{ ...glowSt(committed === "B"), filter: "drop-shadow(0 0 5px rgba(201,100,66,.65))" }} />
+          strokeWidth="3" strokeLinecap="round" style={{ ...glowSt(committed === "B"), filter: "drop-shadow(0 0 5px rgba(227,38,47,.65))" }} />
       </svg>
       <span aria-hidden="true"
         className={noMotion ? "wrf-ember wrf-still" : committed ? `wrf-ember wrf-run${committed}` : "wrf-ember"} />
@@ -227,7 +227,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
             <span style={{ fontSize: T.fs.ui, fontWeight: 800, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.destination}</span>
             {isActive && <span style={{ fontSize: T.fs.micro, fontWeight: 700, color: T.accent, border: `1px solid ${T.accent}`, borderRadius: T.r.pill, padding: "1px 6px", letterSpacing: ".06em", flexShrink: 0 }}>CURRENT</span>}
           </div>
-          <div style={{ fontFamily: T.fontMono, fontWeight: 400, fontSize: T.fs.micro, letterSpacing: ".02em", color: broken ? T.danger : T.muted, marginTop: 3 }}>{sub}</div>
+          <div style={{ fontFamily: T.fontMono, fontWeight:700, fontSize: T.fs.micro, letterSpacing: ".02em", color: broken ? T.danger : T.muted, marginTop: 3 }}>{sub}</div>
         </button>
         <button onClick={() => setConfirmDeleteId(t.id)} aria-label={`Delete ${t.destination}`}
           style={{ width: 30, alignSelf: "stretch", fontSize: T.fs.ui, lineHeight: 1, color: T.hint, background: "transparent", border: "none", cursor: "pointer", fontFamily: T.font, flexShrink: 0 }}>
@@ -241,13 +241,13 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
             <span style={{ color: T.accent, fontWeight: 800, fontSize: T.fs.title }}>↻</span>
           ) : isBucketTrip ? (
             <>
-              <span style={{ fontFamily: T.fontMono, fontSize: T.fs.title, fontWeight: 400, color: T.accent, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{ideas}</span>
-              <span style={{ fontFamily: T.fontMono, fontSize: 8.5, fontWeight: 400, letterSpacing: ".1em", color: T.hint, textTransform: "uppercase" }}>{ideas === 1 ? "idea" : "ideas"}</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: T.fs.title, fontWeight:700, color: T.accent, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{ideas}</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: 8.5, fontWeight:700, letterSpacing: ".1em", color: T.hint, textTransform: "uppercase" }}>{ideas === 1 ? "idea" : "ideas"}</span>
             </>
           ) : t.nights ? (
             <>
-              <span style={{ fontFamily: T.fontMono, fontSize: T.fs.title, fontWeight: 400, color: T.accent, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{t.nights}</span>
-              <span style={{ fontFamily: T.fontMono, fontSize: 8.5, fontWeight: 400, letterSpacing: ".1em", color: T.hint, textTransform: "uppercase" }}>{t.nights === 1 ? "night" : "nights"}</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: T.fs.title, fontWeight:700, color: T.accent, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 }}>{t.nights}</span>
+              <span style={{ fontFamily: T.fontMono, fontSize: 8.5, fontWeight:700, letterSpacing: ".1em", color: T.hint, textTransform: "uppercase" }}>{t.nights === 1 ? "night" : "nights"}</span>
             </>
           ) : (
             <Glyph name="plane" size={14} color={T.hint} />
@@ -266,8 +266,8 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
         @keyframes wbeam { to { --wbeam: 360deg; } }
         .wbeam-idle {
           background: conic-gradient(from var(--wbeam),
-            rgba(201,100,66,.18) 0turn, rgba(201,100,66,.18) .8turn,
-            ${T.accent} .92turn, #ffc79b .965turn, rgba(201,100,66,.18) 1turn);
+            rgba(227,38,47,.18) 0turn, rgba(227,38,47,.18) .8turn,
+            ${T.accent} .92turn, #ffc79b .965turn, rgba(227,38,47,.18) 1turn);
           animation: wbeam 3.8s linear infinite;
         }
         @keyframes wshim { to { background-position: -220% 0; } }
@@ -280,8 +280,8 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
         /* Rail-fork ember (1F). Idle: patrols the trunk toward the junction.
            Run: commits down the chosen branch (paths must mirror the SVG). */
         .wrf-ember{position:absolute;width:11px;height:11px;border-radius:50%;z-index:2;pointer-events:none;
-          background:radial-gradient(circle at 38% 35%, #ffd9b3 0%, #ffc79b 34%, ${T.accent} 72%, rgba(201,100,66,0) 100%);
-          box-shadow:0 0 10px 2px rgba(224,112,80,.75), 0 0 26px 6px rgba(201,100,66,.3);
+          background:radial-gradient(circle at 38% 35%, #ffd9b3 0%, #ffc79b 34%, ${T.accent} 72%, rgba(227,38,47,0) 100%);
+          box-shadow:0 0 10px 2px rgba(200,31,39,.75), 0 0 26px 6px rgba(227,38,47,.3);
           offset-path:path("M8,65 H96");offset-distance:4%;
           animation:wrfidle 2.6s ease-in-out infinite alternate}
         @keyframes wrfidle{from{offset-distance:4%}to{offset-distance:96%}}
@@ -383,7 +383,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
         {/* Destination input */}
         <div style={{ marginBottom: 16 }}>
           {/* 2A quiet mono — the kicker whispers in ticket voice; the input keeps the stage. */}
-          <div style={{ fontFamily: T.fontMono, fontSize: T.fs.label, fontWeight: 400, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", marginBottom: 8 }}>Where to?</div>
+          <div style={{ fontFamily: T.fontMono, fontSize: T.fs.label, fontWeight:700, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", marginBottom: 8 }}>Where to?</div>
           {/* Comet ring (8A): the wrapper IS the border — a 1.5px ring the
               gradient orbits while idle, solid accent otherwise. */}
           <div className={destIdle ? "wbeam-idle" : undefined}
@@ -493,7 +493,7 @@ export default function WelcomeScreen({ onStart, hasProfile, profile, onUpdatePr
           Same renderTripCard as the mobile shelf; only the arrangement differs. */}
       {isWide && (
         <div style={{ width: 316, flexShrink: 0, borderLeft: `1px solid ${T.border}`, background: T.bg1, padding: "22px 18px", overflowY: "auto" }}>
-          <div style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, fontWeight: 400, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", margin: "2px 0 12px" }}>Departures</div>
+          <div style={{ fontFamily: T.fontMono, fontSize: T.fs.micro, fontWeight:700, color: T.hint, textTransform: "uppercase", letterSpacing: ".12em", margin: "2px 0 12px" }}>Departures</div>
           {trips.length > 0 && <SyncStatusLine onSignIn={() => setShowSettings("account")} style={{ margin: "2px 0 12px" }} />}
           {trips.map(renderTripCard)}
           <button onClick={() => inputRef.current?.focus()}
